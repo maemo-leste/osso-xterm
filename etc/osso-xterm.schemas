@@ -32,13 +32,25 @@
 			</locale>
 		</schema>
 		<schema>
-			<key>/schemas/apps/osso/xterm/screenkeys</key>
-			<applyto>/apps/osso/xterm/screenkeys</applyto>
+			<key>/schemas/apps/osso/xterm/keys</key>
+			<applyto>/apps/osso/xterm/keys</applyto>
 			<owner>osso-xterm</owner>
-			<type>bool</type>
-			<default>true</default>
+			<type>list</type>
+			<list_type>string</list_type>
+			<default>[Page_Up, Page_Down, &lt;ctrl&gt;p, &lt;ctrl&gt;n, &lt;ctrl&gt;a\,p, &lt;ctrl&gt;a\,n]</default>
 			<locale name="C">
-				<short>Show screen keys in toolbar</short>
+				<short>Keys shown in toolbar</short>
+			</locale>
+		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/key_labels</key>
+			<applyto>/apps/osso/xterm/key_labels</applyto>
+			<owner>osso-xterm</owner>
+			<type>list</type>
+			<list_type>string</list_type>
+			<default>[PgUp, PgDn, Ctrl-p, Ctrl-n, Ctrl-ap, Ctrl-an]</default>
+			<locale name="C">
+				<short>Labels for keys in toolbar</short>
 			</locale>
 		</schema>
 		<schema>

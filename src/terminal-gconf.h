@@ -54,9 +54,11 @@
 #define OSSO_XTERM_GCONF_TOOLBAR   OSSO_XTERM_GCONF_PATH "/toolbar"
 #define OSSO_XTERM_DEFAULT_TOOLBAR TRUE
 
-/* Boolean */
-#define OSSO_XTERM_GCONF_SCREENKEYS   OSSO_XTERM_GCONF_PATH "/screenkeys"
-#define OSSO_XTERM_DEFAULT_SCREENKEYS TRUE
+/* List of strings */
+#define OSSO_XTERM_GCONF_KEYS   OSSO_XTERM_GCONF_PATH "/keys"
+
+/* List of strings */
+#define OSSO_XTERM_GCONF_KEY_LABELS   OSSO_XTERM_GCONF_PATH "/key_labels"
 
 /* Boolean */
 #define OSSO_XTERM_GCONF_REVERSE     OSSO_XTERM_GCONF_PATH "/reverse"

@@ -95,8 +95,6 @@ static void            terminal_app_action_scrollbar        (GtkToggleAction *ac
                                                              TerminalApp     *app);
 static void            terminal_app_action_toolbar        (GtkToggleAction *action,
                                                              TerminalApp     *app);
-static void            terminal_app_action_screenkeys        (GtkToggleAction *action,
-                                                             TerminalApp     *app);
 static void            terminal_app_action_prev_tab         (GtkAction       *action,
                                                              TerminalApp     *app);
 static void            terminal_app_action_next_tab         (GtkAction       *action,
@@ -169,7 +167,6 @@ static GtkToggleActionEntry toggle_action_entries[] =
   { "fullscreen", NULL, N_ ("Fullscreen"), NULL, NULL, G_CALLBACK (terminal_app_action_fullscreen), FALSE },
   { "scrollbar", NULL, N_ ("Scrollbar"), NULL, NULL, G_CALLBACK (terminal_app_action_scrollbar), TRUE },
   { "toolbar", NULL, N_ ("Toolbar"), NULL, NULL, G_CALLBACK (terminal_app_action_toolbar), TRUE },
-  { "screenkeys", NULL, N_ ("Screen keys"), NULL, NULL, G_CALLBACK (terminal_app_action_screenkeys), TRUE },
 };
 
 static const gchar ui_description[] =
@@ -186,7 +183,6 @@ static const gchar ui_description[] =
  "    <menuitem action='reverse'/>"
  "    <menuitem action='scrollbar'/>"
  "    <menuitem action='toolbar'/>"
- "    <menuitem action='screenkeys'/>"
  "    <menuitem action='fullscreen'/>"
  "    <separator/>"
  "    <menuitem action='ctrl'/>"
@@ -276,7 +272,6 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   attach_item(parent, actiongroup, accelgroup, "reverse");
   attach_item(parent, actiongroup, accelgroup, "scrollbar");
   attach_item(parent, actiongroup, accelgroup, "toolbar");
-  attach_item(parent, actiongroup, accelgroup, "screenkeys");
   attach_item(parent, actiongroup, accelgroup, "fullscreen");
   gtk_menu_shell_append(GTK_MENU_SHELL(parent),
                         gtk_separator_menu_item_new());
@@ -414,7 +409,7 @@ terminal_app_init (TerminalApp *app)
   GError              *error = NULL;
   gchar               *role;
   gint                 font_size;
-  gboolean             scrollbar, toolbar, screenkeys, reverse;
+  gboolean             scrollbar, toolbar, reverse;
   GConfClient         *gconf_client;
   GConfValue          *gconf_value;
   HildonProgram       *program;
@@ -474,23 +469,6 @@ terminal_app_init (TerminalApp *app)
   }
 
   gconf_value = gconf_client_get(gconf_client,
-                                 OSSO_XTERM_GCONF_SCREENKEYS,
-                                 &error);
-
-  if (error != NULL) {
-      g_printerr("Unable to get screenkeys setting from gconf: %s\n",
-                 error->message);
-      g_error_free(error);
-      error = NULL;
-  }
-  screenkeys = OSSO_XTERM_DEFAULT_SCREENKEYS;
-  if (gconf_value) {
-          if (gconf_value->type == GCONF_VALUE_BOOL)
-                  screenkeys = gconf_value_get_bool(gconf_value);
-          gconf_value_free(gconf_value);
-  }
-
-  gconf_value = gconf_client_get(gconf_client,
                                  OSSO_XTERM_GCONF_REVERSE,
                                  &error);
   if (error != NULL) {
@@ -532,9 +510,6 @@ terminal_app_init (TerminalApp *app)
 
   action = gtk_action_group_get_action(app->action_group, "toolbar");
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), toolbar);
-
-  action = gtk_action_group_get_action(app->action_group, "screenkeys");
-  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), screenkeys);
 
   action = gtk_action_group_get_action(app->action_group, "reverse");
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), reverse);
@@ -939,24 +914,6 @@ terminal_app_action_toolbar (GtkToggleAction *action,
 
     gconf_client_set_bool (client,
                            OSSO_XTERM_GCONF_TOOLBAR,
-                           show,
-                           NULL);
-
-    g_object_unref(G_OBJECT(client));
-}
-
-static void
-terminal_app_action_screenkeys (GtkToggleAction *action,
-                               TerminalApp     *app)
-{
-    GConfClient *client;
-    gboolean show;
-
-    client = gconf_client_get_default();
-    show = gtk_toggle_action_get_active (action);
-
-    gconf_client_set_bool (client,
-                           OSSO_XTERM_GCONF_SCREENKEYS,
                            show,
                            NULL);
 

@@ -127,7 +127,7 @@ static void     terminal_widget_gconf_toolbar               (GConfClient    *cli
                                                                guint           conn_id,
                                                                GConfEntry     *entry,
                                                                TerminalWidget *widget);
-static void     terminal_widget_gconf_screenkeys               (GConfClient    *client,
+static void     terminal_widget_gconf_keys               (GConfClient    *client,
                                                                guint           conn_id,
                                                                GConfEntry     *entry,
                                                                TerminalWidget *widget);
@@ -146,8 +146,9 @@ static void     terminal_widget_update_scrolling_bar          (TerminalWidget *w
                                                                gboolean show);
 static void     terminal_widget_update_tool_bar          (TerminalWidget *widget,
                                                                gboolean show);
-static void     terminal_widget_update_screen_keys          (TerminalWidget *widget,
-                                                               gboolean show);
+static void     terminal_widget_update_keys          (TerminalWidget *widget,
+                                                               GSList *keys,
+							       GSList *key_labels);
 static void     terminal_widget_update_colors		      (TerminalWidget *widget,
 							       const gchar *fg_name,
 							       const gchar *bg_name,
@@ -162,11 +163,10 @@ static void	terminal_widget_vte_ctrlify_notify	     (VteTerminal *terminal,
 							      TerminalWidget *widget);
 static void	terminal_widget_ctrlify_notify	     	     (GtkToggleToolButton *item,
 							      TerminalWidget *widget);
-static void	terminal_widget_next_window 		     (GtkToolButton *button,
+static void	terminal_widget_do_keys			     (TerminalWidget *widget,
+							      const gchar *key_string);
+static void	terminal_widget_do_key_button		     (GObject *button,
 							      TerminalWidget *widget);
-static void	terminal_widget_prev_window 		     (GtkToolButton *button,
-							      TerminalWidget *widget);
-
 
 static GObjectClass *parent_class;
 static guint widget_signals[LAST_SIGNAL];
@@ -301,7 +301,8 @@ terminal_widget_init (TerminalWidget *widget)
   GError *err = NULL;
   gboolean scrollbar;
   gboolean toolbar;
-  gboolean screenkeys;
+  GSList *keys;
+  GSList *key_labels;
   GConfValue *gconf_value;
 
   widget->working_directory = g_get_current_dir ();
@@ -328,9 +329,14 @@ terminal_widget_init (TerminalWidget *widget)
           (GConfClientNotifyFunc)terminal_widget_gconf_toolbar,
           widget,
           NULL, &err);
-  widget->screenkeys_conid = gconf_client_notify_add(widget->gconf_client,
-          OSSO_XTERM_GCONF_SCREENKEYS,
-          (GConfClientNotifyFunc)terminal_widget_gconf_screenkeys,
+  widget->keys_conid = gconf_client_notify_add(widget->gconf_client,
+          OSSO_XTERM_GCONF_KEYS,
+          (GConfClientNotifyFunc)terminal_widget_gconf_keys,
+          widget,
+          NULL, &err);
+  widget->key_labels_conid = gconf_client_notify_add(widget->gconf_client,
+          OSSO_XTERM_GCONF_KEY_LABELS,
+          (GConfClientNotifyFunc)terminal_widget_gconf_keys,
           widget,
           NULL, &err);
   if (err != NULL) {
@@ -443,6 +449,7 @@ terminal_widget_init (TerminalWidget *widget)
 		  "orientation", GTK_ORIENTATION_VERTICAL,
 		  NULL);
   widget->cbutton = gtk_toggle_tool_button_new();
+  gtk_tool_item_set_expand(widget->cbutton, TRUE);
   gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "C");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
@@ -453,24 +460,6 @@ terminal_widget_init (TerminalWidget *widget)
 		    G_CALLBACK(terminal_widget_ctrlify_notify),
 		    widget);
 
-  widget->nbutton = gtk_tool_button_new(NULL, ">");
-
-  g_signal_connect (G_OBJECT(widget->nbutton), "clicked",
-		    G_CALLBACK(terminal_widget_next_window),
-		    widget);
-
-  widget->pbutton = gtk_tool_button_new(NULL, "<");
-
-  g_signal_connect (G_OBJECT(widget->pbutton), "clicked",
-		    G_CALLBACK(terminal_widget_prev_window),
-		    widget);
-
-  gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar),
-		  widget->pbutton,
-		  -1);
-  gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar),
-		  widget->nbutton,
-		  -1);
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar),
 		  widget->cbutton,
 		  -1);
@@ -508,24 +497,24 @@ terminal_widget_init (TerminalWidget *widget)
           gconf_value_free(gconf_value);
   }
 
-  gconf_value = gconf_client_get(widget->gconf_client,
-                                 OSSO_XTERM_GCONF_SCREENKEYS,
+  keys = gconf_client_get_list(widget->gconf_client,
+                                 OSSO_XTERM_GCONF_KEYS,
+				 GCONF_VALUE_STRING,
                                  &err);
-  if (err != NULL) {
-      g_printerr("Unable to get toolbar setting from gconf: %s\n",
-                 err->message);
-      g_clear_error(&err);
-  }
-  screenkeys = OSSO_XTERM_DEFAULT_SCREENKEYS;
-  if (gconf_value) {
-          if (gconf_value->type == GCONF_VALUE_BOOL)
-                  screenkeys = gconf_value_get_bool(gconf_value);
-          gconf_value_free(gconf_value);
-  }
+  key_labels = gconf_client_get_list(widget->gconf_client,
+                                 OSSO_XTERM_GCONF_KEY_LABELS,
+				 GCONF_VALUE_STRING,
+                                 &err);
 
   terminal_widget_update_scrolling_bar(TERMINAL_WIDGET(widget), scrollbar);
   terminal_widget_update_tool_bar(TERMINAL_WIDGET(widget), toolbar);
-  terminal_widget_update_screen_keys(TERMINAL_WIDGET(widget), screenkeys);
+  terminal_widget_update_keys(TERMINAL_WIDGET(widget), keys, key_labels);
+
+  g_slist_foreach(keys, (GFunc)g_free, NULL);
+  g_slist_foreach(key_labels, (GFunc)g_free, NULL);
+  g_slist_free(keys);
+  g_slist_free(key_labels);
+
   terminal_widget_gconf_font_size(widget->gconf_client, 0, NULL, widget);
   terminal_widget_gconf_reverse (widget->gconf_client, 0, NULL, widget);
 
@@ -584,7 +573,9 @@ terminal_widget_finalize (GObject *object)
   gconf_client_notify_remove(widget->gconf_client,
                              widget->toolbar_conid);
   gconf_client_notify_remove(widget->gconf_client,
-                             widget->screenkeys_conid);
+                             widget->keys_conid);
+  gconf_client_notify_remove(widget->gconf_client,
+                             widget->key_labels_conid);
   gconf_client_notify_remove(widget->gconf_client,
                              widget->font_name_conid);
   gconf_client_notify_remove(widget->gconf_client,
@@ -1078,16 +1069,40 @@ terminal_widget_update_tool_bar (TerminalWidget *widget, gboolean show)
 }
 
 static void
-terminal_widget_update_screen_keys (TerminalWidget *widget, gboolean show)
+terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_labels)
 {
-    if (show) {
-        gtk_widget_show (GTK_WIDGET(widget->nbutton));
-        gtk_widget_show (GTK_WIDGET(widget->pbutton));
-    }
-    else {
-        gtk_widget_hide (GTK_WIDGET(widget->nbutton));
-        gtk_widget_hide (GTK_WIDGET(widget->pbutton));
-    }
+	g_slist_foreach(widget->keys, (GFunc)gtk_widget_destroy, NULL);
+	g_slist_free(widget->keys);
+	widget->keys = NULL;
+	guint i = 0;
+
+	while (keys && key_labels) {
+		GtkToolItem *button = gtk_tool_button_new(NULL,
+				key_labels->data);
+/*		GtkToolItem *separator = gtk_separator_tool_item_new(); */
+		g_object_set_data_full(G_OBJECT(button), "keys", g_strdup(keys->data), g_free);
+/*		g_object_set_data_full(G_OBJECT(button), "separator", separator, (GDestroyNotify)gtk_widget_destroy); */
+
+		gtk_tool_item_set_expand(button, TRUE);
+		gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
+				button, i++);
+/*		gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
+				separator, i++); */
+
+		gtk_widget_show(GTK_WIDGET(button));
+/*		gtk_widget_show(GTK_WIDGET(separator)); */
+
+		g_signal_connect(G_OBJECT(button),
+				"clicked",
+				G_CALLBACK(terminal_widget_do_key_button),
+				widget);
+
+		widget->keys = g_slist_append(widget->keys,
+				button);
+
+		keys = g_slist_next(keys);
+		key_labels = g_slist_next(key_labels);
+	}
 }
 
 static void
@@ -1141,16 +1156,35 @@ terminal_widget_gconf_toolbar(GConfClient    *client,
 }
 
 static void
-terminal_widget_gconf_screenkeys(GConfClient    *client,
+terminal_widget_gconf_keys(GConfClient    *client,
                                 guint           conn_id,
                                 GConfEntry     *entry,
                                 TerminalWidget *widget) {
     GConfValue *value;
-    gboolean screenkeys;
+    GSList *keys;
+    GSList *key_labels;
+    GSList *freeme;
 
     value = gconf_entry_get_value(entry);
-    screenkeys = gconf_value_get_bool(value);
-    terminal_widget_update_screen_keys(widget, screenkeys);
+
+    if (!strcmp(entry->key, OSSO_XTERM_GCONF_KEYS)) {
+	keys = gconf_value_get_list(value);
+	freeme = key_labels = gconf_client_get_list(client,
+		OSSO_XTERM_GCONF_KEY_LABELS,
+		GCONF_VALUE_STRING,
+		NULL);
+    } else {
+	key_labels = gconf_value_get_list(value);
+	freeme = keys = gconf_client_get_list(client,
+		OSSO_XTERM_GCONF_KEYS,
+		GCONF_VALUE_STRING,
+		NULL);
+    }
+
+    terminal_widget_update_keys(widget, keys, key_labels);
+
+    g_slist_foreach(freeme, (GFunc)g_free, NULL);
+    g_slist_free(freeme);
 }
 
 static void
@@ -1680,7 +1714,7 @@ terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
 
 static void
 terminal_widget_send_key(TerminalWidget *widget,
-		         const char *str,
+		         guint keyval,
 			 guint state)
 {
   GdkEventKey *key;
@@ -1690,7 +1724,7 @@ terminal_widget_send_key(TerminalWidget *widget,
   key->window = GTK_WIDGET(widget->terminal)->window;
   key->time = GDK_CURRENT_TIME;
   key->state = state;
-  key->keyval = gdk_keyval_from_name(str);
+  key->keyval = keyval;
   gdk_event_put ((GdkEvent *) key);
 
   key->type = GDK_KEY_RELEASE;
@@ -1701,18 +1735,108 @@ terminal_widget_send_key(TerminalWidget *widget,
   gdk_event_free((GdkEvent *) key);
 }
 
-static void
-terminal_widget_next_window (GtkToolButton *button,
-			     TerminalWidget *widget)
-{
-	terminal_widget_send_key(widget, "a", GDK_CONTROL_MASK);
-	terminal_widget_send_key(widget, "n", 0);
+static const struct {
+	const gchar *name;
+	GdkModifierType mask;
+} modifier_table[11] = {
+	{ "shift", GDK_SHIFT_MASK },
+	{ "lock", GDK_LOCK_MASK },
+	{ "ctrl", GDK_CONTROL_MASK },
+	{ "control", GDK_CONTROL_MASK },
+	{ "mod1", GDK_MOD1_MASK },
+	{ "alt", GDK_MOD1_MASK },
+	{ "mod2", GDK_MOD2_MASK },
+	{ "mod3", GDK_MOD3_MASK },
+	{ "mod4", GDK_MOD4_MASK },
+	{ "mod5", GDK_MOD5_MASK },
+	{ NULL, 0 }
+};
+
+static GdkModifierType get_mask(const gchar *name, const gchar *end) {
+	int i;
+
+	for (i = 0; modifier_table[i].name; i++) {
+		if (!strncmp(name, modifier_table[i].name, end - name)) {
+			break;
+		}
+	}
+	return modifier_table[i].mask;
 }
 
-static void
-terminal_widget_prev_window (GtkToolButton *button,
-			     TerminalWidget *widget)
+static const gchar *parse_key(const gchar *source,
+		guint *keyval,
+		guint *state)
 {
-	terminal_widget_send_key(widget, "a", GDK_CONTROL_MASK);
-	terminal_widget_send_key(widget, "p", 0);
+	const gchar *tag_start = NULL;
+	const gchar *key_start = NULL;
+
+	if (!source || !keyval || !state) {
+		return NULL;
+	}
+
+	*keyval = 0;
+	*state = 0;
+
+	while (*source) {
+		switch (*source) {
+		case '<':
+			if (!tag_start) {
+				tag_start = source + 1;
+			}
+			break;
+		case '>':
+			if (tag_start) {
+				*state |= get_mask(tag_start, source - 1);
+				tag_start = NULL;
+			} else {
+				key_start = source;
+			}
+			break;
+		case '\\':
+			if (!key_start) {
+				key_start = source + 1;
+			}
+			break;
+		case ',':
+		case ' ':
+		case '\t':
+		case '\n':
+		case '\r':
+			if (key_start && !tag_start) {
+				gchar *temp = g_strndup(key_start,
+						source - key_start);
+				*keyval = gdk_keyval_from_name(temp);
+				g_free(temp);
+				return source + 1;
+			}
+			break;
+		default:
+			if (!tag_start && !key_start) {
+				key_start = source;
+			}
+			break;
+		}
+		source++;
+	}
+	if (key_start) {
+		*keyval = gdk_keyval_from_name(key_start);
+		return source;
+	}
+}
+
+static void terminal_widget_do_keys(TerminalWidget *widget,
+		const gchar *key_string)
+{
+	guint keyval = 0;
+	guint state = 0;
+
+	while (key_string && *key_string) {
+		key_string = parse_key(key_string, &keyval, &state);
+		terminal_widget_send_key(widget, keyval, state);
+	}
+}
+static void terminal_widget_do_key_button(GObject *button,
+		TerminalWidget *widget)
+{
+	terminal_widget_do_keys(widget, g_object_get_data(button, "keys"));
 }
