@@ -47,7 +47,6 @@ enum
 
 static void terminal_tab_header_class_init    (TerminalTabHeaderClass *klass);
 static void terminal_tab_header_init          (TerminalTabHeader      *header);
-static void terminal_tab_header_finalize      (GObject                *object);
 static void terminal_tab_header_get_property  (GObject                *object,
                                                guint                   prop_id,
                                                GValue                 *value,
@@ -65,7 +64,6 @@ struct _TerminalTabHeader
 {
   GtkHBox      __parent__;
 
-  GtkTooltips *tooltips;
   GtkWidget   *ebox;
   GtkWidget   *label;
 };
@@ -89,7 +87,6 @@ terminal_tab_header_class_init (TerminalTabHeaderClass *klass)
   parent_class = g_type_class_peek_parent (klass);
 
   gobject_class = G_OBJECT_CLASS (klass);
-  gobject_class->finalize = terminal_tab_header_finalize;
   gobject_class->get_property = terminal_tab_header_get_property;
   gobject_class->set_property = terminal_tab_header_set_property;
 
@@ -129,10 +126,6 @@ terminal_tab_header_init (TerminalTabHeader *header)
   GtkWidget *button;
   GtkWidget *image;
 
-  header->tooltips = gtk_tooltips_new ();
-  g_object_ref (G_OBJECT (header->tooltips));
-  gtk_object_sink (GTK_OBJECT (header->tooltips));
-
   header->ebox = gtk_event_box_new ();
   gtk_box_pack_start (GTK_BOX (header), header->ebox, TRUE, TRUE, 0);
   gtk_widget_show (header->ebox);
@@ -146,8 +139,6 @@ terminal_tab_header_init (TerminalTabHeader *header)
   button = gtk_button_new ();
   gtk_button_set_relief (GTK_BUTTON (button), GTK_RELIEF_NONE);
   gtk_container_set_border_width (GTK_CONTAINER (button), 0);
-  gtk_tooltips_set_tip (header->tooltips, button,
-                        _("Close this tab"), NULL);
   g_signal_connect (G_OBJECT (button), "clicked",
                     G_CALLBACK (terminal_tab_header_clicked), header);
   gtk_box_pack_start (GTK_BOX (header), button, FALSE, FALSE, 0);
@@ -157,19 +148,6 @@ terminal_tab_header_init (TerminalTabHeader *header)
   gtk_container_add (GTK_CONTAINER (button), image);
   gtk_widget_show (image);
 }
-
-
-
-static void
-terminal_tab_header_finalize (GObject *object)
-{
-  TerminalTabHeader *header = TERMINAL_TAB_HEADER (object);
-
-  g_object_unref (G_OBJECT (header->tooltips));
-
-  parent_class->finalize (object);
-}
-
 
 
 static void
@@ -207,7 +185,6 @@ terminal_tab_header_set_property (GObject      *object,
     {
     case PROP_TITLE:
       title = g_value_get_string (value);
-      gtk_tooltips_set_tip (header->tooltips, header->ebox, title, NULL);
       gtk_label_set_text(GTK_LABEL(header->label), title);
       break;
 

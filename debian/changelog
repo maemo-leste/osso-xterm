@@ -1,3 +1,9 @@
+osso-xterm (0.13.mh21) unstable; urgency=low
+
+  * Tooltips don't really fit maemo platform, remove them.
+
+ -- Santtu Lakkala <inz@inz.fi>  Thu,  1 Mar 2007 13:02:13 +0200
+
 osso-xterm (0.13.mh20) unstable; urgency=low
 
   * Allow building with libhildon1.
