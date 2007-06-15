@@ -450,7 +450,7 @@ terminal_widget_init (TerminalWidget *widget)
 		  NULL);
   widget->cbutton = gtk_toggle_tool_button_new();
   gtk_tool_item_set_expand(widget->cbutton, TRUE);
-  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "C");
+  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
   g_signal_connect (G_OBJECT(widget->terminal), "notify::ctrlify",
