@@ -1159,32 +1159,29 @@ static void
 terminal_widget_gconf_keys(GConfClient    *client,
                                 guint           conn_id,
                                 GConfEntry     *entry,
-                                TerminalWidget *widget) {
-    GConfValue *value;
+                                TerminalWidget *widget)
+{
     GSList *keys;
     GSList *key_labels;
-    GSList *freeme;
 
-    value = gconf_entry_get_value(entry);
+    (void)entry;
+    (void)conn_id;
 
-    if (!strcmp(entry->key, OSSO_XTERM_GCONF_KEYS)) {
-	keys = gconf_value_get_list(value);
-	freeme = key_labels = gconf_client_get_list(client,
+    key_labels = gconf_client_get_list(client,
 		OSSO_XTERM_GCONF_KEY_LABELS,
 		GCONF_VALUE_STRING,
 		NULL);
-    } else {
-	key_labels = gconf_value_get_list(value);
-	freeme = keys = gconf_client_get_list(client,
+    keys = gconf_client_get_list(client,
 		OSSO_XTERM_GCONF_KEYS,
 		GCONF_VALUE_STRING,
 		NULL);
-    }
 
     terminal_widget_update_keys(widget, keys, key_labels);
 
-    g_slist_foreach(freeme, (GFunc)g_free, NULL);
-    g_slist_free(freeme);
+    g_slist_foreach(keys, (GFunc)g_free, NULL);
+    g_slist_foreach(key_labels, (GFunc)g_free, NULL);
+    g_slist_free(keys);
+    g_slist_free(key_labels);
 }
 
 static void
