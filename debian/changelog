@@ -1,3 +1,9 @@
+osso-xterm (0.13.mh24) unstable; urgency=low
+
+  * Configurable scrollback size.
+
+ -- Santtu Lakkala <inz@inz.fi>  Thu, 12 Apr 2007 12:55:30 +0300
+
 osso-xterm (0.13.mh23) unstable; urgency=low
 
   * Make xterm shells login shells. Thanks to mgedmin. Fixes: #34

@@ -778,12 +778,42 @@ terminal_widget_update_misc_cursor_blinks (TerminalWidget *widget)
 {
 }
 
+static void
+terminal_widget_gconf_scrollback_lines(GConfClient    *client,
+                                       guint           conn_id,
+				       GConfEntry     *entry,
+				       TerminalWidget *widget)
+{
+    gint lines = OSSO_XTERM_DEFAULT_SCROLLBACK;
+    if (entry && entry->value && entry->value->type == GCONF_VALUE_INT) {
+	lines = gconf_value_get_int(entry->value);
+    }
+    vte_terminal_set_scrollback_lines (VTE_TERMINAL (widget->terminal), lines);
+}
 
 static void
 terminal_widget_update_scrolling_lines (TerminalWidget *widget)
 {
-    gint lines = 200;
-    vte_terminal_set_scrollback_lines (VTE_TERMINAL (widget->terminal), lines);
+    GConfEntry *entry;
+    GConfValue *value;
+    value = gconf_client_get (widget->gconf_client,
+	    OSSO_XTERM_GCONF_SCROLLBACK, NULL);
+    entry = gconf_entry_new_nocopy (g_strdup(OSSO_XTERM_GCONF_SCROLLBACK),
+	    value);
+
+    if (widget->scrollback_conid == 0) {
+	widget->scrollback_conid = gconf_client_notify_add(
+		widget->gconf_client,
+		OSSO_XTERM_GCONF_SCROLLBACK,
+		(GConfClientNotifyFunc)terminal_widget_gconf_scrollback_lines,
+		widget,
+		NULL, NULL);
+    }
+    terminal_widget_gconf_scrollback_lines (widget->gconf_client,
+	    widget->scrollback_conid,
+	    entry,
+	    widget);
+    gconf_entry_unref(entry);
 }
 
 

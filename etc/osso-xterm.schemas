@@ -22,6 +22,17 @@
 			</locale>
 		</schema>
 		<schema>
+			<key>/schemas/apps/osso/xterm/scrollback</key>
+			<applyto>/apps/osso/xterm/scrollback</applyto>
+			<owner>osso-xterm</owner>
+			<type>int</type>
+			<default>200</default>
+			<locale name="C">
+				<short>Number of lines in the scrollback
+				buffer</short>
+			</locale>
+		</schema>
+		<schema>
 			<key>/schemas/apps/osso/xterm/toolbar</key>
 			<applyto>/apps/osso/xterm/toolbar</applyto>
 			<owner>osso-xterm</owner>

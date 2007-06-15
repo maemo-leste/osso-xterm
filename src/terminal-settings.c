@@ -49,6 +49,7 @@ struct _TerminalSettings
   GtkWidget   *font_button;
   GtkWidget   *fg_button;
   GtkWidget   *bg_button;
+  GtkWidget   *sb_spinner;
 };
 
 
@@ -79,6 +80,7 @@ terminal_settings_init (TerminalSettings *settings)
     GConfClient *gc = gconf_client_get_default();
     GdkColor fg;
     GdkColor bg;
+    gint sb;
 
     gchar *color_name;
     gchar *font_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_FONT_NAME, NULL);
@@ -108,6 +110,11 @@ terminal_settings_init (TerminalSettings *settings)
 	    g_free(color_name);
     }
 
+    sb = gconf_client_get_int(gc, OSSO_XTERM_GCONF_SCROLLBACK, NULL);
+    if (!sb) {
+	    sb = OSSO_XTERM_DEFAULT_SCROLLBACK;
+    }
+
     g_object_unref(gc);
 
     font = g_strdup_printf("%s %d", font_name, font_size);
@@ -120,10 +127,14 @@ terminal_settings_init (TerminalSettings *settings)
 
     settings->fg_button = hildon_color_button_new_with_color(&fg);
     settings->bg_button = hildon_color_button_new_with_color(&bg);
+    settings->sb_spinner = gtk_spin_button_new_with_range(1.0, 10000.0, 1.0);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(settings->sb_spinner), (gdouble)sb);
+    hildon_gtk_entry_set_input_mode(GTK_ENTRY(settings->sb_spinner), HILDON_GTK_INPUT_MODE_NUMERIC);
 
-    gtk_container_add(GTK_CONTAINER(GTK_CONTAINER(GTK_DIALOG(settings)->vbox)), settings->font_button);
-    gtk_container_add(GTK_CONTAINER(GTK_CONTAINER(GTK_DIALOG(settings)->vbox)), settings->fg_button);
-    gtk_container_add(GTK_CONTAINER(GTK_CONTAINER(GTK_DIALOG(settings)->vbox)), settings->bg_button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->font_button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->fg_button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->bg_button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->sb_spinner);
 
     gtk_dialog_add_buttons(GTK_DIALOG(settings),
                            "Ok", GTK_RESPONSE_OK,
@@ -148,6 +159,7 @@ terminal_settings_store (TerminalSettings *settings)
     const gchar *font = gtk_font_button_get_font_name(GTK_FONT_BUTTON(settings->font_button));
     const gchar *sep = g_utf8_strrchr(font, -1, ' ');
     gchar *color_name;
+    gint sb;
     GdkColor *color;
 #if HILDON == 1
     GdkColor colors;
@@ -181,6 +193,9 @@ terminal_settings_store (TerminalSettings *settings)
     color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
     gconf_client_set_string(gc, OSSO_XTERM_GCONF_BG_COLOR, color_name, NULL);
     g_free(color_name);
+
+    sb = (gint)gtk_spin_button_get_value(GTK_SPIN_BUTTON(settings->sb_spinner));
+    gconf_client_set_int(gc, OSSO_XTERM_GCONF_SCROLLBACK, sb, NULL);
 
     g_object_unref(gc);
 
