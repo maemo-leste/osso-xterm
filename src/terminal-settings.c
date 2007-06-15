@@ -22,10 +22,14 @@
 #include <config.h>
 #endif
 
+#include <gconf/gconf-client.h>
 #include <libintl.h>
 #include <locale.h>
+#include <stdlib.h>
+#include <hildon-widgets/hildon-color-button.h>
 #define _(String) gettext(String)
 
+#include "terminal-gconf.h"
 #include "terminal-settings.h"
 
 
@@ -38,7 +42,9 @@ struct _TerminalSettings
 {
   GtkDialog    __parent__;
 
-  GtkWidget   *table;
+  GtkWidget   *font_button;
+  GtkWidget   *fg_button;
+  GtkWidget   *bg_button;
 };
 
 
@@ -63,19 +69,62 @@ terminal_settings_class_init (TerminalSettingsClass *klass)
 static void
 terminal_settings_init (TerminalSettings *settings)
 {
-    settings->table = gtk_table_new(2, 2, FALSE);
+//    settings->table = gtk_table_new(2, 2, FALSE);
 
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->table);
+ //   gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->table);
+    GConfClient *gc = gconf_client_get_default();
+    GdkColor fg;
+    GdkColor bg;
+
+    gchar *color_name;
+    gchar *font_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_FONT_NAME, NULL);
+    gchar *font = NULL;
+
+    if (!font_name) {
+	    font_name = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
+    }
+    gint font_size = gconf_client_get_int(gc, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
+    if (!font_size) {
+	    font_size = OSSO_XTERM_DEFAULT_FONT_BASE_SIZE;
+    }
+
+    color_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, NULL);
+    if (!color_name) {
+	    gdk_color_parse(OSSO_XTERM_DEFAULT_FONT_COLOR, &fg);
+    } else {
+	    gdk_color_parse(color_name, &fg);
+	    g_free(color_name);
+    }
+
+    color_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_BG_COLOR, NULL);
+    if (!color_name) {
+	    gdk_color_parse(OSSO_XTERM_DEFAULT_BG_COLOR, &bg);
+    } else {
+	    gdk_color_parse(color_name, &bg);
+	    g_free(color_name);
+    }
+
+    g_object_unref(gc);
+
+    font = g_strdup_printf("%s %d", font_name, font_size);
+    g_free(font_name);
+    font_name = NULL;
+
+    settings->font_button = gtk_font_button_new_with_font(font);
+    g_free(font);
+    font = NULL;
+
+    settings->fg_button = hildon_color_button_new_with_color(&fg);
+    settings->bg_button = hildon_color_button_new_with_color(&bg);
+
+    gtk_container_add(GTK_CONTAINER(GTK_CONTAINER(GTK_DIALOG(settings)->vbox)), settings->font_button);
+    gtk_container_add(GTK_CONTAINER(GTK_CONTAINER(GTK_DIALOG(settings)->vbox)), settings->fg_button);
+    gtk_container_add(GTK_CONTAINER(GTK_CONTAINER(GTK_DIALOG(settings)->vbox)), settings->bg_button);
 
     gtk_dialog_add_buttons(GTK_DIALOG(settings),
-                           GTK_STOCK_OK, GTK_RESPONSE_OK,
-                           GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                           "Ok", GTK_RESPONSE_OK,
+                           "Cancel", GTK_RESPONSE_CANCEL,
                            NULL);
-
-    g_signal_connect_swapped(GTK_WIDGET(settings),
-                             "response",
-                             G_CALLBACK(gtk_widget_destroy),
-                             settings);
 
     gtk_widget_show_all(GTK_WIDGET(settings));
 }
@@ -91,6 +140,33 @@ terminal_settings_finalize (GObject *object)
 gboolean
 terminal_settings_store (TerminalSettings *settings)
 {
+    GConfClient *gc = gconf_client_get_default();
+    const gchar *font = gtk_font_button_get_font_name(GTK_FONT_BUTTON(settings->font_button));
+    const gchar *sep = g_utf8_strrchr(font, -1, ' ');
+    gchar *color_name;
+    GdkColor *color;
+
+    if (!sep) return FALSE;
+
+    gchar *font_name = g_strndup(font, (sep - font));
+
+    gconf_client_set_string(gc, OSSO_XTERM_GCONF_FONT_NAME, font_name, NULL);
+    gconf_client_set_int(gc, OSSO_XTERM_GCONF_FONT_BASE_SIZE, atoi(sep + 1), NULL);
+
+    g_free(font_name);
+
+    color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button));
+    color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
+    gconf_client_set_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, color_name, NULL);
+    g_free(color_name);
+
+    color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->bg_button));
+    color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
+    gconf_client_set_string(gc, OSSO_XTERM_GCONF_BG_COLOR, color_name, NULL);
+    g_free(color_name);
+
+    g_object_unref(gc);
+
     return TRUE;
 }
 

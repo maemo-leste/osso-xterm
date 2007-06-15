@@ -8,6 +8,18 @@ ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 else
 	CFLAGS += -O2
 endif
+ifneq (,$(findstring thumb,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -mthumb
+endif
+ifneq (,$(findstring maemo-launcher,$(DEB_BUILD_OPTIONS)))
+	LAUNCHER = yes
+endif
+
+ifeq "$(strip $(LAUNCHER))" "yes"
+	LAUNCHER_DEPENDS = -Vlauncher:Depends="maemo-launcher"
+	LAUNCHER_CFLAGS = -shared
+	LAUNCHER_LDFLAGS = -shared
+endif
 
 configure: configure-stamp
 configure-stamp:
@@ -20,7 +32,9 @@ build: configure build-stamp
 build-stamp:
 	
 	dh_testdir
-	$(MAKE)
+	$(MAKE) \
+		LAUNCHER_CFLAGS="$(LAUNCHER_CFLAGS)" \
+		LAUNCHER_LDFLAGS="$(LAUNCHER_LDFLAGS)"
 	touch build-stamp
 
 clean:
@@ -45,6 +59,12 @@ install: build
 	dh_clean -k
 
 	$(MAKE) install DESTDIR=`pwd`/debian/osso-xterm
+ifeq "$(strip $(LAUNCHER))" "yes"
+	mv $(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm \
+		$(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm.launch
+	ln -s /usr/bin/maemo-invoker \
+		$(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm
+endif
 
 	install -d `pwd`/debian/osso-xterm/usr/share/man/man1
 	install `pwd`/debian/osso-xterm.1 `pwd`/debian/osso-xterm/usr/share/man/man1
@@ -71,7 +91,7 @@ binary-arch: build install
 	dh_installdeb -a
 	
 	dh_shlibdeps -a
-	dh_gencontrol -a
+	dh_gencontrol -a -- -DMaemo-Icon-26="$(shell python -c "import base64; file = open('icons/26x26/terminal.png', 'r'); print base64.encodestring(file.read())")"
 	
 	dh_md5sums -a
 	dh_builddeb -a

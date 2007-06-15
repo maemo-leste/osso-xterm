@@ -1,3 +1,86 @@
+osso-xterm (0.13.mh13) unstable; urgency=low
+
+  * Build with launcher.
+  * Set working directory to home.
+
+ -- Santtu Lakkala <inz@inz.fi>  Wed,  2 Aug 2006 10:51:06 +0300
+
+osso-xterm (0.13.mh12) unstable; urgency=low
+
+  * Fix Ticket #24: Quit on destroy, not delete-event.
+
+ -- Santtu Lakkala <inz@inz.fi>  Tue,  1 Aug 2006 12:55:47 +0300
+
+osso-xterm (0.13.mh11) unstable; urgency=low
+
+  * Change to hildon program / window.
+  * Change window / tab titles when terminal title changes.
+
+ -- Santtu Lakkala <inz@inz.fi>  Thu, 27 Jul 2006 11:21:05 +0300
+
+osso-xterm (0.13.mh10) unstable; urgency=low
+
+  * Include icon in debian/control.
+
+ -- Santtu Lakkala <inz@inz.fi>  Mon, 24 Jul 2006 15:42:16 +0300
+
+osso-xterm (0.13.mh9) unstable; urgency=low
+
+  * Build against new libvte to get the copy/paste funcionality in.
+
+ -- Santtu Lakkala <inz@inz.fi>  Fri, 21 Jul 2006 16:31:12 +0300
+
+osso-xterm (0.13.mh8) unstable; urgency=low
+
+  * Ticket #5: Build against new libvte.
+
+ -- Santtu Lakkala <inz@inz.fi>  Mon, 26 Jun 2006 11:07:04 +0300
+
+osso-xterm (0.13.mh7) unstable; urgency=low
+
+  * Really change to Bitstream Vera Sans.
+
+ -- Santtu Lakkala <inz@inz.fi>  Mon, 26 Jun 2006 09:59:22 +0300
+
+osso-xterm (0.13.mh6) unstable; urgency=low
+
+  * Use bitstream vera sans mono instead of newcourier.
+
+ -- Santtu Lakkala <inz@inz.fi>  Mon, 26 Jun 2006 09:52:17 +0300
+
+osso-xterm (0.13.mh5) unstable; urgency=low
+
+  * Really build against newer libvte.
+
+ -- Santtu Lakkala <inz@inz.fi>  Thu, 22 Jun 2006 13:44:20 +0300
+
+osso-xterm (0.13.mh4) unstable; urgency=low
+
+  * Ignore home key.
+  * Ticket #6: Build against new libvte.
+
+ -- Santtu Lakkala <inz@inz.fi>  Thu, 22 Jun 2006 13:07:56 +0300
+
+osso-xterm (0.13.mh3) unstable; urgency=low
+
+  * Fix popping vkb when trying to open URL.
+  * Change from stock icons to plain ones in settings dialog.
+  * Build agains newer libvte.
+
+ -- Santtu Lakkala <inz@inz.fi>  Thu, 15 Jun 2006 14:37:32 +0300
+
+osso-xterm (0.13.mh2) unstable; urgency=low
+
+  * Add support for opening urls.
+
+ -- Santtu Lakkala <inz@inz.fi>  Tue, 13 Jun 2006 10:25:51 +0300
+
+osso-xterm (0.13.mh1) unstable; urgency=low
+
+  * Add color/font selection support.
+
+ -- Santtu Lakkala <inz@inz.fi>  Mon, 12 Jun 2006 12:08:49 +0300
+
 osso-xterm (0.13) unstable; urgency=low
 
   * fixed some packaging mistakes

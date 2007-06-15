@@ -61,9 +61,14 @@ struct _TerminalWidget
   GConfClient         *gconf_client;
   guint                scrollbar_conid;
   guint                font_size_conid;
+  guint                font_base_size_conid;
+  guint                font_name_conid;
   guint                reverse_conid;
+  guint                fg_conid;
+  guint                bg_conid;
 
   GtkIMContext        *im_context;
+  gboolean	       im_pending;
 };
 
 GType        terminal_widget_get_type                     (void) G_GNUC_CONST;
@@ -107,6 +112,10 @@ void       terminal_widget_reset                      (TerminalWidget *widget,
 
 void       terminal_widget_im_append_menuitems        (TerminalWidget *widget,
                                                        GtkMenuShell   *menushell);
+char      *terminal_widget_get_tag		      (TerminalWidget *widget,
+						       gint            x,
+						       gint            y,
+						       gint           *tag);
 
 G_END_DECLS;
 

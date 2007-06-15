@@ -1,14 +1,13 @@
 Source: osso-xterm
-Section: maemo/Applications
+Section: user/Applications
 Priority: optional
-Maintainer: Johan Hedberg <johan.hedberg@nokia.com>
-Uploaders: Johan Hedberg <johan.hedberg@nokia.com>
-Build-Depends: debhelper (>= 4.0.0), libvte-dev, libdbus-1-dev, libgconf2-dev, libdbus-glib-1-dev, libglib2.0-dev, hildon-base-lib-dev, hildon-lgpl-dev, libosso-dev, libsm-dev
-Standards-Version: 3.6.1
+Maintainer: Santtu Lakkala <inz@inz.fi>
+Build-Depends: debhelper (>= 4.0.0), libvte-dev, libdbus-1-dev, libgconf2-dev, libdbus-glib-1-dev, libglib2.0-dev, hildon-libs-dev (>= 0.12.0), libosso-dev, osso-browser-interface-dev
+Standards-Version: 3.6.2.1
 
 Package: osso-xterm
 Architecture: any
-Depends: ${shlibs:Depends}, ${misck:Depends}
+Depends: ${shlibs:Depends}, ${misck:Depends}, ttf-bitstream-vera
 Provides: x-terminal-emulator
 Conflicts: xterminal
 Description: X Terminal Emulator for OSSO

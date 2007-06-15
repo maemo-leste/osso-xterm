@@ -23,7 +23,7 @@
 #ifndef __TERMINAL_APP_H__
 #define __TERMINAL_APP_H__
 
-#include <hildon-widgets/hildon-app.h>
+#include <hildon-widgets/hildon-window.h>
 
 #include "terminal-widget.h"
 
@@ -41,7 +41,7 @@ typedef struct _TerminalApp      TerminalApp;
 
 struct _TerminalAppClass
 {
-  HildonAppClass __parent__;
+  HildonWindowClass __parent__;
 
   /* signals */
   void (*new_window) (TerminalApp *app,

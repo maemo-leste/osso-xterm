@@ -33,7 +33,7 @@
 #include <stdio.h>
 
 #include <gtk/gtk.h>
-#include <dbus/dbus-glib-lowlevel.h>
+/*#include <dbus/dbus-glib-lowlevel.h> */
 
 #include <libosso.h>
 
@@ -42,7 +42,7 @@
 int
 main (int argc, char **argv)
 {
-  GtkWidget       *app;
+  gpointer         app;
   GError          *error = NULL;
   osso_context_t  *osso_context;
 
@@ -59,6 +59,7 @@ main (int argc, char **argv)
   gtk_init (&argc, &argv);
 
   app = terminal_app_new();
+  g_object_add_weak_pointer(G_OBJECT(app), &app);
 
   osso_context = osso_initialize("xterm", VERSION, FALSE, NULL);
 
@@ -67,6 +68,7 @@ main (int argc, char **argv)
       exit(EXIT_FAILURE);
   }
 
+  g_object_set_data(G_OBJECT(app), "osso", osso_context);
   if (!terminal_app_launch (TERMINAL_APP(app), &error))
     {
       g_printerr (_("Unable to launch terminal: %s\n"), error->message);
@@ -76,9 +78,12 @@ main (int argc, char **argv)
 
   gtk_main ();
 
-  g_object_unref (G_OBJECT (app));
+  if (app != NULL)
+    {
+      g_object_unref(G_OBJECT(app));
+    }
 
   osso_deinitialize(osso_context);
 
-  exit(EXIT_SUCCESS);
+  return EXIT_SUCCESS;
 }

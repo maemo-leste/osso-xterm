@@ -10,17 +10,21 @@ bin_PROGRAMS = osso-xterm
 osso_xterm_CFLAGS =							\
 	@VTE_CFLAGS@							\
 	@GCONF_CFLAGS@							\
-	@HILDON_LGPL_CFLAGS@						\
+	@HILDON_LIBS_CFLAGS@						\
 	@OSSO_CFLAGS@							\
-	@DBUS_CFLAGS@
+	@DBUS_CFLAGS@							\
+	$(LAUNCHER_CFLAGS)
+
+osso_xterm_LDADD =							\
+	@DBUS_LIBS@							\
+	@GCONF_LIBS@							\
+	@HILDON_LIBS_LIBS@						\
+	@OSSO_LIBS@							\
+	@VTE_LIBS@
 
 osso_xterm_LDFLAGS =							\
 	-no-undefined							\
-	@DBUS_LIBS@							\
-	@GCONF_LIBS@							\
-	@HILDON_LGPL_LIBS@						\
-	@OSSO_LIBS@							\
-	@VTE_LIBS@
+	$(LAUNCHER_LDFLAGS)
 
 osso_xterm_headers =							\
 	terminal-gconf.h						\

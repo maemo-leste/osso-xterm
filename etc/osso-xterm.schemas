@@ -31,5 +31,45 @@
 				<short>Size of the terminal font</short>
 			</locale>
 		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/font_size_delta</key>
+			<applyto>/apps/osso/xterm/font_size_delta</applyto>
+			<owner>osso-xterm</owner>
+			<type>int</type>
+			<default>0</default>
+			<locale name="C">
+				<short>Offset of the terminal font</short>
+			</locale>
+		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/font_name</key>
+			<applyto>/apps/osso/xterm/font_name</applyto>
+			<owner>osso-xterm</owner>
+			<type>string</type>
+			<default>Bitstream Vera Sans Mono</default>
+			<locale name="C">
+				<short>Name of the terminal font</short>
+			</locale>
+		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/foreground</key>
+			<applyto>/apps/osso/xterm/foreground</applyto>
+			<owner>osso-xterm</owner>
+			<type>string</type>
+			<default>#000000</default>
+			<locale name="C">
+				<short>Color of the terminal font</short>
+			</locale>
+		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/background</key>
+			<applyto>/apps/osso/xterm/background</applyto>
+			<owner>osso-xterm</owner>
+			<type>string</type>
+			<default>#ffffff</default>
+			<locale name="C">
+				<short>Color of the terminal font</short>
+			</locale>
+		</schema>
 	</schemalist>
 </gconfschemafile>

@@ -80,7 +80,6 @@ static void terminal_widget_update_background                 (TerminalWidget   
 #endif
 static void terminal_widget_update_binding_backspace          (TerminalWidget   *widget);
 static void terminal_widget_update_binding_delete             (TerminalWidget   *widget);
-static void terminal_widget_update_colors                     (TerminalWidget   *widget);
 static void terminal_widget_update_misc_bell                  (TerminalWidget   *widget);
 static void terminal_widget_update_misc_cursor_blinks         (TerminalWidget   *widget);
 static void terminal_widget_update_scrolling_lines            (TerminalWidget   *widget);
@@ -107,6 +106,9 @@ static void     terminal_widget_vte_eof                       (VteTerminal    *t
 static gboolean terminal_widget_vte_button_press_event        (VteTerminal    *terminal,
                                                                GdkEventButton *event,
                                                                TerminalWidget *widget);
+static gboolean terminal_widget_vte_button_release_event        (VteTerminal    *terminal,
+                                                               GdkEventButton *event,
+                                                               TerminalWidget *widget);
 static gboolean terminal_widget_vte_key_press_event           (VteTerminal    *terminal,
                                                                GdkEventKey    *event,
                                                                TerminalWidget *widget);
@@ -129,15 +131,20 @@ static void     terminal_widget_gconf_font_size               (GConfClient    *c
                                                                guint           conn_id,
                                                                GConfEntry     *entry,
                                                                TerminalWidget *widget);
-static void     terminal_widget_update_font_size              (TerminalWidget *widget,
+static void     terminal_widget_update_font                   (TerminalWidget *widget,
+							       const gchar *name,
                                                                gint size);
 static void     terminal_widget_update_scrolling_bar          (TerminalWidget *widget,
                                                                gboolean show);
-static void     terminal_widget_update_reverse                (TerminalWidget *widget,
+static void     terminal_widget_update_colors		      (TerminalWidget *widget,
+							       const gchar *fg_name,
+							       const gchar *bg_name,
                                                                gboolean reverse);
 #if 0
 static void     terminal_widget_timer_background_destroy      (gpointer        user_data);
 #endif
+static void     terminal_widget_emit_context_menu            (TerminalWidget *widget,
+		                                              gpointer user_data);
 
 
 static GObjectClass *parent_class;
@@ -271,8 +278,7 @@ static void
 terminal_widget_init (TerminalWidget *widget)
 {
   GError *err = NULL;
-  gint font_size;
-  gboolean scrollbar, reverse;
+  gboolean scrollbar;
   GConfValue *gconf_value;
 
   widget->working_directory = g_get_current_dir ();
@@ -309,6 +315,44 @@ terminal_widget_init (TerminalWidget *widget)
       g_clear_error(&err);
   }
 
+  widget->font_base_size_conid = gconf_client_notify_add(widget->gconf_client,
+          OSSO_XTERM_GCONF_FONT_BASE_SIZE,
+          (GConfClientNotifyFunc)terminal_widget_gconf_font_size,
+          widget,
+          NULL, &err);
+  if (err != NULL) {
+      g_printerr("font_size notify add failed: %s\n", err->message);
+      g_clear_error(&err);
+  }
+
+  widget->font_name_conid = gconf_client_notify_add(widget->gconf_client,
+          OSSO_XTERM_GCONF_FONT_NAME,
+          (GConfClientNotifyFunc)terminal_widget_gconf_font_size,
+          widget,
+          NULL, &err);
+  if (err != NULL) {
+      g_printerr("font_size notify add failed: %s\n", err->message);
+      g_clear_error(&err);
+  }
+
+  widget->fg_conid = gconf_client_notify_add(widget->gconf_client,
+          OSSO_XTERM_GCONF_FONT_COLOR,
+          (GConfClientNotifyFunc)terminal_widget_gconf_reverse,
+          widget,
+          NULL, &err);
+  if (err != NULL) {
+      g_printerr("reverse notify add failed: %s\n", err->message);
+      g_clear_error(&err);
+  }
+  widget->bg_conid = gconf_client_notify_add(widget->gconf_client,
+          OSSO_XTERM_GCONF_BG_COLOR,
+          (GConfClientNotifyFunc)terminal_widget_gconf_reverse,
+          widget,
+          NULL, &err);
+  if (err != NULL) {
+      g_printerr("reverse notify add failed: %s\n", err->message);
+      g_clear_error(&err);
+  }
   widget->reverse_conid = gconf_client_notify_add(widget->gconf_client,
           OSSO_XTERM_GCONF_REVERSE,
           (GConfClientNotifyFunc)terminal_widget_gconf_reverse,
@@ -334,6 +378,8 @@ terminal_widget_init (TerminalWidget *widget)
                     G_CALLBACK (terminal_widget_vte_eof), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "button-press-event",
                     G_CALLBACK (terminal_widget_vte_button_press_event), widget);
+  g_signal_connect (G_OBJECT (widget->terminal), "button-release-event",
+                    G_CALLBACK (terminal_widget_vte_button_release_event), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "key-press-event",
                     G_CALLBACK (terminal_widget_vte_key_press_event), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "selection-changed",
@@ -361,19 +407,6 @@ terminal_widget_init (TerminalWidget *widget)
   gtk_box_pack_start (GTK_BOX (widget), widget->scrollbar, FALSE, FALSE, 0);
 
   /* apply current settings */
-  font_size = gconf_client_get_int(widget->gconf_client,
-                                   OSSO_XTERM_GCONF_FONT_SIZE,
-                                   &err);
-  if (err != NULL) {
-      g_printerr("Unable to get font size from gconf: %s\n",
-                 err->message);
-      g_clear_error(&err);
-  }
-
-  if (font_size == 0) {
-      font_size = OSSO_XTERM_DEFAULT_FONT_SIZE;
-  }
-
   gconf_value = gconf_client_get(widget->gconf_client,
                                  OSSO_XTERM_GCONF_SCROLLBAR,
                                  &err);
@@ -389,24 +422,9 @@ terminal_widget_init (TerminalWidget *widget)
           gconf_value_free(gconf_value);
   }
 
-  gconf_value = gconf_client_get(widget->gconf_client,
-                                 OSSO_XTERM_GCONF_REVERSE,
-                                 &err);
-  if (err != NULL) {
-      g_printerr("Unable to get reverse setting from gconf: %s\n",
-                 err->message);
-      g_clear_error(&err);
-  }
-  reverse = OSSO_XTERM_DEFAULT_REVERSE;
-  if (gconf_value) {
-          if (gconf_value->type == GCONF_VALUE_BOOL)
-                  reverse = gconf_value_get_bool(gconf_value);
-          gconf_value_free(gconf_value);
-  }
-
   terminal_widget_update_scrolling_bar(TERMINAL_WIDGET(widget), scrollbar);
-  terminal_widget_update_font_size (TERMINAL_WIDGET(widget), font_size);
-  terminal_widget_update_reverse (TERMINAL_WIDGET(widget), reverse);
+  terminal_widget_gconf_font_size(widget->gconf_client, 0, NULL, widget);
+  terminal_widget_gconf_reverse (widget->gconf_client, 0, NULL, widget);
 
   terminal_widget_update_binding_backspace (widget);
   terminal_widget_update_binding_delete (widget);
@@ -416,6 +434,36 @@ terminal_widget_init (TerminalWidget *widget)
   terminal_widget_update_scrolling_on_output (widget);
   terminal_widget_update_scrolling_on_keystroke (widget);
   terminal_widget_update_word_chars (widget);
+
+#define USERCHARS "-A-Za-z0-9"
+#define PASSCHARS "-A-Za-z0-9,?;.:/!%$^*&~\"#'"
+#define HOSTCHARS "-A-Za-z0-9"
+#define PATHCHARS "-A-Za-z0-9_$.+!*(),;:@&=?/~#%"
+#define SCHEME    "(news:|telnet:|nntp:|file:/|https?:|ftps?:|webcal:)"
+#define USER      "[" USERCHARS "]+(:["PASSCHARS "]+)?"
+#define URLPATH   "/[" PATHCHARS "]*[^]'.}>) \t\r\n,\\\"]"
+
+  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
+		  "\\<" SCHEME "//(" USER "@)?[" HOSTCHARS ".]+"
+		  "(:[0-9]+)?(" URLPATH ")?\\>");
+
+  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
+		  "\\<(www|ftp)[" HOSTCHARS "]*\\.[" HOSTCHARS ".]+"
+		  "(:[0-9]+)?(" URLPATH ")?\\>");
+
+  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
+		  "\\<(mailto:)?[a-z0-9][a-z0-9.-]*@[a-z0-9]"
+		  "[a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+\\>");
+
+  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
+		  "\\<news:[-A-Z\\^_a-z{|}~!\"#$%&'()*+,./0-9;:=?`]+"                             "@[" HOSTCHARS ".]+(:[0-9]+)?\\>");
+
+
+  gtk_widget_tap_and_hold_setup (GTK_WIDGET(widget->terminal), NULL, NULL,
+		  GTK_TAP_AND_HOLD_NONE);
+  g_signal_connect_swapped(G_OBJECT(widget->terminal), "tap-and-hold",
+		           G_CALLBACK(terminal_widget_emit_context_menu),
+			   widget);
 }
 
 
@@ -431,11 +479,22 @@ terminal_widget_finalize (GObject *object)
   gconf_client_notify_remove(widget->gconf_client,
                              widget->scrollbar_conid);
   gconf_client_notify_remove(widget->gconf_client,
+                             widget->font_name_conid);
+  gconf_client_notify_remove(widget->gconf_client,
+                             widget->font_base_size_conid);
+  gconf_client_notify_remove(widget->gconf_client,
                              widget->font_size_conid);
+  gconf_client_notify_remove(widget->gconf_client,
+                             widget->fg_conid);
+  gconf_client_notify_remove(widget->gconf_client,
+                             widget->bg_conid);
+  gconf_client_notify_remove(widget->gconf_client,
+                             widget->reverse_conid);
+  gconf_client_remove_dir(widget->gconf_client,
+          OSSO_XTERM_GCONF_PATH,
+          NULL);
 
   g_object_unref(G_OBJECT(widget->gconf_client));
-
-  g_object_unref(widget->im_context);
 
   parent_class->finalize (object);
 }
@@ -608,14 +667,6 @@ terminal_widget_update_binding_delete (TerminalWidget *widget)
 {
     vte_terminal_set_delete_binding (VTE_TERMINAL (widget->terminal), VTE_ERASE_DELETE_SEQUENCE);
 }
-
-
-static void
-terminal_widget_update_colors (TerminalWidget *widget)
-{
-    /*vte_terminal_set_default_colors(VTE_TERMINAL(widget->terminal));*/
-}
-
 
 static void
 terminal_widget_update_misc_bell (TerminalWidget *widget)
@@ -817,6 +868,25 @@ terminal_widget_vte_button_press_event (VteTerminal    *terminal,
     }
   else
     {
+      widget->im_pending = TRUE;
+    }
+
+  return FALSE;
+}
+
+static gboolean
+terminal_widget_vte_button_release_event (VteTerminal    *terminal,
+                                          GdkEventButton *event,
+                                          TerminalWidget *widget)
+{
+  if (hildon_gtk_im_context_filter_event (widget->im_context, (GdkEvent*)event))
+    {
+      return TRUE;
+    }
+
+  if (event->button != 3 && widget->im_pending)
+    {
+      widget->im_pending = FALSE;
       hildon_gtk_im_context_show(widget->im_context);
     }
 
@@ -844,7 +914,6 @@ terminal_widget_vte_realize (VteTerminal    *terminal,
 {
   vte_terminal_set_allow_bold (terminal, TRUE);
   terminal_widget_timer_background (TERMINAL_WIDGET (widget));
-  terminal_widget_update_colors (TERMINAL_WIDGET (widget));
 
   gtk_im_context_set_client_window (widget->im_context, widget->terminal->window);
 }
@@ -892,29 +961,24 @@ terminal_widget_update_scrolling_bar (TerminalWidget *widget, gboolean show)
 
 
 static void
-terminal_widget_update_reverse (TerminalWidget *widget, gboolean reverse)
+terminal_widget_update_colors (TerminalWidget *widget, const gchar *fg_name, const gchar *bg_name, gboolean reverse)
 {
-    if (reverse) {
-        GdkColor fg, bg;
+    GdkColor fg, bg;
 
-        gdk_color_parse("black", &fg);
-        gdk_color_parse("white", &bg);
+    gdk_color_parse(fg_name, &fg);
+    gdk_color_parse(bg_name, &bg);
 
-        vte_terminal_set_colors(VTE_TERMINAL(widget->terminal),
-                                &fg, &bg,
-                                NULL, 0);
-    }
-    else {
-        vte_terminal_set_default_colors(VTE_TERMINAL(widget->terminal));
-    }
+    vte_terminal_set_colors(VTE_TERMINAL(widget->terminal),
+                            (reverse ? &bg : &fg), (reverse ? &fg : &bg),
+                            NULL, 0);
 }
 
 
 static void
-terminal_widget_update_font_size (TerminalWidget *widget, gint size)
+terminal_widget_update_font (TerminalWidget *widget, const gchar *name, gint size)
 {
     gchar *font_name;
-    font_name = g_strdup_printf("NewCourier %d", size);
+    font_name = g_strdup_printf("%s %d", name, size);
     vte_terminal_set_font_from_string (VTE_TERMINAL (widget->terminal), font_name);
     g_free(font_name);
 }
@@ -939,12 +1003,36 @@ terminal_widget_gconf_reverse(GConfClient    *client,
                               guint           conn_id,
                               GConfEntry     *entry,
                               TerminalWidget *widget) {
-    GConfValue *value;
+    gchar *fg_name;
+    gchar *bg_name;
     gboolean reverse;
+    GConfValue *reverse_value;
 
-    value = gconf_entry_get_value(entry);
-    reverse = gconf_value_get_bool(value);
-    terminal_widget_update_reverse(widget, reverse);
+    fg_name = gconf_client_get_string(client, OSSO_XTERM_GCONF_FONT_COLOR, NULL);
+    bg_name = gconf_client_get_string(client, OSSO_XTERM_GCONF_BG_COLOR, NULL);
+    reverse_value = gconf_client_get(client, OSSO_XTERM_GCONF_REVERSE, NULL);
+    if (reverse_value) {
+	if (reverse_value->type == GCONF_VALUE_BOOL) {
+	    reverse = gconf_value_get_bool(reverse_value);
+	} else {
+	    reverse = OSSO_XTERM_DEFAULT_REVERSE;
+	}
+	gconf_value_free(reverse_value);
+    } else {
+	reverse = OSSO_XTERM_DEFAULT_REVERSE;
+    }
+
+    if (!fg_name) {
+        fg_name = g_strdup(OSSO_XTERM_DEFAULT_FONT_COLOR);
+    }
+    if (!bg_name) {
+        bg_name = g_strdup(OSSO_XTERM_DEFAULT_BG_COLOR);
+    }
+
+    terminal_widget_update_colors(widget, fg_name, bg_name, reverse);
+
+    g_free(fg_name);
+    g_free(bg_name);
 }
 
 
@@ -953,12 +1041,24 @@ terminal_widget_gconf_font_size(GConfClient    *client,
                                 guint           conn_id,
                                 GConfEntry     *entry,
                                 TerminalWidget *widget) {
-    GConfValue *value;
+    gchar *font_name;
     gint font_size;
 
-    value = gconf_entry_get_value(entry);
-    font_size = gconf_value_get_int(value);
-    terminal_widget_update_font_size(widget, font_size);
+    (void)conn_id;
+    (void)entry;
+
+    font_name = gconf_client_get_string(client, OSSO_XTERM_GCONF_FONT_NAME, NULL);
+    if (!font_name) {
+	    font_name = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
+    }
+    font_size = gconf_client_get_int(client, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
+    if (!font_size) {
+	    font_size = OSSO_XTERM_DEFAULT_FONT_BASE_SIZE;
+    }
+    font_size += gconf_client_get_int(client, OSSO_XTERM_GCONF_FONT_SIZE, NULL);
+
+    terminal_widget_update_font(widget, font_name, font_size);
+    g_free(font_name);
 }
 
 #if 0
@@ -1349,3 +1449,47 @@ terminal_widget_im_append_menuitems (TerminalWidget *widget,
   vte_terminal_im_append_menuitems (VTE_TERMINAL (widget->terminal), menushell);
 }
 
+
+static void
+terminal_widget_emit_context_menu (TerminalWidget *widget,
+		                   gpointer        user_data)
+{
+  GdkEvent *event = gdk_event_new(GDK_BUTTON_PRESS);
+  GdkEventButton *button = (GdkEventButton *)event;
+  gint x, y;
+
+  (void)user_data;
+
+  gtk_widget_get_pointer(widget->terminal, &x, &y);
+  button->button = GDK_BUTTON_PRESS;
+  button->window = widget->terminal->window;
+  button->send_event = FALSE;
+  button->time = gtk_get_current_event_time();
+  button->x = x;
+  button->y = y;
+  button->axes = NULL;
+  button->state = 0;
+  button->button = 0;
+  button->device = NULL;
+
+  g_signal_emit (G_OBJECT (widget), widget_signals[CONTEXT_MENU], 0, event);
+/*  g_free(button); */
+}
+
+char *
+terminal_widget_get_tag (TerminalWidget *widget,
+		         gint            x,
+			 gint            y,
+			 gint           *tag)
+{
+  VteTerminal *term = VTE_TERMINAL(widget->terminal);
+  int xpad, ypad;
+
+  vte_terminal_get_padding(term,
+      &xpad, &ypad);
+
+  return vte_terminal_match_check(term,
+      (x - xpad) / term->char_width,
+      (y - ypad) / term->char_height,
+      tag);
+}

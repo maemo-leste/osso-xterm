@@ -12,4 +12,3 @@ EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README THANKS aclocal/ax_cfl
 distclean-local:
 	$(RM) -r autom4te.cache
 	$(RM) -r osso-xterm-*.tar.gz *~
-

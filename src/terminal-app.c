@@ -32,15 +32,19 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stdlib.h>
+#include <libosso.h>
+#include <osso-browser-interface.h>
 
 #include <libintl.h>
 #include <locale.h>
 #define _(String) gettext(String)
 #define N_(String) String
 
-#include <hildon-widgets/hildon-app.h>
-#include <hildon-widgets/hildon-appview.h>
-#include <hildon-widgets/gtk-infoprint.h>
+#include <hildon-widgets/hildon-window.h>
+#include <hildon-widgets/hildon-program.h>
+#include <hildon-widgets/hildon-defines.h>
+#include <hildon-widgets/hildon-banner.h>
 #include <gconf/gconf-client.h>
 #include <gdk/gdkkeysyms.h>
 
@@ -51,7 +55,6 @@
 
 
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
-
 
 static void            terminal_app_dispose                 (GObject         *object);
 static void            terminal_app_finalize                (GObject         *object);
@@ -65,12 +68,17 @@ static void            terminal_app_update_actions          (TerminalApp     *ap
 static void            terminal_app_notify_page             (GtkNotebook     *notebook,
                                                              GParamSpec      *pspec,
                                                              TerminalApp     *app);
+static void            terminal_app_notify_title            (TerminalWidget  *terminal,
+                                                             GParamSpec      *pspec,
+                                                             TerminalApp     *app);
 static void            terminal_app_context_menu            (TerminalWidget  *widget,
                                                              GdkEvent        *event,
                                                              TerminalApp     *app);
 static void            terminal_app_widget_removed          (GtkNotebook     *notebook,
                                                              TerminalWidget  *widget,
                                                              TerminalApp     *app);
+static void            terminal_app_open_url                (GtkAction       *action,
+		                                             TerminalApp     *app);
 static void            terminal_app_action_new_tab          (GtkAction       *action,
                                                              TerminalApp     *app);
 static void            terminal_app_action_close_tab        (GtkAction       *action,
@@ -105,7 +113,7 @@ static void            terminal_app_action_quit             (GtkAction       *ac
 
 struct _TerminalApp
 {
-  HildonApp            __parent__;
+  HildonWindow         __parent__;
 
   GtkActionGroup      *action_group;
   GtkUIManager        *ui_manager;
@@ -118,47 +126,51 @@ static GObjectClass *parent_class;
 
 static GtkActionEntry action_entries[] =
 {
-  { "file-menu", NULL, N_ ("_File"), },
-  { "new-tab", NULL, N_ ("New _Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_new_tab), }, 
-  { "close-tab", NULL, N_ ("C_lose Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_close_tab), },
-  { "edit-menu", NULL, N_ ("_Edit"),  },
-  { "copy", GTK_STOCK_COPY, N_ ("_Copy"), NULL, NULL, G_CALLBACK (terminal_app_action_copy), },
-  { "paste", GTK_STOCK_PASTE, N_ ("_Paste"), NULL, NULL, G_CALLBACK (terminal_app_action_paste), },
-  { "view-menu", NULL, N_ ("_View"), },
-  { "go-menu", NULL, N_ ("_Go"), },
-  { "prev-tab", GTK_STOCK_GO_BACK, N_ ("_Previous Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_prev_tab), },
-  { "next-tab", GTK_STOCK_GO_FORWARD, N_ ("_Next Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_next_tab), },
-  { "font-menu", NULL, N_ ("_Font size"), },
-  { "terminal-menu", NULL, N_ ("_Terminal"), },
-  { "reset", NULL, N_ ("_Reset"), NULL, NULL, G_CALLBACK (terminal_app_action_reset), },
-  { "reset-and-clear", NULL, N_ ("Reset and C_lear"), NULL, NULL, G_CALLBACK (terminal_app_action_reset_and_clear), },
+  { "file-menu", NULL, N_ ("File"), },
+  { "open-url", NULL, N_ ("Open URL"), NULL, NULL, G_CALLBACK (terminal_app_open_url), },
+  { "new-tab", NULL, N_ ("New Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_new_tab), }, 
+  { "close-tab", NULL, N_ ("Close Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_close_tab), },
+  { "edit-menu", NULL, N_ ("Edit"),  },
+  { "copy", NULL, N_ ("Copy"), NULL, NULL, G_CALLBACK (terminal_app_action_copy), },
+  { "paste", NULL, N_ ("Paste"), NULL, NULL, G_CALLBACK (terminal_app_action_paste), },
+  { "view-menu", NULL, N_ ("View"), },
+  { "go-menu", NULL, N_ ("Go"), },
+  { "prev-tab", NULL, N_ ("Previous Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_prev_tab), },
+  { "next-tab", NULL, N_ ("Next Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_next_tab), },
+  { "font-menu", NULL, N_ ("Font size"), },
+  { "terminal-menu", NULL, N_ ("Terminal"), },
+  { "reset", NULL, N_ ("Reset"), NULL, NULL, G_CALLBACK (terminal_app_action_reset), },
+  { "reset-and-clear", NULL, N_ ("Reset and Clear"), NULL, NULL, G_CALLBACK (terminal_app_action_reset_and_clear), },
   { "ctrl", NULL, N_ ("Send Ctrl-<some key>"), NULL, NULL, G_CALLBACK (terminal_app_action_ctrl), },
-  { "settings", GTK_STOCK_PREFERENCES, N_ ("_Settings..."), NULL, NULL, G_CALLBACK (terminal_app_action_settings), },
-  { "quit", GTK_STOCK_QUIT, N_ ("_Quit"), NULL, NULL, G_CALLBACK (terminal_app_action_quit), },
+  { "settings", NULL, N_ ("Settings..."), NULL, NULL, G_CALLBACK (terminal_app_action_settings), },
+  { "quit", NULL, N_ ("Quit"), NULL, NULL, G_CALLBACK (terminal_app_action_quit), },
 };
 
 static GtkRadioActionEntry font_size_action_entries[] =
 {
-  { "10pt", NULL, N_ ("10 pt"), NULL, NULL, 10 },
-  { "12pt", NULL, N_ ("12 pt"), NULL, NULL, 12 },
-  { "14pt", NULL, N_ ("14 pt"), NULL, NULL, 14 },
-  { "16pt", NULL, N_ ("16 pt"), NULL, NULL, 16 },
-  { "18pt", NULL, N_ ("18 pt"), NULL, NULL, 18 },
-  { "20pt", NULL, N_ ("20 pt"), NULL, NULL, 20 },
-  { "22pt", NULL, N_ ("22 pt"), NULL, NULL, 22 },
-  { "24pt", NULL, N_ ("24 pt"), NULL, NULL, 24 },
+  { "-8pt", NULL, N_ ("-8 pt"), NULL, NULL, -8 },
+  { "-6pt", NULL, N_ ("-6 pt"), NULL, NULL, -6 },
+  { "-4pt", NULL, N_ ("-4 pt"), NULL, NULL, -4 },
+  { "-2pt", NULL, N_ ("-2 pt"), NULL, NULL, -2 },
+  { "+0pt", NULL, N_ ("+0 pt"), NULL, NULL, 0 },
+  { "+2pt", NULL, N_ ("+2 pt"), NULL, NULL, +2 },
+  { "+4pt", NULL, N_ ("+4 pt"), NULL, NULL, +4 },
+  { "+6pt", NULL, N_ ("+6 pt"), NULL, NULL, +6 },
+  { "+8pt", NULL, N_ ("+8 pt"), NULL, NULL, +8 },
 };
 
 static GtkToggleActionEntry toggle_action_entries[] =
 {
-  { "reverse", NULL, N_ ("_Reverse colors"), NULL, NULL, G_CALLBACK (terminal_app_action_reverse), TRUE },
-  { "fullscreen", NULL, N_ ("_Fullscreen"), NULL, NULL, G_CALLBACK (terminal_app_action_fullscreen), FALSE },
-  { "scrollbar", NULL, N_ ("_Scrollbar"), NULL, NULL, G_CALLBACK (terminal_app_action_scrollbar), TRUE },
+  { "reverse", NULL, N_ ("Reverse colors"), NULL, NULL, G_CALLBACK (terminal_app_action_reverse), TRUE },
+  { "fullscreen", NULL, N_ ("Fullscreen"), NULL, NULL, G_CALLBACK (terminal_app_action_fullscreen), FALSE },
+  { "scrollbar", NULL, N_ ("Scrollbar"), NULL, NULL, G_CALLBACK (terminal_app_action_scrollbar), TRUE },
 };
 
 static const gchar ui_description[] =
  "<ui>"
  "  <popup name='popup-menu'>"
+ "    <menuitem action='open-url'/>"
+ "    <separator/>"
  "    <menuitem action='new-tab'/>"
  "    <menuitem action='close-tab'/>"
  "    <separator/>"
@@ -172,20 +184,21 @@ static const gchar ui_description[] =
  "    <menuitem action='ctrl'/>"
  "    <separator/>"
  "    <menu action='font-menu'>"
- "      <menuitem action='10pt'/>"
- "      <menuitem action='12pt'/>"
- "      <menuitem action='14pt'/>"
- "      <menuitem action='16pt'/>"
- "      <menuitem action='18pt'/>"
- "      <menuitem action='20pt'/>"
- "      <menuitem action='22pt'/>"
- "      <menuitem action='24pt'/>"
+ "      <menuitem action='-8pt'/>"
+ "      <menuitem action='-6pt'/>"
+ "      <menuitem action='-4pt'/>"
+ "      <menuitem action='-2pt'/>"
+ "      <menuitem action='+0pt'/>"
+ "      <menuitem action='+2pt'/>"
+ "      <menuitem action='+4pt'/>"
+ "      <menuitem action='+6pt'/>"
+ "      <menuitem action='+8pt'/>"
  "    </menu>"
  "  </popup>"
  "</ui>";
 
 
-G_DEFINE_TYPE (TerminalApp, terminal_app, HILDON_TYPE_APP);
+G_DEFINE_TYPE (TerminalApp, terminal_app, HILDON_TYPE_WINDOW);
 
 
 typedef struct {
@@ -239,11 +252,9 @@ static void
 populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
 {
   GtkWidget           *menubar, *parent;
-  HildonAppView       *appview;
   GtkActionGroup      *actiongroup = app->action_group;
 
-  appview = hildon_app_get_appview(HILDON_APP(app));
-  menubar = GTK_WIDGET(hildon_appview_get_menu(appview));
+  menubar = gtk_menu_new();
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "file-menu");
   attach_item(parent, actiongroup, accelgroup, "new-tab");
@@ -260,14 +271,15 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   gtk_menu_shell_append(GTK_MENU_SHELL(parent),
                         gtk_separator_menu_item_new());
   parent = attach_menu(parent, actiongroup, accelgroup, "font-menu");
-  attach_item(parent, actiongroup, accelgroup, "10pt");
-  attach_item(parent, actiongroup, accelgroup, "12pt");
-  attach_item(parent, actiongroup, accelgroup, "14pt");
-  attach_item(parent, actiongroup, accelgroup, "16pt");
-  attach_item(parent, actiongroup, accelgroup, "18pt");
-  attach_item(parent, actiongroup, accelgroup, "20pt");
-  attach_item(parent, actiongroup, accelgroup, "22pt");
-  attach_item(parent, actiongroup, accelgroup, "24pt");
+  attach_item(parent, actiongroup, accelgroup, "-8pt");
+  attach_item(parent, actiongroup, accelgroup, "-6pt");
+  attach_item(parent, actiongroup, accelgroup, "-4pt");
+  attach_item(parent, actiongroup, accelgroup, "-2pt");
+  attach_item(parent, actiongroup, accelgroup, "+0pt");
+  attach_item(parent, actiongroup, accelgroup, "+2pt");
+  attach_item(parent, actiongroup, accelgroup, "+4pt");
+  attach_item(parent, actiongroup, accelgroup, "+6pt");
+  attach_item(parent, actiongroup, accelgroup, "+8pt");
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "go-menu");
   attach_item(parent, actiongroup, accelgroup, "prev-tab");
@@ -278,20 +290,22 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   attach_item(parent, actiongroup, accelgroup, "reset-and-clear");
   attach_item(parent, actiongroup, accelgroup, "ctrl");
 
-  /*attach_item(menubar, actiongroup, accelgroup, "settings");*/
+  attach_item(menubar, actiongroup, accelgroup, "settings");
 
   attach_item(menubar, actiongroup, accelgroup, "quit");
 
   gtk_widget_show_all(menubar);
+
+  hildon_window_set_menu(HILDON_WINDOW(app), GTK_MENU(menubar));
 }
 
 static int
 terminal_app_get_font_size(TerminalApp *app) {
     GtkAction *action;
 
-    action = gtk_action_group_get_action(app->action_group, "10pt");
+    action = gtk_action_group_get_action(app->action_group, "-8pt");
     if (!action) {
-        return -1;
+        return 0xf00b4;
     }
 
     return gtk_radio_action_get_current_value(GTK_RADIO_ACTION(action));
@@ -302,11 +316,11 @@ gboolean terminal_app_set_font_size(TerminalApp *app, int new_size) {
     GtkAction *action;
     char new_name[5];
 
-    if (new_size < 10 || new_size > 24) {
+    if (new_size < -8 || new_size > 8) {
         return FALSE;
     }
 
-    snprintf(new_name, sizeof(new_name), "%dpt", new_size);
+    snprintf(new_name, sizeof(new_name), "%+dpt", new_size);
 
     action = gtk_action_group_get_action(app->action_group, new_name);
     if (!action) {
@@ -325,49 +339,57 @@ terminal_app_key_press_event (TerminalApp *app,
                               GdkEventKey *event,
                               gpointer user_data) {
     gboolean fs;
-    HildonAppView *appview;
     int font_size;
     GtkAction *action;
 
     switch (event->keyval) 
     {
-        case GDK_F6: /* Full screen */
-            appview = hildon_app_get_appview(HILDON_APP(app));
-            fs = hildon_appview_get_fullscreen(appview);
+        case HILDON_HARDKEY_FULLSCREEN: /* Full screen */
             action = gtk_action_group_get_action(app->action_group,
                                                  "fullscreen");
-            hildon_appview_set_fullscreen(appview, !fs);
+            fs = gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(action));
+	    if (fs) {
+		gtk_window_unfullscreen(GTK_WINDOW(app));
+	    } else {
+		gtk_window_fullscreen(GTK_WINDOW(app));
+	    }
             gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action),
                                          !fs);
             return TRUE;
 
-        case GDK_F7: /* Zoom in */
+        case HILDON_HARDKEY_INCREASE: /* Zoom in */
             font_size = terminal_app_get_font_size(app);
-            if (font_size < 0) {
-                gtk_infoprint(GTK_WINDOW(app), "Getting font size failed!");
+            if (font_size == 0xf00b4) {
+		hildon_banner_show_information(GTK_WIDGET(app), NULL,
+			"Getting font size failed!");
                 return TRUE;
             }
 
-            if (font_size >= 24) {
-                gtk_infoprint(GTK_WINDOW(app), "Already at maximum font size");
+            if (font_size >= 8) {
+		hildon_banner_show_information(GTK_WIDGET(app), NULL,
+			"Already at maximum font size.");
                 return TRUE;
             }
             terminal_app_set_font_size(app, font_size + 2);
             return TRUE;
 
-        case GDK_F8: /* Zoom out */
+        case HILDON_HARDKEY_DECREASE: /* Zoom out */
             font_size = terminal_app_get_font_size(app);
-            if (font_size < 0) {
-                gtk_infoprint(GTK_WINDOW(app), "Getting font size failed!");
+            if (font_size == 0xf00b4) {
+		hildon_banner_show_information(GTK_WIDGET(app), NULL,
+			"Getting font size failed!");
                 return TRUE;
             }
             
-            if (font_size <= 10) {
-                gtk_infoprint(GTK_WINDOW(app), "Already at minimum font size");
+            if (font_size <= -8) {
+		hildon_banner_show_information(GTK_WIDGET(app), NULL,
+			"Already at minimum font size.");
                 return TRUE;
             }
             terminal_app_set_font_size(app, font_size - 2);
             return TRUE;
+	case HILDON_HARDKEY_HOME: /* Ignoring... */
+	    return TRUE;
     }
 
     return FALSE;
@@ -376,7 +398,6 @@ terminal_app_key_press_event (TerminalApp *app,
 static void
 terminal_app_init (TerminalApp *app)
 {
-  HildonAppView       *appview;
   GtkAction           *action;
   GtkAccelGroup       *accel_group;
   GtkWidget           *vbox, *popup;
@@ -386,19 +407,18 @@ terminal_app_init (TerminalApp *app)
   gboolean             scrollbar, reverse;
   GConfClient         *gconf_client;
   GConfValue          *gconf_value;
+  HildonProgram       *program;
 
+  program = hildon_program_get_instance();
+  hildon_program_add_window(program, HILDON_WINDOW(app));
 
-  hildon_app_set_title(HILDON_APP(app), _("X Terminal"));
-  hildon_app_set_two_part_title(HILDON_APP(app), FALSE);
-  appview = HILDON_APPVIEW( hildon_appview_new("osso_xterm") );
-  hildon_app_set_appview(HILDON_APP(app), appview);
-  g_signal_connect( G_OBJECT(appview), "destroy",
-              G_CALLBACK(gtk_main_quit), NULL );
+  gtk_window_set_title(GTK_WINDOW(app), "osso_xterm");
 
   g_signal_connect( G_OBJECT(app), "key-press-event",
                     G_CALLBACK(terminal_app_key_press_event), NULL);
 
   gconf_client = gconf_client_get_default();
+  
   font_size = gconf_client_get_int(gconf_client,
                                    OSSO_XTERM_GCONF_FONT_SIZE,
                                    &error);
@@ -407,10 +427,6 @@ terminal_app_init (TerminalApp *app)
                  error->message);
       g_error_free(error);
       error = NULL;
-  }
-
-  if (font_size == 0) {
-      font_size = OSSO_XTERM_DEFAULT_FONT_SIZE;
   }
 
   gconf_value = gconf_client_get(gconf_client,
@@ -487,7 +503,7 @@ terminal_app_init (TerminalApp *app)
   gtk_window_add_accel_group (GTK_WINDOW (app), accel_group);
 
   vbox = gtk_vbox_new (FALSE, 0);
-  gtk_container_add (GTK_CONTAINER(appview), vbox);
+  gtk_container_add (GTK_CONTAINER(app), vbox);
   gtk_widget_show (vbox);
 
   populate_menubar(app, accel_group);
@@ -507,16 +523,15 @@ terminal_app_init (TerminalApp *app)
   gtk_widget_show (app->notebook);
 
   popup = gtk_ui_manager_get_widget (app->ui_manager, "/popup-menu");
-  gtk_widget_tap_and_hold_setup(GTK_WIDGET(appview), popup, NULL,
+  gtk_widget_tap_and_hold_setup(GTK_WIDGET(app), popup, NULL,
                                 GTK_TAP_AND_HOLD_NONE);
 
-  g_signal_connect (G_OBJECT (app), "delete-event",
-                    G_CALLBACK (gtk_widget_destroy), app);
+  g_signal_connect (G_OBJECT (app), "destroy",
+                    G_CALLBACK (gtk_main_quit), app);
 
   /* setup fullscreen mode */
   if (!gdk_net_wm_supports (gdk_atom_intern ("_NET_WM_STATE_FULLSCREEN", FALSE)))
     {
-      hildon_appview_set_fullscreen_key_allowed(appview, TRUE);
       action = gtk_action_group_get_action (app->action_group, "fullscreen");
       g_object_set (G_OBJECT (action), "sensitive", FALSE, NULL);
     }
@@ -632,8 +647,14 @@ terminal_app_notify_page (GtkNotebook  *notebook,
                           TerminalApp  *app)
 {
   TerminalWidget *terminal;
+  gchar *terminal_title = NULL;
 
   terminal = terminal_app_get_active (app);
+
+  terminal_title = terminal_widget_get_title(terminal);
+  gtk_window_set_title(GTK_WINDOW(app), terminal_title);
+  g_free(terminal_title);
+
   if (G_LIKELY (terminal != NULL))
     {
       terminal_app_update_actions (app);
@@ -641,6 +662,25 @@ terminal_app_notify_page (GtkNotebook  *notebook,
 }
 
 
+static void
+terminal_app_notify_title(TerminalWidget *terminal,
+                          GParamSpec   *pspec,
+                          TerminalApp  *app)
+{
+  TerminalWidget *active_terminal;
+  GtkWidget *header;
+  gchar *terminal_title = terminal_widget_get_title(terminal);
+
+  active_terminal = terminal_app_get_active (app);
+  if (G_LIKELY( terminal == active_terminal )) {
+    gtk_window_set_title(GTK_WINDOW(app), terminal_title);
+  }
+
+  header = gtk_notebook_get_tab_label(GTK_NOTEBOOK(app->notebook),
+		  GTK_WIDGET(terminal));
+  g_object_set(header, "title", terminal_title, NULL);
+  g_free(terminal_title);
+}
 
 static void
 terminal_app_context_menu (TerminalWidget  *widget,
@@ -653,22 +693,45 @@ terminal_app_context_menu (TerminalWidget  *widget,
   gint            time;
 
   terminal = terminal_app_get_active (app);
+
   if (G_LIKELY (widget == terminal))
     {
       popup = gtk_ui_manager_get_widget (app->ui_manager, "/popup-menu");
+      gtk_widget_show_all(GTK_WIDGET(popup));
+
       if (G_UNLIKELY (popup == NULL))
         return;
 
       if (event != NULL)
         {
           if (event->type == GDK_BUTTON_PRESS)
-            button = event->button.button;
-          time = event->button.time;
+            {
+	      char *msg = terminal_widget_get_tag(terminal,
+			      event->button.x,
+			      event->button.y,
+			      NULL);
+		  GtkWidget *item = gtk_ui_manager_get_widget(app->ui_manager,
+				  "/popup-menu/open-url");
+	      if (msg == NULL)
+	        {
+		  gtk_widget_hide(item);
+		  g_object_set_data(G_OBJECT(app), "url", NULL);
+		}
+	      else
+	        {
+		  gtk_widget_show(item);
+		  g_object_set_data_full(G_OBJECT(app), "url", msg, g_free);
+		}
+              button = event->button.button;
+	    }
+	    time = event->button.time;
         }
       else
         {
           time = gtk_get_current_event_time ();
         }
+
+      terminal->im_pending = FALSE;
 
       gtk_menu_popup (GTK_MENU (popup), NULL, NULL,
                       NULL, NULL, button, time);
@@ -702,6 +765,26 @@ terminal_app_widget_removed (GtkNotebook     *notebook,
 }
 
 
+static void
+terminal_app_open_url (GtkAction	*action,
+		       TerminalApp	*app)
+{
+  osso_context_t *osso = (osso_context_t *)g_object_get_data(
+		  G_OBJECT(app), "osso");
+  gchar *url = (gchar *)g_object_get_data(G_OBJECT(app), "url");
+
+  if (url && osso) {
+    osso_rpc_run_with_defaults(osso,
+		    "osso_browser",
+		    OSSO_BROWSER_OPEN_NEW_WINDOW_REQ,
+		    NULL,
+		    DBUS_TYPE_STRING,
+		    url,
+		    DBUS_TYPE_INVALID);
+  }
+  g_object_set_data(G_OBJECT(app), "url", NULL);
+}
+
 
 static void
 terminal_app_action_new_tab (GtkAction    *action,
@@ -724,7 +807,6 @@ terminal_app_action_new_tab (GtkAction    *action,
   terminal_app_add (app, TERMINAL_WIDGET (terminal));
   terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
 }
-
 
 static void
 terminal_app_action_close_tab (GtkAction    *action,
@@ -785,12 +867,14 @@ static void
 terminal_app_action_fullscreen (GtkToggleAction *action,
                                 TerminalApp     *app)
 {
-  HildonAppView *appview;
   gboolean fullscreen;
 
-  appview = hildon_app_get_appview(HILDON_APP(app));
   fullscreen = gtk_toggle_action_get_active (action);
-  hildon_appview_set_fullscreen (appview, fullscreen);
+  if (fullscreen) {
+      gtk_window_fullscreen(GTK_WINDOW(app));
+  } else {
+      gtk_window_unfullscreen(GTK_WINDOW(app));
+  }
 }
 
 
@@ -926,7 +1010,7 @@ terminal_app_action_ctrl (GtkAction    *action,
   dialog = gtk_dialog_new_with_buttons("Control",
                                        GTK_WINDOW(app),
                                        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                                       "Cancel", GTK_RESPONSE_CANCEL,
                                        NULL);
 
   imctx = gtk_im_multicontext_new();
@@ -980,6 +1064,7 @@ terminal_app_action_settings (GtkAction    *action,
         default:
             break;
     }
+    gtk_widget_destroy(settings);
 }
 
 
@@ -1014,18 +1099,15 @@ terminal_app_add (TerminalApp    *app,
 {
 /*  ExoPropertyProxy *proxy;*/
   TerminalWidget   *active;
-  GtkWidget        *header, *popup;
+  GtkWidget        *header;
   gint              npages;
   gint              page;
   gint              grid_width = -1;
   gint              grid_height = -1;
+  gchar            *title;
 
   g_return_if_fail (TERMINAL_IS_APP (app));
   g_return_if_fail (TERMINAL_IS_WIDGET (widget));
-
-  popup = gtk_ui_manager_get_widget (app->ui_manager, "/popup-menu");
-  gtk_widget_tap_and_hold_setup(GTK_WIDGET(widget->terminal), popup, NULL,
-                                GTK_TAP_AND_HOLD_NONE);
 
   active = terminal_app_get_active (app);
   if (G_LIKELY (active != NULL))
@@ -1035,6 +1117,14 @@ terminal_app_add (TerminalApp    *app,
     }
 
   header = terminal_tab_header_new ();
+
+  title = terminal_widget_get_title(widget);
+  g_object_set(header, "title", title, NULL);
+  g_free(title);
+
+  g_signal_connect(G_OBJECT(widget), "notify::title",
+		  G_CALLBACK(terminal_app_notify_title), app);
+
   g_signal_connect_swapped (G_OBJECT (header), "close",
                             G_CALLBACK (gtk_widget_destroy), widget);
   gtk_widget_show (header);
@@ -1095,6 +1185,9 @@ terminal_app_launch (TerminalApp     *app,
 
   /* setup the terminal widget */
   terminal = terminal_widget_new ();
+
+  terminal_widget_set_working_directory(TERMINAL_WIDGET(terminal),
+		 g_get_home_dir()); 
 
   terminal_app_add (app, TERMINAL_WIDGET (terminal));
   terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
