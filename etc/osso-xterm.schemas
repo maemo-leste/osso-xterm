@@ -22,6 +22,26 @@
 			</locale>
 		</schema>
 		<schema>
+			<key>/schemas/apps/osso/xterm/toolbar</key>
+			<applyto>/apps/osso/xterm/toolbar</applyto>
+			<owner>osso-xterm</owner>
+			<type>bool</type>
+			<default>true</default>
+			<locale name="C">
+				<short>Show tool bar in window</short>
+			</locale>
+		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/screenkeys</key>
+			<applyto>/apps/osso/xterm/screenkeys</applyto>
+			<owner>osso-xterm</owner>
+			<type>bool</type>
+			<default>true</default>
+			<locale name="C">
+				<short>Show screen keys in toolbar</short>
+			</locale>
+		</schema>
+		<schema>
 			<key>/schemas/apps/osso/xterm/font_size</key>
 			<applyto>/apps/osso/xterm/font_size</applyto>
 			<owner>osso-xterm</owner>

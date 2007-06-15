@@ -1,4 +1,4 @@
-AC_INIT([osso-xterm],[0.13.mh12])
+AC_INIT([osso-xterm],[0.13.mh14])
 
 dnl Initialize automake
 AM_CONFIG_HEADER([config.h])

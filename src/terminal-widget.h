@@ -51,6 +51,10 @@ struct _TerminalWidget
   GtkHBox              __parent__;
   GtkWidget           *terminal;
   GtkWidget           *scrollbar;
+  GtkWidget	      *tbar;
+  GtkToolItem         *cbutton;
+  GtkToolItem	      *nbutton;
+  GtkToolItem         *pbutton;
 
   GPid                 pid;
   gchar               *working_directory;
@@ -60,6 +64,8 @@ struct _TerminalWidget
 
   GConfClient         *gconf_client;
   guint                scrollbar_conid;
+  guint                toolbar_conid;
+  guint                screenkeys_conid;
   guint                font_size_conid;
   guint                font_base_size_conid;
   guint                font_name_conid;
