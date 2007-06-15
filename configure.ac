@@ -1,4 +1,4 @@
-AC_INIT([osso-xterm],[0.13.mh22])
+AC_INIT([osso-xterm],[0.13.mh23])
 
 dnl Initialize automake
 AM_CONFIG_HEADER([config.h])
@@ -49,8 +49,6 @@ AC_SUBST(HILDON_LIBS_LIBS)
 AC_SUBST(HILDON_LIBS_CFLAGS)
 
 AC_DEFINE_UNQUOTED(LOCALEDIR, "/usr/share/locale", Locale dir)
-
-PKG_CHECK_MODULES(HILDON_BASE, hildon-base-lib >= 0.8.1)
 
 AC_OUTPUT([
 Makefile

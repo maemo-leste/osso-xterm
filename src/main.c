@@ -88,7 +88,9 @@ main (int argc, char **argv)
 
   gtk_init (&argc, &argv);
 
-  if (argc > 1) {
+  if (argc > 2 && !strcmp(argv[1], "-e")) {
+    command = argv[2];
+  } else if (argc > 1) {
     command = argv[1];
   }
 

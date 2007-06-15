@@ -685,7 +685,7 @@ terminal_widget_get_child_command (TerminalWidget   *widget,
       *command = g_strdup (pw->pw_shell);
 
       *argv = g_new (gchar *, 2);
-      (*argv)[0] = g_strdup (shell_name);
+      (*argv)[0] = g_strconcat ("-", shell_name, NULL);
       (*argv)[1] = NULL;
     }
 
