@@ -1,0 +1,97 @@
+osso-xterm (0.13) unstable; urgency=low
+
+  * fixed some packaging mistakes
+  * assuming maintainership
+
+ -- Philippe De Swert <philippe.de-swert@nokia.com>  Tue, 04 Apr 2006 17:17:08 +0200
+
+osso-xterm (0.12) unstable; urgency=low
+
+  * Added an IM context to the terminal widget
+
+ -- Tomas Junnonen <tomas.junnonen@nokia.com>  Thu, 02 Mar 2006 19:11:01 +0200
+
+osso-xterm (0.11) unstable; urgency=low
+
+  * Generic Ctrl-<some key> solution 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Wed, 26 Oct 2005 18:40:01 +0300
+
+osso-xterm (0.10) unstable; urgency=low
+
+  * Make default GConf values work with AI (patch from Tomas Junnonen)
+  * Add ctrl-c menu entry (patch from Jan Arne Petersen)
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Mon, 24 Oct 2005 08:44:04 +0300
+
+osso-xterm (0.9) unstable; urgency=low
+
+  * Remove invalid g_object_unref
+  * Add libsm-dev build-dependency 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Mon, 10 Oct 2005 10:57:56 +0300
+
+osso-xterm (0.8.2) unstable; urgency=low
+
+  * Don't show popup menu when pressing scrollbar (patch from Tomas Junnonen)
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Mon,  3 Oct 2005 13:16:11 +0300
+
+osso-xterm (0.8.1) unstable; urgency=low
+
+  * Fixed copyright notices in a couple of files
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Fri, 16 Sep 2005 11:11:10 +0300
+
+osso-xterm (0.8) unstable; urgency=low
+
+  * Grab focus on startup
+  * Get rid of TerminalOptions (not really needed in maemo)
+  * Add "Reverse colors" functionality 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Thu,  2 Jun 2005 10:55:13 +0300
+
+osso-xterm (0.7) unstable; urgency=low
+
+  * Use libosso
+  * Use N770 HW buttons 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Mon, 30 May 2005 15:20:37 +0300
+
+osso-xterm (0.6) unstable; urgency=low
+
+  * Update dbus-glib-1 version requirement in configure.ac
+  * Compile against new hildon 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Fri, 25 Feb 2005 16:18:16 +0200
+
+osso-xterm (0.5) unstable; urgency=low
+
+  * Changed font to NewCourier
+  * Fixed corrupted icon images 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Mon,  3 Jan 2005 16:44:35 +0200
+
+osso-xterm (0.4) unstable; urgency=low
+
+  * Removed svg icon because it causes a segfault in task navigator
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Mon, 13 Dec 2004 10:58:15 +0200
+
+osso-xterm (0.3) unstable; urgency=low
+
+  * Fixed gconf schema 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Thu, 18 Nov 2004 10:39:51 +0200
+
+osso-xterm (0.2) unstable; urgency=low
+
+  * Updated to new hildon 
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Wed, 17 Nov 2004 08:35:33 +0200
+
+osso-xterm (0.1) unstable; urgency=low
+
+  * Hildonized
+
+ -- Johan Hedberg <johan.hedberg@nokia.com>  Fri,  5 Nov 2004 21:10:56 +0200
