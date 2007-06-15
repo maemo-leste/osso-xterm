@@ -1262,6 +1262,7 @@ terminal_app_remove (TerminalApp    *app,
  **/
 gboolean
 terminal_app_launch (TerminalApp     *app,
+		     const gchar     *command,
                      GError          **error)
 {
   GtkWidget *terminal;
@@ -1275,6 +1276,19 @@ terminal_app_launch (TerminalApp     *app,
 		 g_get_home_dir()); 
 
   terminal_app_add (app, TERMINAL_WIDGET (terminal));
+  if (command) {
+    gint argc;
+    gchar **argv;
+
+    if (g_shell_parse_argv(command,
+	  &argc,
+	  &argv,
+	  NULL)) {
+      terminal_widget_set_custom_command(TERMINAL_WIDGET (terminal),
+	  argv);
+      g_strfreev(argv);
+    }
+  }
   terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
 
   /* Keep IM open on startup */

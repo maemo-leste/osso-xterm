@@ -59,6 +59,7 @@ void       terminal_app_remove   (TerminalApp *app,
                                   TerminalWidget *widget);
 
 gboolean   terminal_app_launch (TerminalApp     *app,
+    				const gchar     *command,
                                 GError          **error);
 
 G_END_DECLS;
