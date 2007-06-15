@@ -1,4 +1,4 @@
-AC_INIT([osso-xterm],[0.13.mh21])
+AC_INIT([osso-xterm],[0.13.mh22])
 
 dnl Initialize automake
 AM_CONFIG_HEADER([config.h])
@@ -42,6 +42,7 @@ else
 	PKG_CHECK_MODULES(HILDON_LIBS, hildon-libs >= 0.12.0)
 	AC_DEFINE(HILDON, 0, [Version of hildon libraries])
 fi
+PKG_CHECK_MODULES(BROWSER, maemo-browser-interface, [], [PKG_CHECK_MODULES(BROWSER, osso-browser-interface)])
 AC_SUBST(HILDON_LIBS)
 AC_SUBST(HILDON_CFLAGS)
 AC_SUBST(HILDON_LIBS_LIBS)

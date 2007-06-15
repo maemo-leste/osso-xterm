@@ -1,3 +1,9 @@
+osso-xterm (0.13.mh22) unstable; urgency=low
+
+  * Allow building with maemo-browser-interface.
+
+ -- Santtu Lakkala <inz@inz.fi>  Tue,  6 Mar 2007 14:58:36 +0200
+
 osso-xterm (0.13.mh21) unstable; urgency=low
 
   * Tooltips don't really fit maemo platform, remove them.

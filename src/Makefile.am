@@ -14,6 +14,7 @@ osso_xterm_CFLAGS =							\
 	@HILDON_CFLAGS@							\
 	@OSSO_CFLAGS@							\
 	@DBUS_CFLAGS@							\
+	@BROWSER_CFLAGS@						\
 	$(LAUNCHER_CFLAGS)
 
 osso_xterm_LDADD =							\
