@@ -23,7 +23,14 @@
 #ifndef __TERMINAL_APP_H__
 #define __TERMINAL_APP_H__
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+#if HILDON == 0
 #include <hildon-widgets/hildon-window.h>
+#elif HILDON == 1
+#include <hildon/hildon-window.h>
+#endif
 
 #include "terminal-widget.h"
 

@@ -26,7 +26,11 @@
 #include <libintl.h>
 #include <locale.h>
 #include <stdlib.h>
+#if HILDON == 0
 #include <hildon-widgets/hildon-color-button.h>
+#elif HILDON == 1
+#include <hildon/hildon-color-button.h>
+#endif
 #define _(String) gettext(String)
 
 #include "terminal-gconf.h"
@@ -145,6 +149,10 @@ terminal_settings_store (TerminalSettings *settings)
     const gchar *sep = g_utf8_strrchr(font, -1, ' ');
     gchar *color_name;
     GdkColor *color;
+#if HILDON == 1
+    GdkColor colors;
+    color = &colors;
+#endif
 
     if (!sep) return FALSE;
 
@@ -155,12 +163,21 @@ terminal_settings_store (TerminalSettings *settings)
 
     g_free(font_name);
 
+#if HILDON == 0
     color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button));
+#elif HILDON == 1
+    hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button), color);
+#endif
     color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
+
     gconf_client_set_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, color_name, NULL);
     g_free(color_name);
 
+#if HILDON == 0
     color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->bg_button));
+#elif HILDON == 1
+    hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->bg_button), color);
+#endif
     color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
     gconf_client_set_string(gc, OSSO_XTERM_GCONF_BG_COLOR, color_name, NULL);
     g_free(color_name);

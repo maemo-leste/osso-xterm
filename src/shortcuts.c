@@ -1,7 +1,14 @@
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <gconf/gconf-client.h>
+#if HILDON == 0
 #include <hildon-widgets/hildon-caption.h>
+#elif HILDON == 1
+#include <hildon/hildon-caption.h>
+#endif
 #include <libintl.h>
 #include "terminal-gconf.h"
 #include "shortcuts.h"

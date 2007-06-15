@@ -41,10 +41,17 @@
 #define _(String) gettext(String)
 #define N_(String) String
 
+#if HILDON == 0
 #include <hildon-widgets/hildon-window.h>
 #include <hildon-widgets/hildon-program.h>
 #include <hildon-widgets/hildon-defines.h>
 #include <hildon-widgets/hildon-banner.h>
+#elif HILDON == 1
+#include <hildon/hildon-window.h>
+#include <hildon/hildon-program.h>
+#include <hildon/hildon-defines.h>
+#include <hildon/hildon-banner.h>
+#endif
 #include <gconf/gconf-client.h>
 #include <gdk/gdkkeysyms.h>
 

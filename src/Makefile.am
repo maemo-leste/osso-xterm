@@ -11,6 +11,7 @@ osso_xterm_CFLAGS =							\
 	@VTE_CFLAGS@							\
 	@GCONF_CFLAGS@							\
 	@HILDON_LIBS_CFLAGS@						\
+	@HILDON_CFLAGS@							\
 	@OSSO_CFLAGS@							\
 	@DBUS_CFLAGS@							\
 	$(LAUNCHER_CFLAGS)
@@ -19,6 +20,7 @@ osso_xterm_LDADD =							\
 	@DBUS_LIBS@							\
 	@GCONF_LIBS@							\
 	@HILDON_LIBS_LIBS@						\
+	@HILDON_LIBS@							\
 	@OSSO_LIBS@							\
 	@VTE_LIBS@
 

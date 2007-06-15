@@ -1,4 +1,4 @@
-AC_INIT([osso-xterm],[0.13.mh19])
+AC_INIT([osso-xterm],[0.13.mh20])
 
 dnl Initialize automake
 AM_CONFIG_HEADER([config.h])
@@ -35,7 +35,15 @@ PKG_CHECK_MODULES(OSSO, libosso >= 0.7.5)
 AC_SUBST(VTE_LIBS)
 AC_SUBST(VTE_CFLAGS)
 
-PKG_CHECK_MODULES(HILDON_LIBS, hildon-libs >= 0.12.0)
+PKG_CHECK_MODULES(HILDON, hildon-1 >= 0.9.9, hildon1=yes, hildon1=no)
+if test "$hildon1" == "yes"; then
+	AC_DEFINE(HILDON, 1, [Version of hildon libraries])
+else
+	PKG_CHECK_MODULES(HILDON_LIBS, hildon-libs >= 0.12.0)
+	AC_DEFINE(HILDON, 0, [Version of hildon libraries])
+fi
+AC_SUBST(HILDON_LIBS)
+AC_SUBST(HILDON_CFLAGS)
 AC_SUBST(HILDON_LIBS_LIBS)
 AC_SUBST(HILDON_LIBS_CFLAGS)
 
