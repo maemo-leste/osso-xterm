@@ -52,6 +52,7 @@
 #include "terminal-settings.h"
 #include "terminal-tab-header.h"
 #include "terminal-app.h"
+#include "shortcuts.h"
 
 
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
@@ -86,6 +87,8 @@ static void            terminal_app_action_close_tab        (GtkAction       *ac
 static void            terminal_app_action_copy             (GtkAction       *action,
                                                              TerminalApp     *app);
 static void            terminal_app_action_paste            (GtkAction       *action,
+                                                             TerminalApp     *app);
+static void            terminal_app_action_edit_shortcuts   (GtkAction       *action,
                                                              TerminalApp     *app);
 static void            terminal_app_action_reverse          (GtkToggleAction *action,
                                                              TerminalApp     *app);
@@ -135,6 +138,7 @@ static GtkActionEntry action_entries[] =
   { "edit-menu", NULL, N_ ("Edit"),  },
   { "copy", NULL, N_ ("Copy"), NULL, NULL, G_CALLBACK (terminal_app_action_copy), },
   { "paste", NULL, N_ ("Paste"), NULL, NULL, G_CALLBACK (terminal_app_action_paste), },
+  { "shortcuts", NULL, N_ ("Shortcuts..."), NULL, NULL, G_CALLBACK (terminal_app_action_edit_shortcuts), },
   { "view-menu", NULL, N_ ("View"), },
   { "go-menu", NULL, N_ ("Go"), },
   { "prev-tab", NULL, N_ ("Previous Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_prev_tab), },
@@ -179,6 +183,7 @@ static const gchar ui_description[] =
  "    <separator/>"
  "    <menuitem action='copy'/>"
  "    <menuitem action='paste'/>"
+ "    <menuitem action='shortcuts'/>"
  "    <separator/>"
  "    <menuitem action='reverse'/>"
  "    <menuitem action='scrollbar'/>"
@@ -267,6 +272,7 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   parent = attach_menu(menubar, actiongroup, accelgroup, "edit-menu");
   attach_item(parent, actiongroup, accelgroup, "copy");
   attach_item(parent, actiongroup, accelgroup, "paste");
+  attach_item(parent, actiongroup, accelgroup, "shortcuts");
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "view-menu");
   attach_item(parent, actiongroup, accelgroup, "reverse");
@@ -866,6 +872,16 @@ terminal_app_action_paste (GtkAction    *action,
   terminal = terminal_app_get_active (app);
   if (G_LIKELY (terminal != NULL))
     terminal_widget_paste_clipboard (terminal);
+}
+
+static void
+terminal_app_action_edit_shortcuts (GtkAction    *action,
+                           TerminalApp  *app)
+{
+  (void)action;
+  (void)app;
+
+  update_shortcut_keys();
 }
 
 

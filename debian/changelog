@@ -1,3 +1,9 @@
+osso-xterm (0.13.mh18) unstable; urgency=low
+
+  * Create shortcut changing dialog.
+
+ -- Santtu Lakkala <inz@inz.fi>  Wed, 24 Jan 2007 18:54:51 +0200
+
 osso-xterm (0.13.mh17) unstable; urgency=low
 
   * Fix control button label.

@@ -31,7 +31,8 @@ osso_xterm_headers =							\
 	terminal-settings.h						\
 	terminal-tab-header.h						\
 	terminal-widget.h						\
-	terminal-app.h
+	terminal-app.h							\
+	shortcuts.h
 
 osso_xterm_SOURCES =							\
 	$(osso_xterm_headers)						\
@@ -39,7 +40,8 @@ osso_xterm_SOURCES =							\
 	terminal-tab-header.c						\
 	terminal-settings.c						\
 	terminal-widget.c						\
-	terminal-app.c
+	terminal-app.c							\
+	shortcuts.c
 
 clean-local:
 	$(RM) *.core core core.* stamp-*.h *~
