@@ -272,27 +272,31 @@ terminal_widget_class_init (TerminalWidgetClass *klass)
                   G_TYPE_NONE, 0);
 }
 
-static void
+static gboolean
 terminal_widget_vte_focus_in_event (VteTerminal    *terminal,
                                     GdkEventFocus *event,
                                     TerminalWidget *widget)
 {
-  g_return_if_fail (VTE_IS_TERMINAL (terminal));
-  g_return_if_fail (TERMINAL_IS_WIDGET (widget));
+  g_return_val_if_fail (VTE_IS_TERMINAL (terminal), FALSE);
+  g_return_val_if_fail (TERMINAL_IS_WIDGET (widget), FALSE);
 
   gtk_im_context_focus_in (widget->im_context);
+
+  return FALSE;
 }
 
 
-static void
+static gboolean
 terminal_widget_vte_focus_out_event (VteTerminal    *terminal,
                                     GdkEventFocus *event,
                                     TerminalWidget *widget)
 {
-  g_return_if_fail (VTE_IS_TERMINAL (terminal));
-  g_return_if_fail (TERMINAL_IS_WIDGET (widget));
+  g_return_val_if_fail (VTE_IS_TERMINAL (terminal), FALSE);
+  g_return_val_if_fail (TERMINAL_IS_WIDGET (widget), FALSE);
 
   gtk_im_context_focus_out (widget->im_context);
+
+  return FALSE;
 }
 
 static void

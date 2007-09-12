@@ -1,3 +1,10 @@
+osso-xterm (0.13.mh25) unstable; urgency=low
+
+  * Fixed the VTE widget's focus handlers not being invoked, causing
+    an iconsistent IM context state.
+
+ -- Tomas Junnonen <tomas.junnonen@nokia.com>  Wed, 12 Sep 2007 14:49:00 +0300
+
 osso-xterm (0.13.mh24) unstable; urgency=low
 
   * Configurable scrollback size.
