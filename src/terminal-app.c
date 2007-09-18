@@ -66,26 +66,27 @@
 
 static void            terminal_app_dispose                 (GObject         *object);
 static void            terminal_app_finalize                (GObject         *object);
+static void            terminal_app_update_actions          (TerminalApp     *app);
+static void            terminal_app_context_menu            (TerminalWidget  *widget,
+                                                             GdkEvent        *event,
+                                                             TerminalApp     *app);
+static void            terminal_app_notify_title            (TerminalWidget  *terminal,
+                                                             GParamSpec      *pspec,
+                                                             TerminalApp     *app);
+
 #ifdef USE_NOTEBOOK
 static TerminalWidget *terminal_app_get_active              (TerminalApp     *app);
 static void            terminal_app_set_size_force_grid     (TerminalApp     *app,
                                                              TerminalWidget  *widget,
                                                              gint             force_grid_width,
                                                              gint             force_grid_height);
-static void            terminal_app_update_geometry         (TerminalApp     *app);
-static void            terminal_app_update_actions          (TerminalApp     *app);
 static void            terminal_app_notify_page             (GtkNotebook     *notebook,
                                                              GParamSpec      *pspec,
-                                                             TerminalApp     *app);
-static void            terminal_app_notify_title            (TerminalWidget  *terminal,
-                                                             GParamSpec      *pspec,
-                                                             TerminalApp     *app);
-static void            terminal_app_context_menu            (TerminalWidget  *widget,
-                                                             GdkEvent        *event,
                                                              TerminalApp     *app);
 static void            terminal_app_widget_removed          (GtkNotebook     *notebook,
                                                              TerminalWidget  *widget,
                                                              TerminalApp     *app);
+static void            terminal_app_update_geometry         (TerminalApp     *app);
 #endif
 
 static void            terminal_app_open_url                (GtkAction       *action,
@@ -150,7 +151,7 @@ static gint windows = 0;
 /* Show toolbar */
 static gboolean toolbar_fs = TRUE;
 static gboolean toolbar_normal = TRUE;
-
+static gboolean fs = FALSE;
 #endif
 
 struct _TerminalApp
@@ -346,7 +347,10 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   parent = attach_menu(menubar, actiongroup, accelgroup, "edit-menu");
   attach_item(parent, actiongroup, accelgroup, "copy");
   attach_item(parent, actiongroup, accelgroup, "paste");
+
+#ifdef USE_NOTEBOOK
   attach_item(parent, actiongroup, accelgroup, "shortcuts");
+#endif
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "view-menu");
   attach_item(parent, actiongroup, accelgroup, "fullscreen");
@@ -439,7 +443,7 @@ static gboolean
 terminal_app_key_press_event (TerminalApp *app,
                               GdkEventKey *event,
                               gpointer user_data) {
-    gboolean fs;
+
     int font_size;
     GtkAction *action;
 
@@ -450,9 +454,11 @@ terminal_app_key_press_event (TerminalApp *app,
                                                  "fullscreen");
             fs = gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(action));
 	    if (fs) {
-		gtk_window_unfullscreen(GTK_WINDOW(app));
+	 	    gtk_window_unfullscreen(GTK_WINDOW(app));
+            terminal_app_set_toolbar (toolbar_normal);
 	    } else {
-		gtk_window_fullscreen(GTK_WINDOW(app));
+ 		    gtk_window_fullscreen(GTK_WINDOW(app));
+            terminal_app_set_toolbar (toolbar_fs);
 	    }
             gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action),
                                          !fs);
@@ -724,7 +730,6 @@ terminal_app_get_active (TerminalApp *app)
 }
 #endif
 
-
 #ifdef USE_NOTEBOOK
 static void
 terminal_app_set_size_force_grid (TerminalApp    *app,
@@ -736,10 +741,8 @@ terminal_app_set_size_force_grid (TerminalApp    *app,
   terminal_widget_force_resize_window (widget, GTK_WINDOW (app),
                                        force_grid_width, force_grid_height);
 }
-#endif
 
 
-#ifdef USE_NOTEBOOK
 static void
 terminal_app_update_geometry (TerminalApp *app)
 {
@@ -757,19 +760,21 @@ terminal_app_update_geometry (TerminalApp *app)
 
 
 
-#ifdef USE_NOTEBOOK
 static void
 terminal_app_update_actions (TerminalApp *app)
 {
   TerminalWidget *terminal;
-  GtkNotebook    *notebook = GTK_NOTEBOOK (app->notebook);
   GtkAction      *action;
+#ifdef USE_NOTEBOOK
+  GtkNotebook    *notebook = GTK_NOTEBOOK (app->notebook);
   gint            page_num;
   gint            n_pages;
+#endif
 
   terminal = terminal_app_get_active (app);
   if (G_LIKELY (terminal != NULL))
     {
+#ifdef USE_NOTEBOOK
       page_num = gtk_notebook_page_num (notebook, GTK_WIDGET (terminal));
       n_pages = gtk_notebook_get_n_pages (notebook);
 
@@ -782,15 +787,13 @@ terminal_app_update_actions (TerminalApp *app)
       g_object_set (G_OBJECT (action),
                     "sensitive", page_num < n_pages - 1,
                     NULL);
-
+#endif
       action = gtk_action_group_get_action (app->action_group, "copy");
       g_object_set (G_OBJECT (action),
                     "sensitive", terminal_widget_has_selection (terminal),
                     NULL);
     }
 }
-#endif
-
 
 
 #ifdef USE_NOTEBOOK
@@ -815,29 +818,29 @@ terminal_app_notify_page (GtkNotebook  *notebook,
 }
 #endif
 
-
-#ifdef USE_NOTEBOOK
 static void
 terminal_app_notify_title(TerminalWidget *terminal,
                           GParamSpec   *pspec,
                           TerminalApp  *app)
 {
   TerminalWidget *active_terminal;
+#ifdef USE_NOTEBOOK
   GtkWidget *header;
+#endif
   gchar *terminal_title = terminal_widget_get_title(terminal);
   active_terminal = terminal_app_get_active (app);
   if (G_LIKELY( terminal == active_terminal )) {
     gtk_window_set_title(GTK_WINDOW(app), terminal_title);
   }
 
+#ifdef USE_NOTEBOOK
   header = gtk_notebook_get_tab_label(GTK_NOTEBOOK(app->notebook),
 		  GTK_WIDGET(terminal));
   g_object_set(header, "title", terminal_title, NULL);
+#endif
   g_free(terminal_title);
 }
-#endif
 
-#ifdef USE_NOTEBOOK
 static void
 terminal_app_context_menu (TerminalWidget  *widget,
                            GdkEvent        *event,
@@ -893,7 +896,6 @@ terminal_app_context_menu (TerminalWidget  *widget,
                       NULL, NULL, button, time);
     }
 }
-#endif
 
 
 
@@ -1050,9 +1052,11 @@ terminal_app_action_fullscreen (GtkToggleAction *action,
   if (fullscreen) {
       gtk_window_fullscreen(GTK_WINDOW(app));
       terminal_app_set_toolbar (toolbar_fs);
+      fs = TRUE;
   } else {
       gtk_window_unfullscreen(GTK_WINDOW(app));
       terminal_app_set_toolbar (toolbar_normal);
+      fs = FALSE;
   }
 }
 
@@ -1310,25 +1314,7 @@ terminal_app_add (TerminalApp    *app,
                   TerminalWidget *widget)
 {
 
-  gtk_widget_show (GTK_WIDGET (widget));
 
-  if (windows != 0 ) {
-    gpointer newapp = NULL;
-    newapp = terminal_app_new ();  
-    g_object_add_weak_pointer(G_OBJECT(newapp), &newapp);
-    gtk_container_add(GTK_CONTAINER (newapp), GTK_WIDGET(widget));
-    gtk_widget_show (GTK_WIDGET (newapp));
-    TERMINAL_APP (newapp)->terminal = widget;
-  } else {
-    gtk_container_add(GTK_CONTAINER (app), GTK_WIDGET(widget));
-    TERMINAL_APP (app)->terminal = widget;
-  }
-
-  g_object_ref (widget);
-
-  windows++;
-
-  g_debug ("windows: %d", windows);
 #ifdef USE_NOTEBOOK
 /*  ExoPropertyProxy *proxy;*/
   TerminalWidget   *active;
@@ -1379,6 +1365,52 @@ terminal_app_add (TerminalApp    *app,
   terminal_app_set_size_force_grid (app, widget, grid_width, grid_height);
 
   terminal_app_update_actions (app);
+
+#else
+
+  g_return_if_fail (TERMINAL_IS_APP (app));
+  g_return_if_fail (TERMINAL_IS_WIDGET (widget));
+
+  gtk_widget_show (GTK_WIDGET (widget));
+
+  if (windows != 0 ) {
+    gpointer newapp = NULL;
+    newapp = terminal_app_new ();  
+    g_object_add_weak_pointer(G_OBJECT(newapp), &newapp);
+    gtk_container_add(GTK_CONTAINER (newapp), GTK_WIDGET(widget));
+    gtk_widget_show (GTK_WIDGET (newapp));
+    TERMINAL_APP (newapp)->terminal = widget;
+
+    g_signal_connect(G_OBJECT(widget), "notify::title",
+  		    G_CALLBACK(terminal_app_notify_title), newapp);
+    g_signal_connect (G_OBJECT (widget), "context-menu",
+                      G_CALLBACK (terminal_app_context_menu), newapp);
+    g_signal_connect_swapped (G_OBJECT (widget), "selection-changed",
+                              G_CALLBACK (terminal_app_update_actions), newapp);
+    terminal_app_update_actions (newapp);
+
+
+  } else {
+    gtk_container_add(GTK_CONTAINER (app), GTK_WIDGET(widget));
+    TERMINAL_APP (app)->terminal = widget;
+    g_signal_connect (G_OBJECT (widget), "context-menu",
+                      G_CALLBACK (terminal_app_context_menu), app);
+    g_signal_connect_swapped (G_OBJECT (widget), "selection-changed",
+                              G_CALLBACK (terminal_app_update_actions), app);
+    g_signal_connect(G_OBJECT(widget), "notify::title",
+	     	  G_CALLBACK(terminal_app_notify_title), app);
+
+    terminal_app_update_actions (app);
+  }
+
+  g_object_ref (widget);
+
+  windows++;
+
+  g_debug ("windows: %d", windows);
+
+
+
 #endif
 }
 
@@ -1466,16 +1498,24 @@ terminal_app_on_close_window(GtkWidget *widget, gpointer data)
   }
 }
 
-static void            terminal_app_action_show_full_screen (GtkToggleAction *action,
-                                                             TerminalApp     *app)
+static void            
+terminal_app_action_show_full_screen (GtkToggleAction *action,
+                                      TerminalApp     *app)
 {
     toolbar_fs = gtk_toggle_action_get_active (action);
+    if (fs == TRUE) {
+        terminal_app_set_toolbar (toolbar_fs);  
+    }
 }
 
-static void            terminal_app_action_show_normal_screen(GtkToggleAction *action,
-                                                              TerminalApp     *app)
+static void
+terminal_app_action_show_normal_screen(GtkToggleAction *action,
+                                       TerminalApp     *app)
 {
     toolbar_normal = gtk_toggle_action_get_active (action);
+    if (fs == FALSE) {
+        terminal_app_set_toolbar (toolbar_normal);      
+    }
 }
 
 #endif
