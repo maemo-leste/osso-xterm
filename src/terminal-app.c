@@ -150,7 +150,9 @@ static GtkActionEntry action_entries[] =
   { "go-menu", NULL, N_ ("Go"), },
   { "prev-tab", NULL, N_ ("Previous Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_prev_tab), },
   { "next-tab", NULL, N_ ("Next Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_next_tab), },
+#if 0
   { "font-menu", NULL, N_ ("Font size"), },
+#endif
   { "terminal-menu", NULL, N_ ("Terminal"), },
   { "reset", NULL, N_ ("Reset"), NULL, NULL, G_CALLBACK (terminal_app_action_reset), },
   { "reset-and-clear", NULL, N_ ("Reset and Clear"), NULL, NULL, G_CALLBACK (terminal_app_action_reset_and_clear), },
@@ -198,6 +200,7 @@ static const gchar ui_description[] =
  "    <menuitem action='fullscreen'/>"
  "    <separator/>"
  "    <menuitem action='ctrl'/>"
+#if 0
  "    <separator/>"
  "    <menu action='font-menu'>"
  "      <menuitem action='-8pt'/>"
@@ -210,6 +213,7 @@ static const gchar ui_description[] =
  "      <menuitem action='+6pt'/>"
  "      <menuitem action='+8pt'/>"
  "    </menu>"
+#endif
  "  </popup>"
  "</ui>";
 
@@ -288,6 +292,7 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   attach_item(parent, actiongroup, accelgroup, "fullscreen");
   gtk_menu_shell_append(GTK_MENU_SHELL(parent),
                         gtk_separator_menu_item_new());
+#if 0
   parent = attach_menu(parent, actiongroup, accelgroup, "font-menu");
   attach_item(parent, actiongroup, accelgroup, "-8pt");
   attach_item(parent, actiongroup, accelgroup, "-6pt");
@@ -298,6 +303,7 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   attach_item(parent, actiongroup, accelgroup, "+4pt");
   attach_item(parent, actiongroup, accelgroup, "+6pt");
   attach_item(parent, actiongroup, accelgroup, "+8pt");
+#endif
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "go-menu");
   attach_item(parent, actiongroup, accelgroup, "prev-tab");
