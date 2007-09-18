@@ -6,7 +6,7 @@
 			<applyto>/apps/osso/xterm/reverse</applyto>
 			<owner>osso-xterm</owner>
 			<type>bool</type>
-			<default>true</default>
+			<default>false</default>
 			<locale name="C">
 				<short>Reverse colors</short>
 			</locale>
