@@ -89,7 +89,7 @@
 			<applyto>/apps/osso/xterm/font_name</applyto>
 			<owner>osso-xterm</owner>
 			<type>string</type>
-			<default>Bitstream Vera Sans Mono</default>
+			<default>Monospace</default>
 			<locale name="C">
 				<short>Name of the terminal font</short>
 			</locale>
