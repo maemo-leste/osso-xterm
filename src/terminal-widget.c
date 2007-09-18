@@ -194,7 +194,7 @@ static GtkTargetEntry target_table[] =
 };
 
 
-G_DEFINE_TYPE (TerminalWidget, terminal_widget, GTK_TYPE_HBOX);
+G_DEFINE_TYPE (TerminalWidget, terminal_widget, GTK_TYPE_VBOX);
 
 
 static void
@@ -308,6 +308,7 @@ terminal_widget_init (TerminalWidget *widget)
   GSList *keys;
   GSList *key_labels;
   GConfValue *gconf_value;
+  GtkWidget *hbox;
 
   widget->working_directory = g_get_current_dir ();
   widget->custom_title = g_strdup ("");
@@ -431,7 +432,12 @@ terminal_widget_init (TerminalWidget *widget)
                     G_CALLBACK (terminal_widget_vte_realize), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "window-title-changed",
                     G_CALLBACK (terminal_widget_vte_window_title_changed), widget);
-  gtk_box_pack_start (GTK_BOX (widget), widget->terminal, TRUE, TRUE, 0);
+
+  hbox = gtk_hbox_new (FALSE, FALSE);
+  gtk_widget_show (hbox);
+  gtk_box_pack_start (GTK_BOX (hbox), widget->terminal, TRUE, TRUE, 0);
+
+  gtk_box_pack_start (GTK_BOX (widget), hbox, TRUE, TRUE, 0);
   gtk_widget_show (widget->terminal);
 
   /* setup Drag'n'Drop support */
@@ -447,10 +453,10 @@ terminal_widget_init (TerminalWidget *widget)
   gtk_widget_grab_focus(widget->terminal);
 
   widget->scrollbar = gtk_vscrollbar_new (VTE_TERMINAL (widget->terminal)->adjustment);
-  gtk_box_pack_start (GTK_BOX (widget), widget->scrollbar, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox), widget->scrollbar, FALSE, FALSE, 0);
 
   widget->tbar = g_object_new(GTK_TYPE_TOOLBAR, 
-		  "orientation", GTK_ORIENTATION_VERTICAL,
+		  "orientation", GTK_ORIENTATION_HORIZONTAL,
 		  NULL);
   widget->cbutton = gtk_toggle_tool_button_new();
   gtk_tool_item_set_expand(widget->cbutton, TRUE);
