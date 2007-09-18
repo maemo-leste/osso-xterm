@@ -110,6 +110,7 @@ void         terminal_widget_set_working_directory      (TerminalWidget *widget,
                                                          const gchar    *directory);
 
 gboolean   terminal_widget_has_selection              (TerminalWidget *widget);
+gboolean   terminal_widget_select_all                 (TerminalWidget *widget);
 
 void       terminal_widget_copy_clipboard             (TerminalWidget *widget);
 void       terminal_widget_paste_clipboard            (TerminalWidget *widget);

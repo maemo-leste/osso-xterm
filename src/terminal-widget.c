@@ -45,6 +45,7 @@
 #include "terminal-widget.h"
 
 
+
 enum
 {
   PROP_0,
@@ -167,6 +168,7 @@ static void	terminal_widget_do_keys			     (TerminalWidget *widget,
 							      const gchar *key_string);
 static void	terminal_widget_do_key_button		     (GObject *button,
 							      TerminalWidget *widget);
+
 
 static GObjectClass *parent_class;
 static guint widget_signals[LAST_SIGNAL];
@@ -1877,3 +1879,16 @@ static void terminal_widget_do_key_button(GObject *button,
 {
 	terminal_widget_do_keys(widget, g_object_get_data(button, "keys"));
 }
+
+gboolean   
+terminal_widget_select_all (TerminalWidget *widget)
+{
+    g_debug (__FUNCTION__);
+#if 0
+    VteTerminal *term = VTE_TERMINAL(widget->terminal);
+    GTK_WIDGET (term->widget);
+#endif
+    return TRUE;
+}
+
+
