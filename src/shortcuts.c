@@ -84,13 +84,13 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 			NULL);
 
 	applet->keys_dialog = GTK_DIALOG(
-			gtk_dialog_new_with_buttons(_("Shortcuts"),
+			gtk_dialog_new_with_buttons(_("weba_fi_plugin_details_shortcut"),
 			GTK_WINDOW(window),
 			GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
-			_("New"), GRAPH_RESPONSE_NEW,
-			_("Edit"), GRAPH_RESPONSE_EDIT,
-			_("Delete"), GRAPH_RESPONSE_DELETE,
-			_("Done"), GRAPH_RESPONSE_DONE,
+			_("webb_me_new"), GRAPH_RESPONSE_NEW,
+			_("webb_me_edit"), GRAPH_RESPONSE_EDIT,
+			_("webb_me_delete"), GRAPH_RESPONSE_DELETE,
+			_("webb_me_close"), GRAPH_RESPONSE_DONE,
 			NULL));
 
 	model = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
@@ -109,7 +109,7 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 	g_object_unref(model);
 
 	rend = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Title", rend,
+	col = gtk_tree_view_column_new_with_attributes(_("weba_fi_page_details_page_title"), rend,
 			"text", 0, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(applet->keys_list), col);
 
@@ -141,8 +141,8 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 	g_signal_connect(applet->keys_dialog, "response",
 			G_CALLBACK(keys_dialog_response), applet);
 
-	gtk_widget_show_all(GTK_WIDGET(applet->keys_dialog)
-		);
+	gtk_widget_show_all(GTK_WIDGET(applet->keys_dialog));
+	gtk_widget_set_size_request (GTK_WIDGET (applet->keys_dialog), 400, 250);
 }
 
 static void keys_dialog_response(GtkDialog *dialog, gint response,
@@ -206,12 +206,12 @@ static gboolean key_dialog_run(GtkWindow *parent, gchar **title, gchar **key)
 	GtkWidget *key_entry = gtk_entry_new();
 	GtkSizeGroup *group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 	GtkWidget *title_caption = hildon_caption_new(group,
-			_("Label"),
+			_("weba_fi_page_details_page_title"),
 			title_entry,
 			NULL,
 			HILDON_CAPTION_OPTIONAL);
 	GtkWidget *key_caption = hildon_caption_new(group,
-			_("Key(s)"),
+			_("weba_fi_cookie_details_value"),
 			key_entry,
 			NULL,
 			HILDON_CAPTION_OPTIONAL);
