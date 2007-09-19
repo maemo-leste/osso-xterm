@@ -190,6 +190,7 @@ static gboolean toolbar_fs = TRUE;
 static gboolean toolbar_normal = TRUE;
 static gboolean fs = FALSE;
 
+static gint window_id = 1;
 
 G_DEFINE_TYPE (TerminalAppWrapper, terminal_app_wrapper, HILDON_TYPE_WINDOW);
 
@@ -260,6 +261,33 @@ remove_item (gpointer data, GObject *obj)
     }
 }
 
+#endif
+
+struct appstru
+{
+  TerminalAppWrapper *appw;
+  TerminalApp *app;
+};
+
+static void
+on_menu_item_activated (GtkWidget *menuitem, gpointer data) 
+{
+  struct appstru *apps = (struct appstru *)data;
+
+  TerminalAppWrapper *appw = TERMINAL_APP_WRAPPER (apps->appw);
+  TerminalApp *app = TERMINAL_APP (apps->app);
+  if (app != appw->current) {
+    /* FIXME: implement */
+  }
+}
+
+static void
+on_menu_item_destroy (GtkWidget *menuitem, gpointer data) 
+{
+  struct appstru *apps = (struct appstru *)data;
+  g_free (apps);
+}
+
 static void
 attach_new_window (TerminalAppWrapper *appw, TerminalApp *app, const gchar *label)
 {
@@ -276,10 +304,16 @@ attach_new_window (TerminalAppWrapper *appw, TerminalApp *app, const gchar *labe
 
     menuitem = gtk_action_create_menu_item(GTK_ACTION (action));
     gtk_menu_shell_prepend(GTK_MENU_SHELL(appw->windows_menu), menuitem);
-
-    g_slist_append (appw->apps, app);
+    appw->apps = g_slist_append (appw->apps, app);
+    
+    struct appstru *apps = g_new0 (struct appstru, 1);
+    apps->appw = appw;
+    apps->app = app;
+    g_object_set (menuitem, "active", TRUE, NULL);
+    g_signal_connect (menuitem, "activate", G_CALLBACK (on_menu_item_activated), apps);
+    g_signal_connect (menuitem, "destroy", G_CALLBACK (on_menu_item_destroy), apps);
 }
-#endif
+
 
 static void
 populate_menubar (TerminalAppWrapper *app, GtkAccelGroup *accelgroup)
@@ -473,7 +507,7 @@ terminal_app_wrapper_init (TerminalAppWrapper *app)
   gtk_widget_tap_and_hold_setup(GTK_WIDGET(app), popup, NULL,
                                 GTK_TAP_AND_HOLD_NONE);
 
-    gtk_window_set_title(GTK_WINDOW(app), "osso_xterm");
+  gtk_window_set_title(GTK_WINDOW(app), "XTerm");
 
   g_signal_connect( G_OBJECT(app), "key-press-event",
                     G_CALLBACK(terminal_app_key_press_event), NULL);
@@ -830,8 +864,9 @@ terminal_app_wrapper_launch (TerminalAppWrapper     *appw,
   gpointer app = terminal_app_new ();
   g_object_add_weak_pointer(G_OBJECT(app), &app);
   if (!terminal_app_launch (TERMINAL_APP(app), command, error)) {
-	return FALSE;
-      }
+      return FALSE;
+  }
+
   appw->current = app;
 
   gtk_widget_show (GTK_WIDGET (app));
@@ -839,19 +874,65 @@ terminal_app_wrapper_launch (TerminalAppWrapper     *appw,
 
   gtk_widget_show(GTK_WIDGET(appw));
 
+  attach_new_window (appw, app, N_("XTerm"));
+
+  appw->windows = 0;
+
   return TRUE;
 }
 
 static void
-terminal_app_wrapper_close_window(GtkAction *action, TerminalAppWrapper *app)
+remove_old_and_replace_with_new (TerminalApp *app, TerminalApp *app_new)
 {
-    g_assert (app);
-    g_assert (TERMINAL_IS_APP (app));
+  g_debug (__FUNCTION__);
+
+  GtkWidget *pwindow = GTK_WIDGET (gtk_widget_get_parent (GTK_WIDGET (app)));
+  GtkWidget *pwindow_new = GTK_WIDGET (gtk_widget_get_parent (GTK_WIDGET (app_new)));
+
+  gtk_container_remove (GTK_CONTAINER (pwindow), GTK_WIDGET (app));
+
+  g_object_ref (app_new);
+  gtk_container_remove (GTK_CONTAINER (pwindow_new), GTK_WIDGET (app_new));
+  gtk_container_add (GTK_CONTAINER (pwindow), GTK_WIDGET (app_new));
+  g_object_unref (app_new);
+
+  g_object_unref (pwindow_new);
+}
+
+static void
+terminal_app_wrapper_close_window(GtkAction *action, TerminalAppWrapper *appw)
+{
+    g_assert (appw);
+    g_assert (TERMINAL_IS_APP_WRAPPER (appw));
+
+    GSList *list = NULL;
 
     g_debug (__FUNCTION__);
 
-    //gtk_widget_hide (GTK_WIDGET (app));
-    //gtk_widget_destroy (GTK_WIDGET (app));
+    if (appw->apps == NULL) {
+      g_debug ("appw->apps == NULL");
+      gtk_main_quit ();
+      return;
+    }
+
+    list = g_slist_nth(appw->apps, 0);
+
+    if (list != NULL && list->data != NULL && appw->current != (list->data)) {
+      g_debug ("first");
+      remove_old_and_replace_with_new (appw->current, (list->data));
+      appw->current = (list->data);
+      appw->windows--;
+      return;
+    }
+    list = g_slist_nth(appw->apps, 1);
+    if (list != NULL && list->data != NULL && appw->current != (list->data)) {
+      g_debug ("second");
+      remove_old_and_replace_with_new (appw->current, (list->data));
+      appw->current = (list->data);
+      appw->windows--;
+    } else {
+      gtk_main_quit ();
+    }
 }
 
 static void            
@@ -886,7 +967,33 @@ terminal_app_wrapper_select_all (GtkAction    *action,
 
 static void            
 terminal_app_wrapper_action_new_window (GtkToggleAction *action,
-                                        TerminalAppWrapper     *app)
+                                        TerminalAppWrapper     *appw)
 {
+
+  GtkWidget *fake = hildon_window_new ();
+  gpointer app = terminal_app_new ();
+  gchar window_name[256];
+
+  g_snprintf (window_name, 255, "XTerm (%d)", window_id++);
+
+  g_object_add_weak_pointer(G_OBJECT(app), &app);
+  terminal_app_new_window (app);
+
+  //  g_signal_connect (fake, "focus", on_focus, )
+
+  g_object_ref (appw->current);
+  gtk_container_remove (GTK_CONTAINER (appw), GTK_WIDGET (appw->current));
+
+  gtk_container_add (GTK_CONTAINER (fake), GTK_WIDGET (appw->current));
+  gtk_window_set_title(GTK_WINDOW(fake), window_name);
+  gtk_widget_show (fake);
+  g_object_unref (appw->current);
+
+  appw->current = app;
+  gtk_widget_show (GTK_WIDGET (app));
+  gtk_container_add (GTK_CONTAINER (appw), GTK_WIDGET (app));
+
+  attach_new_window (appw, app, window_name);
+  appw->windows++;
 
 }

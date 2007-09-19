@@ -78,8 +78,6 @@ static void            terminal_app_notify_title            (TerminalWidget  *te
 #if 0
 static void            terminal_app_open_url                (GtkAction       *action,
 		                                             TerminalApp     *app);
-static void            terminal_app_action_new_window          (GtkAction       *action,
-                                                             TerminalApp     *app);
 static void            terminal_app_action_close_tab        (GtkAction       *action,
                                                              TerminalApp     *app);
 static void            terminal_app_action_copy             (GtkAction       *action,
@@ -149,6 +147,27 @@ terminal_app_class_init (TerminalAppClass *klass)
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->dispose = terminal_app_dispose;
   gobject_class->finalize = terminal_app_finalize;
+}
+
+void
+terminal_app_new_window (TerminalApp  *app)
+{
+  GtkWidget      *terminal;
+
+  terminal = terminal_widget_new ();
+  const gchar    *directory;
+
+  g_assert (TERMINAL_IS_WIDGET (terminal));
+
+  directory = terminal_widget_get_working_directory (TERMINAL_WIDGET (terminal));
+  if (directory == NULL) {
+    directory = g_get_home_dir(); 
+    terminal_widget_set_working_directory (TERMINAL_WIDGET (terminal),
+                                           directory);
+  }
+  terminal_app_add (app, TERMINAL_WIDGET (terminal));
+  terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
+
 }
 
 #if 0
@@ -358,8 +377,8 @@ terminal_app_finalize (GObject *object)
   g_debug (__FUNCTION__);
 
   g_object_unref (app->terminal);
-  g_object_unref (G_OBJECT (app->action_group));
-  g_object_unref (G_OBJECT (app->ui_manager));
+  //g_object_unref (G_OBJECT (app->action_group));
+  //g_object_unref (G_OBJECT (app->ui_manager));
 
   parent_class->finalize (object);
 }
@@ -484,32 +503,6 @@ terminal_app_open_url (GtkAction	*action,
 }
 
 
-static void
-terminal_app_action_new_window (GtkAction    *action,
-                             TerminalApp  *app)
-{
-  GtkWidget      *terminal;
-
-  terminal = terminal_widget_new ();
-  TerminalWidget *active;
-  const gchar    *directory;
-
-  g_assert (TERMINAL_IS_WIDGET (terminal));
-
-  active = terminal_app_get_active (app);
-  if (G_LIKELY (active != NULL))
-    {
-      directory = terminal_widget_get_working_directory (active);
-      if (directory == NULL) {
-	  directory = g_get_home_dir(); 
-      }
-      terminal_widget_set_working_directory (TERMINAL_WIDGET (terminal),
-                                             directory);
-    }
-  terminal_app_add (app, TERMINAL_WIDGET (terminal));
-  terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
-
-}
 
 static void
 terminal_app_action_close_tab (GtkAction    *action,

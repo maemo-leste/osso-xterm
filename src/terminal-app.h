@@ -89,6 +89,7 @@ gboolean terminal_app_set_font_size       (TerminalApp *app, int new_size);
 void terminal_app_action_font_size        (GtkRadioAction  *action,
                                            GtkRadioAction  *current,
                                            TerminalApp     *app);
+void terminal_app_new_window (TerminalApp  *app);
 
 
 G_END_DECLS;
