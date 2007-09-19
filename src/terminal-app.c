@@ -135,13 +135,22 @@ static void           attach_subparent(GtkWidget *parent, GtkActionGroup *action
 static void            terminal_app_close_window            (GtkWidget *widget, 
                                                              TerminalApp     *app);
 static void            terminal_app_on_close_window            (GtkWidget *widget, 
+
                                                              gpointer data);
 static void            terminal_app_action_show_full_screen (GtkToggleAction *action,
                                                              TerminalApp     *app);
 static void            terminal_app_action_show_normal_screen(GtkToggleAction *action,
                                                               TerminalApp     *app);
+static void            terminal_app_set_toolbar (gboolean show);
+
+
 /* This keeps count of number of windows */
 static gint windows = 0;
+
+/* Show toolbar */
+static gboolean toolbar_fs = TRUE;
+static gboolean toolbar_normal = TRUE;
+
 #endif
 
 struct _TerminalApp
@@ -152,6 +161,8 @@ struct _TerminalApp
   GtkUIManager        *ui_manager;
 #if USE_NOTEBOOK
   GtkWidget           *notebook;
+#else
+  TerminalWidget *terminal;
 #endif
 };
 
@@ -218,17 +229,8 @@ static GtkToggleActionEntry toggle_action_entries[] =
   { "scrollbar", NULL, N_ ("Scrollbar"), NULL, NULL, G_CALLBACK (terminal_app_action_scrollbar), TRUE },
   { "toolbar", NULL, N_ ("Toolbar"), NULL, NULL, G_CALLBACK (terminal_app_action_toolbar), TRUE },
 
-  { "show-full-screen", NULL, N_ ("Full screen"), NULL, NULL, G_CALLBACK (terminal_app_action_show_full_screen), },
-  { "show-normal-screen", NULL, N_ ("Normal screen"), NULL, NULL, G_CALLBACK(terminal_app_action_show_normal_screen), },
-};
-
-static GtkToggleActionEntry show_toggle_action_entries[] =
-{
-  { "toolbar-normal", NULL, N_ ("Normal screen"), NULL, NULL, G_CALLBACK 
-(terminal_app_action_show_normal_screen)},
-  { "toolbar-fullscreen", NULL, N_ ("Full screen"), NULL, NULL, G_CALLBACK 
-(terminal_app_action_show_full_screen), },
-
+  { "show-full-screen", NULL, N_ ("Full screen"), NULL, NULL, G_CALLBACK (terminal_app_action_show_full_screen), TRUE},
+  { "show-normal-screen", NULL, N_ ("Normal screen"), NULL, NULL, G_CALLBACK(terminal_app_action_show_normal_screen), TRUE},
 };
 
 static const gchar ui_description[] =
@@ -514,6 +516,7 @@ terminal_app_init (TerminalApp *app)
   program = hildon_program_get_instance();
   hildon_program_add_window(program, HILDON_WINDOW(app));
 
+  app->terminal = NULL;
   gtk_window_set_title(GTK_WINDOW(app), "osso_xterm");
 
   g_signal_connect( G_OBJECT(app), "key-press-event",
@@ -601,16 +604,17 @@ terminal_app_init (TerminalApp *app)
                                       font_size,
                                       G_CALLBACK(terminal_app_action_font_size),
                                       GTK_WIDGET(app));;
-  gtk_action_group_add_toggle_actions (app->action_group,
-                                       show_toggle_action_entries,
-                                       G_N_ELEMENTS (show_toggle_action_entries),
-                                       GTK_WIDGET (app));
 
   action = gtk_action_group_get_action(app->action_group, "scrollbar");
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), scrollbar);
 
   action = gtk_action_group_get_action(app->action_group, "toolbar");
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), toolbar);
+
+  action = gtk_action_group_get_action(app->action_group, "show-full-screen");
+  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), toolbar_fs);
+  action = gtk_action_group_get_action(app->action_group, "show-normal-screen");
+  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), toolbar_normal);
 
   action = gtk_action_group_get_action(app->action_group, "reverse");
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), reverse);
@@ -711,6 +715,12 @@ terminal_app_get_active (TerminalApp *app)
     return TERMINAL_WIDGET (gtk_notebook_get_nth_page (notebook, page_num));
   else
     return NULL;
+}
+#else
+static TerminalWidget*
+terminal_app_get_active (TerminalApp *app)
+{
+    return app->terminal;    
 }
 #endif
 
@@ -981,13 +991,11 @@ static void
 terminal_app_action_copy (GtkAction    *action,
                           TerminalApp  *app)
 {
-#ifdef USE_NOTEBOOK
   TerminalWidget *terminal;
 
   terminal = terminal_app_get_active (app);
   if (G_LIKELY (terminal != NULL))
     terminal_widget_copy_clipboard (terminal);
-#endif
 }
 
 
@@ -995,13 +1003,11 @@ static void
 terminal_app_action_paste (GtkAction    *action,
                            TerminalApp  *app)
 {
-#ifdef USE_NOTEBOOK
   TerminalWidget *terminal;
 
   terminal = terminal_app_get_active (app);
   if (G_LIKELY (terminal != NULL))
     terminal_widget_paste_clipboard (terminal);
-#endif
 }
 
 static void
@@ -1043,20 +1049,18 @@ terminal_app_action_fullscreen (GtkToggleAction *action,
   fullscreen = gtk_toggle_action_get_active (action);
   if (fullscreen) {
       gtk_window_fullscreen(GTK_WINDOW(app));
+      terminal_app_set_toolbar (toolbar_fs);
   } else {
       gtk_window_unfullscreen(GTK_WINDOW(app));
+      terminal_app_set_toolbar (toolbar_normal);
   }
 }
 
 static void
-terminal_app_action_toolbar (GtkToggleAction *action,
-                               TerminalApp     *app)
+terminal_app_set_toolbar (gboolean show)
 {
     GConfClient *client;
-    gboolean show;
-
     client = gconf_client_get_default();
-    show = gtk_toggle_action_get_active (action);
 
     gconf_client_set_bool (client,
                            OSSO_XTERM_GCONF_TOOLBAR,
@@ -1064,6 +1068,17 @@ terminal_app_action_toolbar (GtkToggleAction *action,
                            NULL);
 
     g_object_unref(G_OBJECT(client));
+}
+
+static void
+terminal_app_action_toolbar (GtkToggleAction *action,
+                               TerminalApp     *app)
+{
+    gboolean show;
+
+    show = gtk_toggle_action_get_active (action);
+    terminal_app_set_toolbar (show);
+
 }
 
 static void
@@ -1303,9 +1318,13 @@ terminal_app_add (TerminalApp    *app,
     g_object_add_weak_pointer(G_OBJECT(newapp), &newapp);
     gtk_container_add(GTK_CONTAINER (newapp), GTK_WIDGET(widget));
     gtk_widget_show (GTK_WIDGET (newapp));
+    TERMINAL_APP (newapp)->terminal = widget;
   } else {
     gtk_container_add(GTK_CONTAINER (app), GTK_WIDGET(widget));
+    TERMINAL_APP (app)->terminal = widget;
   }
+
+  g_object_ref (widget);
 
   windows++;
 
@@ -1432,6 +1451,7 @@ terminal_app_close_window(GtkWidget *widget, TerminalApp *app)
     g_assert (app);
     g_assert (TERMINAL_IS_APP (app));
 
+    g_object_unref (app->terminal);
     g_object_unref (GTK_WIDGET (app));
 
 }
@@ -1449,13 +1469,13 @@ terminal_app_on_close_window(GtkWidget *widget, gpointer data)
 static void            terminal_app_action_show_full_screen (GtkToggleAction *action,
                                                              TerminalApp     *app)
 {
-
+    toolbar_fs = gtk_toggle_action_get_active (action);
 }
 
 static void            terminal_app_action_show_normal_screen(GtkToggleAction *action,
                                                               TerminalApp     *app)
 {
-
+    toolbar_normal = gtk_toggle_action_get_active (action);
 }
 
 #endif
