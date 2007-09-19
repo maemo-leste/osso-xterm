@@ -131,8 +131,7 @@ static void            terminal_app_select_all         (GtkAction       *action,
 static guint window_id = 1;
 static gint windows = 0;
 static GSList *window_list = NULL;
-static GSList *window_group = NULL;
-static GHashTable *menuaction_hash = NULL;
+//static GHashTable *menuaction_hash = NULL;
 
 /* Show toolbar */
 static gboolean toolbar_fs = TRUE;
@@ -150,6 +149,8 @@ struct _TerminalApp
   GtkWidget *menubar; /* menubar */
   GtkWidget *windows_menu; /* Where window menuitems are*/
   GtkAction *menuaction; /* Window menuitem */
+
+  GSList *window_group;
 
   TerminalWidget *terminal;
 
@@ -290,6 +291,18 @@ on_window_menu_select (GtkWidget *widget, TerminalApp *app)
 }
 
 static void
+remove_item (gpointer data, GObject *obj)
+{
+    g_debug (__FUNCTION__);
+    if (obj == NULL) {
+        g_debug ("There must be error");
+    }
+    if (data != NULL && GTK_IS_WIDGET (data)) {
+        gtk_widget_destroy (GTK_WIDGET (data));
+    }
+}
+
+static void
 attach_new_window (TerminalApp *app, TerminalApp *toaddapp, 
 		   const gchar *label)
 {
@@ -300,16 +313,19 @@ attach_new_window (TerminalApp *app, TerminalApp *toaddapp,
 						   label, 1);
 
     gtk_action_group_add_action (app->action_group, GTK_ACTION (action));
-    gtk_radio_action_set_group (action, window_group);
-    if (window_group == NULL)
-      window_group = gtk_radio_action_get_group (action);
+    gtk_radio_action_set_group (action, app->window_group);
 
+    app->window_group = gtk_radio_action_get_group (action);
     menuitem = gtk_action_create_menu_item(GTK_ACTION (action));
+
     gtk_menu_shell_prepend(GTK_MENU_SHELL(toaddapp->windows_menu), menuitem);
 
     g_signal_connect (menuitem, "activate", G_CALLBACK (on_window_menu_select), app);
     app->menuaction = GTK_ACTION (action);
+    g_object_weak_ref (G_OBJECT (app->menuaction), remove_item, menuitem);
+
 }
+
 
 static void
 populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
@@ -353,8 +369,14 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
 				       GTK_ACTION (TERMINAL_APP(list->data)->menuaction));
     gtk_menu_shell_prepend(GTK_MENU_SHELL(app->windows_menu), 
 			   menuitem);
-    g_hash_table_insert(menuaction_hash, GTK_ACTION (TERMINAL_APP(list->data)->menuaction),
-    			menuitem);
+//    g_hash_table_insert(menuaction_hash, GTK_ACTION (TERMINAL_APP(list->data)->menuaction),
+//    			menuitem);
+//    app->window_group = gtk_radio_action_get_group (GTK_ACTION (TERMINAL_APP(list->data)->menuaction));
+//    gtk_radio_action_set_group (GTK_RADIO_ACTION (TERMINAL_APP(list->data)->menuaction), app->window_group);
+
+    g_object_weak_ref (G_OBJECT (TERMINAL_APP (list->data)->menuaction), remove_item, menuitem);
+    g_object_unref (TERMINAL_APP(list->data)->menuaction);
+
   }
 
   gchar window_name[256];
@@ -375,8 +397,12 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
     GtkWidget *menuitem = gtk_action_create_menu_item(GTK_ACTION (app->menuaction));
     gtk_menu_shell_prepend(GTK_MENU_SHELL(TERMINAL_APP (list->data)->windows_menu), 
 			   menuitem);
-    g_hash_table_insert(menuaction_hash, GTK_ACTION (app->menuaction),
-    		  menuitem);
+    g_object_weak_ref (G_OBJECT (app->menuaction), remove_item, menuitem);
+    g_object_unref (app->menuaction);
+
+//    g_hash_table_insert(menuaction_hash, GTK_ACTION (app->menuaction),
+//    		  menuitem);
+//    gtk_radio_action_set_group (GTK_RADIO_ACTION (app->menuaction), TERMINAL_APP(list->data)->window_group);
   }
 
   GtkWidget *menuitem = gtk_separator_menu_item_new();
@@ -503,10 +529,11 @@ terminal_app_init (TerminalApp *app)
   program = hildon_program_get_instance();
   hildon_program_add_window(program, HILDON_WINDOW(app));
 
-  if (menuaction_hash == NULL)
-    menuaction_hash = g_hash_table_new (NULL, NULL);
+//  if (menuaction_hash == NULL)
+//    menuaction_hash = g_hash_table_new (NULL, NULL);
 
-  //app->terminal = NULL;
+  app->window_group = NULL;
+  app->terminal = NULL;
   gtk_window_set_title(GTK_WINDOW(app), "osso_xterm");
 
   g_signal_connect( G_OBJECT(app), "key-press-event",
@@ -659,26 +686,35 @@ static void
 terminal_app_finalize (GObject *object)
 {
   TerminalApp *app = TERMINAL_APP (object);
-  GtkWidget *menuitem = NULL;
+//  GtkWidget *menuitem = NULL;
 
   g_debug (__FUNCTION__);
-  if (windows < 1) {
-    //    g_hash_table_unref (menuaction_hash);
-  }
 
   g_object_unref (app->terminal);
   g_object_unref (G_OBJECT (app->action_group));
   g_object_unref (G_OBJECT (app->ui_manager));
 
-  menuitem = g_hash_table_lookup (menuaction_hash, app->menuaction);
-    if (GTK_IS_WIDGET (menuitem)) {
-      gtk_widget_hide (menuitem);
-      g_object_unref (app->menuaction);
-    }
-    g_hash_table_remove (menuaction_hash, app->menuaction);
+  /* Remove window menuitems from hashtable */
+//  menuitem = g_hash_table_lookup (menuaction_hash, app->menuaction);
+//  if (GTK_IS_WIDGET (menuitem)) {
+    /* We hide same menu item from all */
+//    gtk_widget_hide (menuitem);
+//    gtk_widget_unref (menuitem);
+//  }
+//  g_hash_table_remove (menuaction_hash, app->menuaction);
+  g_object_unref (app->menuaction);
 
-    window_list = g_slist_remove_link (window_list, g_slist_find (window_list, app));
-    windows--;
+  window_list = g_slist_remove_link (window_list, g_slist_find (window_list, app));
+  windows--;
+  g_debug ("windows: %d", windows);
+  if (windows == 1) {
+//    g_hash_table_unref (menuaction_hash);
+//    menuaction_hash = g_hash_table_new (NULL, NULL);
+  }
+
+  if (windows < 1) {
+    gtk_main_quit ();
+  }
 
   parent_class->finalize (object);
 }
