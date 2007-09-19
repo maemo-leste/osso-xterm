@@ -274,11 +274,10 @@ on_menu_item_activated (GtkWidget *menuitem, gpointer data)
 {
   struct appstru *apps = (struct appstru *)data;
 
-  TerminalAppWrapper *appw = TERMINAL_APP_WRAPPER (apps->appw);
+  //  TerminalAppWrapper *appw = TERMINAL_APP_WRAPPER (apps->appw);
   TerminalApp *app = TERMINAL_APP (apps->app);
-  if (app != appw->current) {
-    /* FIXME: implement */
-  }
+  GtkWidget *pwindow = gtk_widget_get_parent (GTK_WIDGET(app));;
+  gtk_window_present ( GTK_WINDOW (pwindow));
 }
 
 static void
@@ -321,6 +320,7 @@ populate_menubar (TerminalAppWrapper *app, GtkAccelGroup *accelgroup)
   GtkActionGroup      *actiongroup = app->action_group;
   GtkWidget           *parent = NULL, *subparent;
   GtkWidget *menubar = NULL;
+  app->menubar = NULL;
 
   menubar = gtk_menu_new();
 
@@ -356,6 +356,7 @@ populate_menubar (TerminalAppWrapper *app, GtkAccelGroup *accelgroup)
 			menuitem);
   attach_item(app->windows_menu, actiongroup, accelgroup, "new-window");
   gtk_widget_show_all(menubar);
+  app->menubar = menubar;
 
 }
 
@@ -888,7 +889,7 @@ remove_old_and_replace_with_new (TerminalApp *app, TerminalApp *app_new)
 
   GtkWidget *pwindow = GTK_WIDGET (gtk_widget_get_parent (GTK_WIDGET (app)));
   GtkWidget *pwindow_new = GTK_WIDGET (gtk_widget_get_parent (GTK_WIDGET (app_new)));
-
+  
   gtk_container_remove (GTK_CONTAINER (pwindow), GTK_WIDGET (app));
 
   g_object_ref (app_new);
@@ -965,6 +966,12 @@ terminal_app_wrapper_select_all (GtkAction    *action,
     g_debug(__FUNCTION__);
 }
 
+static void 
+on_focus (GtkWindow widget, TerminalAppWrapper *appw)
+{
+  g_debug (__FUNCTION__);
+}
+
 static void            
 terminal_app_wrapper_action_new_window (GtkToggleAction *action,
                                         TerminalAppWrapper     *appw)
@@ -978,8 +985,9 @@ terminal_app_wrapper_action_new_window (GtkToggleAction *action,
 
   g_object_add_weak_pointer(G_OBJECT(app), &app);
   terminal_app_new_window (app);
+  g_signal_connect (fake, "focus", G_CALLBACK (on_focus), appw);
 
-  //  g_signal_connect (fake, "focus", on_focus, )
+  //  hildon_window_set_menu(HILDON_WINDOW(fake), GTK_MENU(appw->menubar));
 
   g_object_ref (appw->current);
   gtk_container_remove (GTK_CONTAINER (appw), GTK_WIDGET (appw->current));

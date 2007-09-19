@@ -63,6 +63,8 @@ struct _TerminalAppWrapper
   gpointer         current;
   GSList              *apps;
 
+  GtkWidget *menubar;
+
   GSList *window_group;
   GtkWidget *windows_menu; /* Where window menuitems are*/
   guint windows;
