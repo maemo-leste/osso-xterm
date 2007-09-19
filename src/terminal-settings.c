@@ -54,12 +54,6 @@ struct _TerminalSettings
   GtkWidget   *bg_button;
   GtkWidget   *sb_spinner;
 
-  gint size;
-  gboolean bold;
-  gboolean italic;
-  gboolean underline;
-  gchar *family;
-
 };
 
 
@@ -97,14 +91,12 @@ terminal_settings_init (TerminalSettings *settings)
     gchar *font = NULL;
 
     if (!font_name) {
-	    settings->family = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
-    } else {
-	    settings->family = g_strdup(font_name);
+	    font_name = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
     }
 
-    settings->size = gconf_client_get_int(gc, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
-    if (!settings->size) {
-	    settings->size = OSSO_XTERM_DEFAULT_FONT_BASE_SIZE;
+    gint font_size = gconf_client_get_int(gc, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
+    if (!font_size) {
+	    font_size = OSSO_XTERM_DEFAULT_FONT_BASE_SIZE;
     }
 
     color_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, NULL);
@@ -130,7 +122,7 @@ terminal_settings_init (TerminalSettings *settings)
 
     g_object_unref(gc);
 
-    font = g_strdup_printf("%s %d", settings->family, settings->size);
+    font = g_strdup_printf("%s %d", font_name, font_size);
     g_free(font_name);
     font_name = NULL;
 
@@ -138,7 +130,6 @@ terminal_settings_init (TerminalSettings *settings)
 
     /* FIXME: right way to do this is subclassing */
     GTK_BUTTON_GET_CLASS (settings->font_button)->clicked = NULL;
-
     gtk_signal_connect( GTK_OBJECT (settings->font_button), "clicked", 
  			G_CALLBACK (terminal_settings_show_hildon_font_dialog), 
                         settings);
@@ -169,10 +160,6 @@ terminal_settings_init (TerminalSettings *settings)
 static void
 terminal_settings_finalize (GObject *object)
 {
-    TerminalSettings *settings = TERMINAL_SETTINGS (object);
-
-    if(settings->family != NULL)
-        g_free (settings->family);
 
     parent_class->finalize (object);
 }
@@ -260,6 +247,10 @@ static void
 terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 {
     TerminalSettings *settings = TERMINAL_SETTINGS (data);
+    PangoFontDescription *fontdesc;
+
+    gboolean bold = FALSE;
+    gboolean italic = FALSE;
 
     /* Create dialog */
     GtkWidget *dialog = hildon_font_selection_dialog_new (NULL, NULL);
@@ -268,52 +259,80 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
       return;
     }
 
+    fontdesc = pango_font_description_from_string (
+        gtk_font_button_get_font_name(GTK_FONT_BUTTON (settings->font_button)));
+    if (fontdesc == NULL) {
+      g_debug ("Couldn't create font description");
+      gtk_widget_destroy (dialog);
+      return;
+    }
+
+    pango_font_description_unset_fields (fontdesc, 
+       PANGO_FONT_MASK_STRETCH|PANGO_FONT_MASK_VARIANT);
+
+    if (pango_font_description_get_style (fontdesc) & PANGO_STYLE_ITALIC) {
+         italic = TRUE;
+    }
+
+    if ( (pango_font_description_get_weight (fontdesc) & PANGO_WEIGHT_BOLD) 
+                                                         == PANGO_WEIGHT_BOLD) {
+         bold = TRUE;
+    }
+
+    g_object_set(G_OBJECT(dialog),
+                 "family", pango_font_description_get_family (fontdesc),
+                 "size", pango_font_description_get_size (fontdesc)/PANGO_SCALE,
+                 "bold", bold,
+                 "italic", italic,
+                 NULL);
+
+
     gtk_widget_show_all (GTK_WIDGET(dialog));
 
     if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK) {
 
-        /* Help strings to convert dialogs results suitable to font_button */
-        gchar font_name[MAX_FONT_NAME_LENGHT];
-	gchar *bold = NULL;
-	gchar *italic = NULL;
+        gchar *font_name;
+        gint size;
+        gchar *family = NULL;
 
-	if (settings->family != NULL) {
-	  g_free (settings->family);
-	  settings->family = NULL;
-	}
+        PangoStyle style = PANGO_STYLE_NORMAL;
+        PangoWeight weight = PANGO_WEIGHT_NORMAL;
 
         g_object_get(G_OBJECT(dialog),
-                    "family", &settings->family,
-                    "size", &settings->size,
-                    "bold", &settings->bold,
-                    "italic", &settings->italic,
+                    "family", &family,
+                    "size", &size,
+                    "bold", &bold,
+                    "italic", &italic,
                     NULL);
 
-        if (settings->bold) {
-            bold = g_strdup ("Bold");
-        } else {
-            bold = g_strdup ("");
+        style = PANGO_STYLE_NORMAL;
+        weight = PANGO_WEIGHT_NORMAL;
+
+        if (italic == TRUE) {
+            style = PANGO_STYLE_ITALIC;
         }
-        if (settings->italic) {
-            italic = g_strdup ("Italic");
-        } else {
-            italic = g_strdup ("");
+        if (bold == TRUE) {
+	    weight = PANGO_WEIGHT_BOLD;
         }
 
-        g_snprintf (font_name, MAX_FONT_NAME_LENGHT-1, "%s %s %s %d", 
-                    settings->family, bold, italic, settings->size);
-        g_free (italic);
-        g_free (bold);
+	pango_font_description_set_family (fontdesc, family);
+	pango_font_description_set_size (fontdesc, size*PANGO_SCALE);
+	pango_font_description_set_weight (fontdesc, weight);
+	pango_font_description_set_style (fontdesc, style);
 
-        g_debug ("font name: %s", font_name);
+	font_name = pango_font_description_to_string (fontdesc);
+
         gtk_font_button_set_font_name (GTK_FONT_BUTTON (settings->font_button),
                                        font_name);
+	if (font_name != NULL) {
+            g_free(font_name);
+	}
+	if (family != NULL) {
+	  g_free (family);
+	  family = NULL;
+	}
 
     }
     gtk_widget_destroy(dialog);
-
-
-    g_debug (__FUNCTION__);
-    
-    
+        
 }
