@@ -126,9 +126,20 @@ static void            terminal_app_action_settings         (GtkAction       *ac
 static void            terminal_app_action_quit             (GtkAction       *action,
                                                              TerminalApp     *app);
 #ifndef USE_NOTEBOOK
-static void            terminal_app_close_window            (GtkWidget *widget, 
-                                                             gpointer data);
+#if 0
+static void           attach_subparent(GtkWidget *parent, GtkActionGroup *actiongroup,
+                                       GtkAccelGroup *accelgroup, 
+                                       GtkWidget *menuitem);
+#endif
 
+static void            terminal_app_close_window            (GtkWidget *widget, 
+                                                             TerminalApp     *app);
+static void            terminal_app_on_close_window            (GtkWidget *widget, 
+                                                             gpointer data);
+static void            terminal_app_action_show_full_screen (GtkToggleAction *action,
+                                                             TerminalApp     *app);
+static void            terminal_app_action_show_normal_screen(GtkToggleAction *action,
+                                                              TerminalApp     *app);
 /* This keeps count of number of windows */
 static gint windows = 0;
 #endif
@@ -151,7 +162,6 @@ static GtkActionEntry action_entries[] =
 {
 
   { "file-menu", NULL, N_ ("File"), },
-  { "windows-menu", NULL, N_ ("Windows"), },
   { "open-url", NULL, N_ ("Open URL"), NULL, NULL, G_CALLBACK (terminal_app_open_url), },
   { "new-window", NULL, N_ ("New window"), NULL, NULL, G_CALLBACK (terminal_app_action_new_tab), }, 
   { "new-tab", NULL, N_ ("New Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_new_tab), }, 
@@ -164,15 +174,28 @@ static GtkActionEntry action_entries[] =
   { "go-menu", NULL, N_ ("Go"), },
   { "prev-tab", NULL, N_ ("Previous Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_prev_tab), },
   { "next-tab", NULL, N_ ("Next Tab"), NULL, NULL, G_CALLBACK (terminal_app_action_next_tab), },
-#if 0
   { "font-menu", NULL, N_ ("Font size"), },
-#endif
   { "terminal-menu", NULL, N_ ("Terminal"), },
   { "reset", NULL, N_ ("Reset"), NULL, NULL, G_CALLBACK (terminal_app_action_reset), },
   { "reset-and-clear", NULL, N_ ("Reset and Clear"), NULL, NULL, G_CALLBACK (terminal_app_action_reset_and_clear), },
   { "ctrl", NULL, N_ ("Send Ctrl-<some key>"), NULL, NULL, G_CALLBACK (terminal_app_action_ctrl), },
+#if 0
   { "settings", NULL, N_ ("Settings..."), NULL, NULL, G_CALLBACK (terminal_app_action_settings), },
+#endif
   { "quit", NULL, N_ ("Quit"), NULL, NULL, G_CALLBACK (terminal_app_action_quit), },
+  { "tools-menu", NULL, N_ ("Tools"), },
+  { "close-menu", NULL, N_ ("Close"), },
+
+  { "windows-menu", NULL, N_ ("Windows"), },
+  { "tools", NULL, N_ ("Tools"), },
+
+  { "close-window", NULL, N_ ("Close window"), NULL, NULL, G_CALLBACK (terminal_app_close_window), },
+  { "close-all-windows", NULL, N_ ("Close all windows"), NULL, NULL, G_CALLBACK (terminal_app_action_quit), },
+
+  { "show-toolbar-menu", NULL, N_ ("Show toolbar"), },
+
+  { "settings", NULL, N_ ("Settings"), NULL, NULL, G_CALLBACK (terminal_app_action_settings), },
+
 };
 
 static GtkRadioActionEntry font_size_action_entries[] =
@@ -194,6 +217,18 @@ static GtkToggleActionEntry toggle_action_entries[] =
   { "fullscreen", NULL, N_ ("Fullscreen"), NULL, NULL, G_CALLBACK (terminal_app_action_fullscreen), FALSE },
   { "scrollbar", NULL, N_ ("Scrollbar"), NULL, NULL, G_CALLBACK (terminal_app_action_scrollbar), TRUE },
   { "toolbar", NULL, N_ ("Toolbar"), NULL, NULL, G_CALLBACK (terminal_app_action_toolbar), TRUE },
+
+  { "show-full-screen", NULL, N_ ("Full screen"), NULL, NULL, G_CALLBACK (terminal_app_action_show_full_screen), },
+  { "show-normal-screen", NULL, N_ ("Normal screen"), NULL, NULL, G_CALLBACK(terminal_app_action_show_normal_screen), },
+};
+
+static GtkToggleActionEntry show_toggle_action_entries[] =
+{
+  { "toolbar-normal", NULL, N_ ("Normal screen"), NULL, NULL, G_CALLBACK 
+(terminal_app_action_show_normal_screen)},
+  { "toolbar-fullscreen", NULL, N_ ("Full screen"), NULL, NULL, G_CALLBACK 
+(terminal_app_action_show_full_screen), },
+
 };
 
 static const gchar ui_description[] =
@@ -281,11 +316,18 @@ attach_item(GtkWidget *parent, GtkActionGroup *actiongroup,
     gtk_menu_shell_append(GTK_MENU_SHELL(parent), menuitem);
 }
 
+#if 0
+static void
+attach_subparent(GtkWidget *parent, GtkActionGroup *actiongroup,
+                 GtkAccelGroup *accelgroup, GtkWidget *menuitem) {
+    gtk_menu_shell_append(GTK_MENU_SHELL(parent), menuitem);
+}
+#endif
 
 static void
 populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
 {
-  GtkWidget           *menubar, *parent;
+  GtkWidget           *menubar, *parent, *subparent;
   GtkActionGroup      *actiongroup = app->action_group;
 
   menubar = gtk_menu_new();
@@ -305,12 +347,22 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   attach_item(parent, actiongroup, accelgroup, "shortcuts");
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "view-menu");
-  attach_item(parent, actiongroup, accelgroup, "reverse");
-  attach_item(parent, actiongroup, accelgroup, "scrollbar");
-  attach_item(parent, actiongroup, accelgroup, "toolbar");
   attach_item(parent, actiongroup, accelgroup, "fullscreen");
+
+  subparent = attach_menu(parent, actiongroup, accelgroup, "show-toolbar-menu");
+  attach_item(subparent, actiongroup, accelgroup, "show-full-screen");
+  attach_item(subparent, actiongroup, accelgroup, "show-normal-screen");
+
+  parent = attach_menu(menubar, actiongroup, accelgroup, "tools-menu");
+  attach_item(parent, actiongroup, accelgroup, "settings");
+
   gtk_menu_shell_append(GTK_MENU_SHELL(parent),
                         gtk_separator_menu_item_new());
+
+  parent = attach_menu(menubar, actiongroup, accelgroup, "close-menu");
+  attach_item(parent, actiongroup, accelgroup, "close-window");
+  attach_item(parent, actiongroup, accelgroup, "close-all-windows");
+
 #if 0
   parent = attach_menu(parent, actiongroup, accelgroup, "font-menu");
   attach_item(parent, actiongroup, accelgroup, "-8pt");
@@ -324,10 +376,13 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   attach_item(parent, actiongroup, accelgroup, "+8pt");
 #endif
 
+#if 0
   parent = attach_menu(menubar, actiongroup, accelgroup, "go-menu");
   attach_item(parent, actiongroup, accelgroup, "prev-tab");
   attach_item(parent, actiongroup, accelgroup, "next-tab");
+#endif
 
+#if 0
   parent = attach_menu(menubar, actiongroup, accelgroup, "terminal-menu");
   attach_item(parent, actiongroup, accelgroup, "reset");
   attach_item(parent, actiongroup, accelgroup, "reset-and-clear");
@@ -336,6 +391,7 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   attach_item(menubar, actiongroup, accelgroup, "settings");
 
   attach_item(menubar, actiongroup, accelgroup, "quit");
+#endif
 
   gtk_widget_show_all(menubar);
 
@@ -545,6 +601,10 @@ terminal_app_init (TerminalApp *app)
                                       font_size,
                                       G_CALLBACK(terminal_app_action_font_size),
                                       GTK_WIDGET(app));;
+  gtk_action_group_add_toggle_actions (app->action_group,
+                                       show_toggle_action_entries,
+                                       G_N_ELEMENTS (show_toggle_action_entries),
+                                       GTK_WIDGET (app));
 
   action = gtk_action_group_get_action(app->action_group, "scrollbar");
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), scrollbar);
@@ -601,7 +661,7 @@ terminal_app_init (TerminalApp *app)
                     G_CALLBACK (gtk_main_quit), app);
 #else
   g_signal_connect (G_OBJECT (app), "destroy",
-                    G_CALLBACK (terminal_app_close_window), NULL);
+                    G_CALLBACK (terminal_app_on_close_window), NULL);
 #endif
 
   /* setup fullscreen mode */
@@ -1367,11 +1427,35 @@ terminal_app_launch (TerminalApp     *app,
 
 #ifndef USE_NOTEBOOK
 static void
-terminal_app_close_window(GtkWidget *widget, gpointer data)
+terminal_app_close_window(GtkWidget *widget, TerminalApp *app)
+{
+    g_assert (app);
+    g_assert (TERMINAL_IS_APP (app));
+
+    g_object_unref (GTK_WIDGET (app));
+
+}
+
+static void
+terminal_app_on_close_window(GtkWidget *widget, gpointer data)
 {
   windows--;
+  g_debug ("%s - windows: %d", __FUNCTION__, windows);
   if (windows == 0) {
     gtk_main_quit ();
   }
 }
+
+static void            terminal_app_action_show_full_screen (GtkToggleAction *action,
+                                                             TerminalApp     *app)
+{
+
+}
+
+static void            terminal_app_action_show_normal_screen(GtkToggleAction *action,
+                                                              TerminalApp     *app)
+{
+
+}
+
 #endif
