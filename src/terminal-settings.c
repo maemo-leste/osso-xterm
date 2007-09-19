@@ -37,6 +37,7 @@
 
 #include "terminal-gconf.h"
 #include "terminal-settings.h"
+#include "shortcuts.h"
 
 #define MAX_FONT_NAME_LENGHT 256
 
@@ -44,13 +45,14 @@ static void terminal_settings_class_init    (TerminalSettingsClass *klass);
 static void terminal_settings_init          (TerminalSettings      *header);
 static void terminal_settings_finalize      (GObject               *object);
 static void terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data);
-
+static void terminal_widget_edit_shortcuts (GtkAction *action, gpointer *data);
 struct _TerminalSettings
 {
   GtkDialog    __parent__;
 
   GtkWidget   *font_button;
   GtkWidget   *fg_button;
+  GdkColor    *color;
   GtkWidget   *bg_button;
   GtkWidget   *sb_spinner;
 
@@ -78,17 +80,17 @@ terminal_settings_class_init (TerminalSettingsClass *klass)
 static void
 terminal_settings_init (TerminalSettings *settings)
 {
-//    settings->table = gtk_table_new(2, 2, FALSE);
 
- //   gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->table);
     GConfClient *gc = gconf_client_get_default();
     GdkColor fg;
     GdkColor bg;
     gint sb;
-
+//    GdkColormap *colormap = gdk_colormap_get_system ();
     gchar *color_name;
     gchar *font_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_FONT_NAME, NULL);
     gchar *font = NULL;
+
+    settings->color = NULL;
 
     if (!font_name) {
 	    font_name = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
@@ -103,9 +105,15 @@ terminal_settings_init (TerminalSettings *settings)
     if (!color_name) {
 	    gdk_color_parse(OSSO_XTERM_DEFAULT_FONT_COLOR, &fg);
     } else {
-	    gdk_color_parse(color_name, &fg);
+      //        g_debug ("color: %s", color_name);
+	    if(gdk_color_parse(color_name, &fg) == FALSE) {
+            g_debug ("color parsing failed");
+    	    gdk_color_parse(OSSO_XTERM_DEFAULT_FONT_COLOR, &fg);
+        }
 	    g_free(color_name);
     }
+//    gdk_colormap_alloc_color (colormap, &fg, TRUE, TRUE);
+//    settings->color = gdk_color_copy (&fg);
 
     color_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_BG_COLOR, NULL);
     if (!color_name) {
@@ -147,10 +155,14 @@ terminal_settings_init (TerminalSettings *settings)
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->fg_button);
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->bg_button);
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->sb_spinner);
+    GtkWidget *button = gtk_button_new_with_label (_("Toolbar"));
+    g_signal_connect (button, "clicked", G_CALLBACK (terminal_widget_edit_shortcuts), NULL);
+    gtk_widget_show (button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), button);
 
     gtk_dialog_add_buttons(GTK_DIALOG(settings),
-                           "Ok", GTK_RESPONSE_OK,
-                           "Cancel", GTK_RESPONSE_CANCEL,
+                           _("Ok"), GTK_RESPONSE_OK,
+                           _("Cancel"), GTK_RESPONSE_CANCEL,
                            NULL);
 
     gtk_widget_show_all(GTK_WIDGET(settings));
@@ -160,6 +172,9 @@ terminal_settings_init (TerminalSettings *settings)
 static void
 terminal_settings_finalize (GObject *object)
 {
+//    TerminalSettings *settings = TERMINAL_SETTINGS (object);
+//    if (settings->color != NULL)
+//        gdk_color_free (settings->color);
 
     parent_class->finalize (object);
 }
@@ -188,15 +203,19 @@ terminal_settings_store (TerminalSettings *settings)
 
     g_free(font_name);
 
+#if 1
 #if HILDON == 0
     color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button));
 #elif HILDON == 1
     hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button), color);
 #endif
+#else
+    color = gdk_color_copy(settings->color);
+#endif
     color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
-
     gconf_client_set_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, color_name, NULL);
     g_free(color_name);
+//    gdk_color_free (color);
 
 #if HILDON == 0
     color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->bg_button));
@@ -230,7 +249,7 @@ terminal_settings_new (GtkWindow *parent)
 
     dialog = g_object_new (TERMINAL_TYPE_SETTINGS, NULL);
 
-    gtk_window_set_title(GTK_WINDOW(dialog), _("X Terminal Settings"));
+    gtk_window_set_title(GTK_WINDOW(dialog), _("weba_ti_settings_title"));
 
     if (parent)
         gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
@@ -251,6 +270,9 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 
     gboolean bold = FALSE;
     gboolean italic = FALSE;
+//    GdkColor color;
+
+    g_debug (__FUNCTION__);
 
     /* Create dialog */
     GtkWidget *dialog = hildon_font_selection_dialog_new (NULL, NULL);
@@ -279,12 +301,16 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
          bold = TRUE;
     }
 
+    //    g_debug ("color stuff");
     g_object_set(G_OBJECT(dialog),
                  "family", pango_font_description_get_family (fontdesc),
                  "size", pango_font_description_get_size (fontdesc)/PANGO_SCALE,
                  "bold", bold,
                  "italic", italic,
+//                 "color-set", TRUE,
+//                 "color", *settings->color,
                  NULL);
+    //    g_debug ("color stuff end");
 
 
     gtk_widget_show_all (GTK_WIDGET(dialog));
@@ -303,7 +329,12 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
                     "size", &size,
                     "bold", &bold,
                     "italic", &italic,
+                   // "color", &color,
                     NULL);
+
+    //    if (settings->color != NULL)
+    //        gdk_color_free (settings->color);
+    //    settings->color = gdk_color_copy (&color);
 
         style = PANGO_STYLE_NORMAL;
         weight = PANGO_WEIGHT_NORMAL;
@@ -312,27 +343,38 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
             style = PANGO_STYLE_ITALIC;
         }
         if (bold == TRUE) {
-	    weight = PANGO_WEIGHT_BOLD;
+            weight = PANGO_WEIGHT_BOLD;
         }
 
-	pango_font_description_set_family (fontdesc, family);
-	pango_font_description_set_size (fontdesc, size*PANGO_SCALE);
-	pango_font_description_set_weight (fontdesc, weight);
-	pango_font_description_set_style (fontdesc, style);
+        pango_font_description_set_family (fontdesc, family);
+        pango_font_description_set_size (fontdesc, size*PANGO_SCALE);
+        pango_font_description_set_weight (fontdesc, weight);
+        pango_font_description_set_style (fontdesc, style);
 
-	font_name = pango_font_description_to_string (fontdesc);
+        font_name = pango_font_description_to_string (fontdesc);
 
         gtk_font_button_set_font_name (GTK_FONT_BUTTON (settings->font_button),
                                        font_name);
-	if (font_name != NULL) {
+	    if (font_name != NULL) {
             g_free(font_name);
-	}
-	if (family != NULL) {
-	  g_free (family);
-	  family = NULL;
-	}
+        }
+        if (family != NULL) {
+            g_free (family);
+            family = NULL;
+        }
 
     }
     gtk_widget_destroy(dialog);
         
+}
+
+
+static void
+terminal_widget_edit_shortcuts (GtkAction    *action,
+                           gpointer  *data)
+{
+  (void)action;
+  (void)data;
+
+  update_shortcut_keys();
 }
