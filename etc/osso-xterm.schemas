@@ -48,7 +48,7 @@
 			<owner>osso-xterm</owner>
 			<type>list</type>
 			<list_type>string</list_type>
-			<default>[Escape, Page_Up, Page_Down]</default>
+			<default>[Tabulator, Escape, Page_Up, Page_Down]</default>
 			<locale name="C">
 				<short>Keys shown in toolbar</short>
 			</locale>
@@ -59,7 +59,7 @@
 			<owner>osso-xterm</owner>
 			<type>list</type>
 			<list_type>string</list_type>
-			<default>[Esc, PgUp, PgDn]</default>
+			<default>[Tab, Esc, PgUp, PgDn]</default>
 			<locale name="C">
 				<short>Labels for keys in toolbar</short>
 			</locale>
