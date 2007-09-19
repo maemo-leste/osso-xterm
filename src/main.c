@@ -59,7 +59,7 @@ static gint osso_xterm_incoming(const gchar *interface,
     command = g_array_index(arguments, osso_rpc_t, 0).value.s;
   }
 
-  retval->value.b = terminal_app_launch(TERMINAL_APP(data),
+  retval->value.b = terminal_app_wrapper_launch(TERMINAL_APP_WRAPPER(data),
       command,
       NULL);
   retval->type = DBUS_TYPE_BOOLEAN;
@@ -131,7 +131,7 @@ main (int argc, char **argv)
   }
 
   g_object_set_data(G_OBJECT(app_wrapper), "osso", osso_context);
-  if (!terminal_app_launch (TERMINAL_APP(app_wrapper), command, &error))
+  if (!terminal_app_wrapper_launch (TERMINAL_APP_WRAPPER(app_wrapper), command, &error))
     {
       g_printerr (_("Unable to launch terminal: %s\n"), error->message);
       g_error_free(error);

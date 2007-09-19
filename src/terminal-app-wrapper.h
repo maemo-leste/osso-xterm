@@ -32,16 +32,14 @@
 #include <hildon/hildon-window.h>
 #endif
 
-#include "terminal-app.h"
-
 G_BEGIN_DECLS;
 
-#define TERMINAL_TYPE_APP_WRAPPER            (terminal_app_get_type ())
-#define TERMINAL_APP_WRAPPER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TERMINAL_TYPE_APP, TerminalApp))
-#define TERMINAL_APP_WRAPPER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_APP, TerminalAppClass))
-#define TERMINAL_IS_APP_WARAPPER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TERMINAL_TYPE_APP))
-#define TERMINAL_IS_APP_WRAPPER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_APP))
-#define TERMINAL_APP_WRAPPER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), TERMINAL_TYPE_APP, TerminalAppClass))
+#define TERMINAL_TYPE_APP_WRAPPER            (terminal_app_wrapper_get_type ())
+#define TERMINAL_APP_WRAPPER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TERMINAL_TYPE_APP_WRAPPER, TerminalAppWrapper))
+#define TERMINAL_APP_WRAPPER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_APP_WRAPPER, TerminalAppWrapperClass))
+#define TERMINAL_IS_APP_WRAPPER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TERMINAL_TYPE_APP_WRAPPER))
+#define TERMINAL_IS_APP_WRAPPER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_APP_WRAPPER))
+#define TERMINAL_APP_WRAPPER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), TERMINAL_TYPE_APP_WRAPPER, TerminalAppWrapperClass))
 
 typedef struct _TerminalAppWrapperClass TerminalAppWrapperClass;
 typedef struct _TerminalAppWrapper      TerminalAppWrapper;
@@ -51,33 +49,28 @@ struct _TerminalAppWrapperClass
   HildonWindowClass __parent__;
 
   /* signals */
-  void (*new_window) (TerminalApp *app,
+  void (*new_window) (TerminalAppWrapper *app,
                       const gchar *working_directory);
 };
 
-struct _TerminalWrapperApp
+struct _TerminalAppWrapper
 {
   HildonWindow         __parent__;
 
   GtkActionGroup      *action_group;
   GtkUIManager        *ui_manager;
 
-  TerminalApp         *current;
+  gpointer         current;
   GSList              *apps;
+
+  GSList *window_group;
+  GtkWidget *windows_menu; /* Where window menuitems are*/
+
 };
 
-
 GType      terminal_app_wrapper_get_type (void) G_GNUC_CONST;
-
 GtkWidget  *terminal_app_wrapper_new      (void);
-
-void       terminal_app_wrapper_add      (TerminalApp    *app,
-                                  TerminalWidget *widget);
-
-void       terminal_app_wrapper_remove   (TerminalApp *app,
-                                  TerminalWidget *widget);
-
-gboolean   terminal_app_wrapper_launch (TerminalApp     *app,
+gboolean   terminal_app_wrapper_launch (TerminalAppWrapper     *app,
     				const gchar     *command,
                                 GError          **error);
 

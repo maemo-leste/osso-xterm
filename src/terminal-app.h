@@ -48,26 +48,48 @@ typedef struct _TerminalApp      TerminalApp;
 
 struct _TerminalAppClass
 {
-  HildonWindowClass __parent__;
+  GtkVBoxClass __parent__;
 
   /* signals */
   void (*new_window) (TerminalApp *app,
                       const gchar *working_directory);
 };
 
+struct _TerminalApp
+{
+  GtkVBox         __parent__;
+
+  GtkActionGroup      *action_group;
+  GtkUIManager        *ui_manager;
+
+  GtkWidget *menubar; /* menubar */ 
+  GtkWidget *windows_menu; /* Where window menuitems are*/
+  GtkAction *menuaction; /* Window menuitem */
+
+
+  TerminalWidget *terminal;
+
+};
+
 GType      terminal_app_get_type (void) G_GNUC_CONST;
-
 GtkWidget *terminal_app_new      (void);
-
-void       terminal_app_add      (TerminalApp    *app,
-                                  TerminalWidget *widget);
-
-void       terminal_app_remove   (TerminalApp *app,
-                                  TerminalWidget *widget);
 
 gboolean   terminal_app_launch (TerminalApp     *app,
     				const gchar     *command,
                                 GError          **error);
+
+void terminal_app_set_toolbar (TerminalApp *app, gboolean show);
+void       terminal_app_add      (TerminalApp    *app,
+                                  TerminalWidget *widget);
+void       terminal_app_remove   (TerminalApp *app,
+                                  TerminalWidget *widget);
+
+int terminal_app_get_font_size            (TerminalApp *app);
+gboolean terminal_app_set_font_size       (TerminalApp *app, int new_size);
+void terminal_app_action_font_size        (GtkRadioAction  *action,
+                                           GtkRadioAction  *current,
+                                           TerminalApp     *app);
+
 
 G_END_DECLS;
 
