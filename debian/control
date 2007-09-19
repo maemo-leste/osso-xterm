@@ -7,7 +7,7 @@ Standards-Version: 3.6.2.1
 
 Package: osso-xterm
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ttf-bitstream-vera
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Provides: x-terminal-emulator
 Conflicts: xterminal
 Description: X Terminal Emulator for OSSO
