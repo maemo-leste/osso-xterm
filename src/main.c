@@ -38,7 +38,7 @@
 
 #include <libosso.h>
 
-#include "terminal-app.h"
+#include "terminal-app-wrapper.h"
 
 static gint osso_xterm_incoming(const gchar *interface,
     const gchar *method,
@@ -70,7 +70,7 @@ static gint osso_xterm_incoming(const gchar *interface,
 int
 main (int argc, char **argv)
 {
-  gpointer         app;
+  gpointer         app_wrapper;
   GError          *error = NULL;
   osso_context_t  *osso_context;
   const gchar     *command = NULL;
@@ -120,8 +120,8 @@ main (int argc, char **argv)
     exit(EXIT_SUCCESS);
   }
 
-  app = terminal_app_new();
-  g_object_add_weak_pointer(G_OBJECT(app), &app);
+  app_wrapper = terminal_app_wrapper_new();
+  g_object_add_weak_pointer(G_OBJECT(app_wrapper), &app_wrapper);
 
   osso_context = osso_initialize("xterm", VERSION, FALSE, NULL);
 
@@ -130,8 +130,8 @@ main (int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  g_object_set_data(G_OBJECT(app), "osso", osso_context);
-  if (!terminal_app_launch (TERMINAL_APP(app), command, &error))
+  g_object_set_data(G_OBJECT(app_wrapper), "osso", osso_context);
+  if (!terminal_app_launch (TERMINAL_APP(app_wrapper), command, &error))
     {
       g_printerr (_("Unable to launch terminal: %s\n"), error->message);
       g_error_free(error);
@@ -140,13 +140,13 @@ main (int argc, char **argv)
 
   osso_rpc_set_default_cb_f(osso_context,
       osso_xterm_incoming,
-      app);
+      app_wrapper);
 
   gtk_main ();
 
-  if (app != NULL)
+  if (app_wrapper != NULL)
     {
-      g_object_unref(G_OBJECT(app));
+      g_object_unref(G_OBJECT(app_wrapper));
     }
 
   osso_deinitialize(osso_context);
