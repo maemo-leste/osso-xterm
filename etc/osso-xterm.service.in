@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.nokia.xterm
+Exec=@bindir@/osso-xterm

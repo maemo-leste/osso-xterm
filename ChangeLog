@@ -1,0 +1,168 @@
+2004-10-12	Benedikt Meurer <benny@xfce.org>
+
+	* configure.ac: Version 0.1.9, depend on latest exo 0.1.2.
+	* m4/debug.m4: Added linker optimizations if --enable-final is
+	  given (recent GNU binutils required).
+	* doc/C/Terminal.xml: Update version and date.
+
+2004-10-10	Benedikt Meurer <benny@xfce.org>
+
+	* Terminal.ui, terminal/terminal-window.c: Load the UI description
+	  from the Terminal.ui file at runtime to allow users to customize
+	  the menus.
+
+2004-10-03	Benedikt Meurer <benny@xfce.org>
+
+	* HACKING: Added note to update gnomefiles.org entry when releasing.
+
+2004-10-02	Benedikt Meurer <benny@xfce.org>
+
+	* doc/C/Terminal.xml: Added FAQ entry how to fix Home/End keys in
+	  Terminal, thanks to sofar@lunar-linux.org.
+	* TODO: Added note on how to handle backwards compatibility in the
+	  D-BUS service interface.
+
+2004-09-31	Benedikt Meurer <benny@xfce.org>
+
+	* configure.ac: Version 0.1.8.
+	* terminal/terminal-preferences.c(transform_string_to_double): Try
+	  to transform using strtod first, fallback to g_ascii_strtod if
+	  the first failes. Should fix bug #2.
+	* terminal/terminal-app.c(terminal_app_new_window): Be sure to
+	  zero out options struct here. Should fix bug #3.
+	* terminal/Terminal.desktop: Added translations.
+	* po/fr.po, po/nl.po: Added french and dutch translations.
+	  Dutch translation reviewed and fixed by Jasper Huijsmans
+	  <jasper@xfce.org>.
+	* po/de.po: Updated german translations.
+	* doc/C/Terminal.xml: Added FAQ to the documentation. Random
+	  tweaks.
+	* terminal/terminal-preferences.c: Corrected spelling of menu item
+	  accelerators.
+	* terminal/terminal-options.c, terminal/main.c: Added command line
+	  option -e as a shortcut for --command.
+	* THANKS: Added to list contributers.
+	* debian/rules: Include THANKS file with the docs.
+
+2004-09-30	Benedikt Meurer <benny@xfce.org>
+
+	* configure.ac: Version 0.1.7.
+	* terminal/terminal-preferences.c (transform_color_to_string): Use
+	  full 16bit of each color component when storing colors.
+	* terminal/terminal-preferences.c, terminal/terminal-widget.c,
+	  terminal/terminal-preferences-dialog.c: Allow to specify the
+	  color palette used by Terminal, defaults to the Linux console color
+	  palette. Also use the specified background color for tinting
+	  the terminal background in image and transparent mode.
+	* terminal/terminal-window.c, terminal/main.c: Setup default icon
+	  on startup not per newly created window.
+	* terminal/terminal-preferences.c: Don't delete the whole Configuration
+	  group when storing settings.
+	* terminal/terminal-preferences.c, terminal-preferences-dialog.c,
+	  terminal/terminal-widget.c, TODO: Allow the user to specify the
+	  setting of the $TERM variable on new terminals.
+	* doc/: Updated documentation and images to keep up with the
+	  recent changes.
+	* po/de.po: German translation updated.
+
+2004-09-29	Benedikt Meurer <benny@xfce.org>
+
+	* terminal/stock-icon-reportbug.png, terminal/terminal-window.c,
+	  terminal/main.c: Added Report Bug icon from Francois Le Clainche.
+
+2004-09-28	Benedikt Meurer <benny@xfce.org>
+
+	* TODO: Added note about TERM environment variable.
+
+2004-09-27	Benedikt Meurer <benny@xfce.org>
+
+	* HACKING: Added note about bugzilla update to Release Process.
+
+2004-09-26	Benedikt Meurer <benny@xfce.org>
+
+	* icons/scalable: Added scalable versions of the terminal icons,
+	  designed by Francois Le Clainche <fleclainche@wanadoo.fr>.
+	* icons/48x48: Use new icons by Francois Le Clainche
+	  <fleclainche@wanadoo.fr>.
+
+2004-09-25	Benedikt Meurer <benny@xfce.org>
+
+	* configure.ac, NEWS: Version 0.1.6, depends on exo-0.1 >= 0.1.1.
+	* po/de.po: Translation updates.
+	* terminal/terminal-window.c: Setup correct translation domain 
+	  for the actions.
+	* HACKING: Added note to update translations to Release process
+	  section.
+	* terminal/terminal-preferences-dialog.c, terminal/terminal-widget.c,
+	  terminal/terminal-preferences.c: Remove custom command functionality,
+	  since its useless, because Terminal offers -x/--execute command
+	  line option. Remove visible bell option, as the visible bell provided
+	  by VTE isn't worth to have an option.
+	* terminal/terminal-preferences-dialog.c, terminal/terminal-window.c,
+	  terminal/terminal-preferences.c, terminal/terminal-shortcut-editors.c:
+	  Remove compact mode and replace it by two other options,
+	  'show menubar' and 'show borders'.
+	* terminal/terminal-preferences-dialog.c: Use GtkFrame instead of
+	  XfceFramebox for smoother look.
+	* terminal/terminal-widget.c: Bind to realize signal of VteTerminal
+	  for setting terminal parameters instead of overloading the map
+	  method of GtkWidget. Fix problem with monochrom mc on some linux
+	  systems by explicitly setting TERM and COLORTERM environment
+	  variables.
+	* terminal/terminal-window.c: Added border and Help button to the
+	  Set Title dialog. Added Report a bug to the Help menu.
+	* TerminalHelp.in: Added second parameter to allow supplying a
+	  page section id.
+	* doc/: Lots of documentation updates. All images have been updated
+	  to display the new xfwm default theme and to keep up with the
+	  interface changes in Terminal.
+	* terminal/stock-newtab.png, terminal/stock-newwindow.png: New icons
+	  from Francois.
+	* AUTHOR: Added Francois Le Clainche <fleclainche@wanadoo.fr>.
+
+2004-09-24	Benedikt Meurer <benny@xfce.org>
+
+	* TerminalHelp.in, doc/: Produce multiple html files for each toplevel
+	  section instead of a single html file. Added more documentation.
+	* terminal/terminal-widget.c, terminal/terminal-widget.h: Added
+	  encoding property.
+
+2004-09-23	Benedikt Meurer <benny@xfce.org>
+
+	* terminal/terminal-tab-header.c, terminal/terminal-tab-header.h: Move
+	  the terminal tab header functionality here.
+	* terminal/terminal-widget.c, terminal-widget.h: Add possibility to
+	  set a custom title and added functionality to get/set the working
+	  directory in use for a widget.
+	* terminal/terminal-window.c: Implement the "Set title" action. Set
+	  a unique role on each newly created window. Added Help/Contents,
+	  which runs TerminalHelp.
+	* terminal/terminal-app.c: New terminal windows opened from existing
+	  terminal windows inherit the working directory, atleast on plattforms
+	  that supports getting the working directory for a child process.
+	* terminal/main.c(usage): Include all command line options in the
+	  usage output.
+	* doc/: Added online documentation.
+	* HACKING: Added notes about updating documentation to the
+	  "Release process" section.
+	* TerminalHelp.in: Simple script to launch a browser with the
+	  Terminal online documentation.
+	* debian/rules: Use /usr/bin as libexecdir, since Debian policies
+	  seems to forbid the use of libexecdir.
+	* terminal/terminal-preferences-dialog.c: Run TerminalHelp when the
+	  Help button is clicked.
+
+2004-09-22	Benedikt Meurer <benny@xfce.org>
+
+	* configure.ac: Version 0.1.5.
+	* m4/glib-gettext.m4: Added missing file.
+	* debian/Terminal.xpm, debian/rules, debian/menu, icons/terminal.xpm,
+	  icons/Makefile.am: Include XPM version of the icon in package.
+	* Terminal.desktop: Added .desktop file.
+	* Terminal.spec.in: Include file to ease RPM creation.
+	* TODO: Remove fixed tasks.
+	* HACKING: Mention the steps required to create a release.
+
+2004-09-10	Benedikt Meurer <benny@xfce.org>
+
+	* Initial import.

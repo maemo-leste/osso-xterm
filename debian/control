@@ -1,0 +1,16 @@
+Source: osso-xterm
+Section: user/Applications
+Priority: optional
+Maintainer: Santtu Lakkala <inz@inz.fi>
+Build-Depends: debhelper (>= 4.0.0), libvte-dev, libdbus-1-dev, libgconf2-dev, libdbus-glib-1-dev, libglib2.0-dev, libhildon1-dev (>= 0.9.9) | hildon-libs-dev (>= 0.12.0), libosso-dev, maemo-browser-interface-dev | osso-browser-interface-dev
+Standards-Version: 3.6.2.1
+
+Package: osso-xterm
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ttf-bitstream-vera
+Provides: x-terminal-emulator
+Conflicts: xterminal
+Description: X Terminal Emulator for OSSO
+ This package contains an X Terminal Emulator which is based on xterminal
+ (http://www.os-cillation.com/article.php?sid=40) by Benedikt Meurer
+ <benny@xfce.org> and Francois Le Clainche <fleclainche@wanadoo.fr>

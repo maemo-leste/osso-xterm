@@ -1,0 +1,100 @@
+#!/usr/bin/make -f
+
+DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O0
+else
+	CFLAGS += -O2
+endif
+ifneq (,$(findstring thumb,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -mthumb
+endif
+ifneq (,$(findstring maemo-launcher,$(DEB_BUILD_OPTIONS)))
+	LAUNCHER = yes
+endif
+
+ifeq "$(strip $(LAUNCHER))" "yes"
+	LAUNCHER_DEPENDS = -Vlauncher:Depends="maemo-launcher"
+	LAUNCHER_CFLAGS = -shared
+	LAUNCHER_LDFLAGS = -shared
+endif
+
+configure: configure-stamp
+configure-stamp:
+
+	dh_testdir
+	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/sbin --enable-final
+	touch configure-stamp
+
+build: configure build-stamp
+build-stamp:
+	
+	dh_testdir
+	$(MAKE) \
+		LAUNCHER_CFLAGS="$(LAUNCHER_CFLAGS)" \
+		LAUNCHER_LDFLAGS="$(LAUNCHER_LDFLAGS)"
+	touch build-stamp
+
+clean:
+	
+	dh_testdir
+	dh_testroot
+	
+	-rm -f configure-stamp build-stamp 
+
+	-$(MAKE) distclean
+	-test -r /usr/share/misc/config.sub && \
+	  cp -f /usr/share/misc/config.sub config.sub
+	-test -r /usr/share/misc/config.guess && \
+	  cp -f /usr/share/misc/config.guess config.guess
+
+	dh_clean
+
+install: build
+
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+
+	$(MAKE) install DESTDIR=`pwd`/debian/osso-xterm
+ifeq "$(strip $(LAUNCHER))" "yes"
+	mv $(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm \
+		$(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm.launch
+	ln -s /usr/bin/maemo-invoker \
+		$(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm
+endif
+
+	install -d `pwd`/debian/osso-xterm/usr/share/man/man1
+	install `pwd`/debian/osso-xterm.1 `pwd`/debian/osso-xterm/usr/share/man/man1
+
+binary-indep: build install
+binary-arch: build install
+	
+	dh_testdir
+	dh_testroot
+
+	dh_gconf -a
+
+	dh_installdocs -a AUTHORS NEWS README THANKS
+	dh_installmenu -a
+
+	dh_installchangelogs ChangeLog -a
+
+	dh_link -a
+
+	dh_strip -a
+	dh_compress -a
+	
+	dh_fixperms -a
+	dh_installdeb -a
+	
+	dh_shlibdeps -a
+	dh_gencontrol -a -- -DMaemo-Icon-26="$(shell python -c "import base64; file = open('icons/26x26/terminal.png', 'r'); print base64.encodestring(file.read())")"
+	
+	dh_md5sums -a
+	dh_builddeb -a
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install 
