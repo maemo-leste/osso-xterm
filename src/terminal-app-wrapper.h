@@ -64,6 +64,7 @@ struct _TerminalAppWrapper
   GSList              *apps;
 
   GtkWidget *menubar;
+  GtkWidget *currentwindow;
 
   GSList *window_group;
   GtkWidget *windows_menu; /* Where window menuitems are*/

@@ -371,12 +371,12 @@ terminal_app_dispose (GObject *object)
 static void
 terminal_app_finalize (GObject *object)
 {
-  TerminalApp *app = TERMINAL_APP (object);
+//  TerminalApp *app = TERMINAL_APP (object);
 //  GtkWidget *menuitem = NULL;
 
   g_debug (__FUNCTION__);
 
-  g_object_unref (app->terminal);
+//  g_object_unref (app->terminal);
   //g_object_unref (G_OBJECT (app->action_group));
   //g_object_unref (G_OBJECT (app->ui_manager));
 
