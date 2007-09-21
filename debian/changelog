@@ -1,3 +1,16 @@
+osso-xterm (0.14) unstable; urgency=low
+
+  * Added autogen.sh
+  * Added autogen.sh to debian/rules
+  * Replaced tabs with windows
+  * Modified menus
+  * Replaced GtkFontSelector with HildonFontSelector
+  * Added Maemo localisation from osso-browser-ui domain
+  * Modified tooldar. Place and default buttons.
+  * Moved shortcut-settinsgs to settings
+
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Fri, 21 Sep 2007 16:48:01 +0300
+
 osso-xterm (0.13.mh25) unstable; urgency=low
 
   * Fixed the VTE widget's focus handlers not being invoked, causing

@@ -1,3 +1,16 @@
+2007-09-21      Joni Valtanen <jvaltane@kapsi.fi>
+
+        * added autogen.sh and edited debian/rules to work straight with 
+          dpkg-buildpackage -rfakeroot
+        * removed tab-system and replaced them with windows
+        * modified menus
+        * replaced gtkfontselector with hildonfontselector
+        * added localisation from osso-browserui-domain
+        * modified toolbar work like osso-browser. different mode for 
+          fullscreen and windowed
+        * moved shortcut settings to settings
+        * modified default shortcuts
+
 2004-10-12	Benedikt Meurer <benny@xfce.org>
 
 	* configure.ac: Version 0.1.9, depend on latest exo 0.1.2.
