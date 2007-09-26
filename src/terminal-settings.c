@@ -22,9 +22,15 @@
 #include <config.h>
 #endif
 
+#define GETTEXT_PACKAGE "osso-browser-ui"
+
 #include <gconf/gconf-client.h>
+
+#include <glib/gi18n-lib.h>
+
 #include <libintl.h>
 #include <locale.h>
+
 #include <stdlib.h>
 #if HILDON == 0
 #include <hildon-widgets/hildon-color-button.h>
@@ -33,7 +39,6 @@
 #include <hildon/hildon-color-button.h>
 #include <hildon/hildon-font-selection-dialog.h>
 #endif
-#define _(String) gettext(String)
 
 #include "terminal-gconf.h"
 #include "terminal-settings.h"
@@ -46,6 +51,7 @@ static void terminal_settings_init          (TerminalSettings      *header);
 static void terminal_settings_finalize      (GObject               *object);
 static void terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data);
 static void terminal_widget_edit_shortcuts (GtkButton *button, gpointer *data);
+
 struct _TerminalSettings
 {
   GtkDialog    __parent__;
@@ -60,7 +66,6 @@ struct _TerminalSettings
 
 
 static GObjectClass *parent_class;
-
 
 G_DEFINE_TYPE (TerminalSettings, terminal_settings, GTK_TYPE_DIALOG);
 
@@ -80,7 +85,7 @@ terminal_settings_class_init (TerminalSettingsClass *klass)
 static void
 terminal_settings_init (TerminalSettings *settings)
 {
-
+    GtkWidget *widget = NULL;
     GConfClient *gc = gconf_client_get_default();
     GdkColor fg;
     GdkColor bg;
@@ -148,16 +153,25 @@ terminal_settings_init (TerminalSettings *settings)
     settings->fg_button = hildon_color_button_new_with_color(&fg);
     settings->bg_button = hildon_color_button_new_with_color(&bg);
     settings->sb_spinner = gtk_spin_button_new_with_range(1.0, 10000.0, 1.0);
+
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(settings->sb_spinner), (gdouble)sb);
     hildon_gtk_entry_set_input_mode(GTK_ENTRY(settings->sb_spinner), HILDON_GTK_INPUT_MODE_NUMERIC);
 
+	widget = gtk_label_new (dgettext ("osso-email-old", "mcen_ti_font_settings"));
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), widget);
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->font_button);
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->fg_button);
+//    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->fg_button);
+
+	widget = gtk_label_new (dgettext ("osso-email-old", "mcen_me_editor_bgcolor"));
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), widget);
+
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->bg_button);
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->sb_spinner);
-    GtkWidget *button = gtk_button_new_with_label (_("Toolbar"));
+
+    GtkWidget *button = gtk_button_new_with_label (_("weba_fi_plugin_details_shortcut"));
     g_signal_connect (button, "clicked", G_CALLBACK (terminal_widget_edit_shortcuts), (gpointer)settings);
     gtk_widget_show (button);
+
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), button);
 
     gtk_dialog_add_buttons(GTK_DIALOG(settings),
@@ -166,6 +180,7 @@ terminal_settings_init (TerminalSettings *settings)
                            NULL);
 
     gtk_widget_show_all(GTK_WIDGET(settings));
+
 }
 
 

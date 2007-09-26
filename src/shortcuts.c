@@ -1,9 +1,15 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
 #include <glib.h>
 #include <gtk/gtk.h>
+
+#define GETTEXT_PACKAGE "osso-browser-ui"
+#include <glib/gi18n-lib.h>
+
 #include <gconf/gconf-client.h>
+
 #if HILDON == 0
 #include <hildon-widgets/hildon-caption.h>
 #elif HILDON == 1
@@ -15,7 +21,7 @@
 
 #include <assert.h>
 
-#define _(x) gettext(x)
+//#define _(x) gettext(x)
 
 enum Responses {
 	GRAPH_RESPONSE_NEW = 1,
@@ -41,7 +47,7 @@ static void selection_changed(GtkTreeSelection *sel, GraphApplet *applet);
 static void move_up(GtkButton *button, GraphApplet *applet);
 static void move_down(GtkButton *button, GraphApplet *applet);
 
-void update_shortcut_keys(void)
+void update_shortcut_keys(gpointer window)
 {
 	GraphApplet applet;
 
@@ -49,7 +55,7 @@ void update_shortcut_keys(void)
 
 	/* Create the main dialog and refresh the ui */
 
-	ui_create_main_dialog(&applet, NULL);
+	ui_create_main_dialog(&applet, window);
 
 	gtk_dialog_run(GTK_DIALOG(applet.keys_dialog));
 	update_cmds(gtk_tree_view_get_model(GTK_TREE_VIEW(applet.keys_list)),
@@ -92,6 +98,10 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 			_("webb_me_delete"), GRAPH_RESPONSE_DELETE,
 			_("webb_me_close"), GRAPH_RESPONSE_DONE,
 			NULL));
+
+//    gtk_window_set_transient_for(GTK_WINDOW(applet->keys_dialog), GTK_WINDOW (window));
+    gtk_window_set_modal(GTK_WINDOW (applet->keys_dialog), TRUE);
+    gtk_window_set_destroy_with_parent(GTK_WINDOW(applet->keys_dialog), TRUE);
 
 	model = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
 
@@ -141,8 +151,8 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 	g_signal_connect(applet->keys_dialog, "response",
 			G_CALLBACK(keys_dialog_response), applet);
 
-	gtk_widget_show_all(GTK_WIDGET(applet->keys_dialog));
 	gtk_widget_set_size_request (GTK_WIDGET (applet->keys_dialog), 400, 250);
+	gtk_widget_show_all(GTK_WIDGET(applet->keys_dialog));
 }
 
 static void keys_dialog_response(GtkDialog *dialog, gint response,

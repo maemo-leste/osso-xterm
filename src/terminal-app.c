@@ -221,11 +221,13 @@ static const gchar ui_description[] =
  "    <menuitem action='new-window'/>"
  "    <separator/>"
  "    <menuitem action='paste'/>"
- "    <separator/>"
- "    <menuitem action='settings'/>"
  "  </popup>"
  "</ui>";
 
+/*
+ "    <separator/>"
+ "    <menuitem action='settings'/>"
+*/
 
 G_DEFINE_TYPE (TerminalApp, terminal_app, HILDON_TYPE_WINDOW);
 
@@ -882,7 +884,7 @@ terminal_app_action_edit_shortcuts (GtkAction    *action,
   (void)action;
   (void)app;
 
-  update_shortcut_keys();
+//  update_shortcut_keys();
 }
 
 
@@ -1123,6 +1125,8 @@ terminal_app_action_settings (GtkAction    *action,
     GtkWidget *settings;
     
     settings = terminal_settings_new(GTK_WINDOW(app));
+	gtk_widget_set_size_request (GTK_WIDGET (settings), 300, 200);
+
     switch (gtk_dialog_run(GTK_DIALOG(settings))) {
         case GTK_RESPONSE_OK:
             terminal_settings_store(TERMINAL_SETTINGS(settings));
