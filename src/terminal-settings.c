@@ -90,7 +90,6 @@ terminal_settings_init (TerminalSettings *settings)
     GdkColor fg;
     GdkColor bg;
     gint sb;
-//    GdkColormap *colormap = gdk_colormap_get_system ();
     gchar *color_name;
     gchar *font_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_FONT_NAME, NULL);
     gchar *font = NULL;
@@ -117,8 +116,8 @@ terminal_settings_init (TerminalSettings *settings)
         }
 	    g_free(color_name);
     }
-//    gdk_colormap_alloc_color (colormap, &fg, TRUE, TRUE);
-//    settings->color = gdk_color_copy (&fg);
+
+    settings->color = gdk_color_copy (&fg);
 
     color_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_BG_COLOR, NULL);
     if (!color_name) {
@@ -150,7 +149,7 @@ terminal_settings_init (TerminalSettings *settings)
     g_free(font);
     font = NULL;
 
-    settings->fg_button = hildon_color_button_new_with_color(&fg);
+//    settings->fg_button = hildon_color_button_new_with_color(&fg);
     settings->bg_button = hildon_color_button_new_with_color(&bg);
 //    settings->sb_spinner = gtk_spin_button_new_with_range(1.0, 10000.0, 1.0);
 
@@ -205,8 +204,8 @@ terminal_settings_store (TerminalSettings *settings)
 //    gint sb;
     GdkColor *color;
 #if HILDON == 1
-    GdkColor colors;
-    color = &colors;
+//    GdkColor colors;
+//    color = &colors;
 #endif
 
     if (!sep) return FALSE;
@@ -218,7 +217,7 @@ terminal_settings_store (TerminalSettings *settings)
 
     g_free(font_name);
 
-#if 1
+#if 0
 #if HILDON == 0
     color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button));
 #elif HILDON == 1
@@ -228,6 +227,7 @@ terminal_settings_store (TerminalSettings *settings)
     color = gdk_color_copy(settings->color);
 #endif
     color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
+    g_debug ("color : %s", color_name);
     gconf_client_set_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, color_name, NULL);
     g_free(color_name);
 //    gdk_color_free (color);
@@ -281,7 +281,6 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 
     gboolean bold = FALSE;
     gboolean italic = FALSE;
-//    GdkColor color;
 
     g_debug (__FUNCTION__);
 
@@ -312,16 +311,13 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
          bold = TRUE;
     }
 
-    //    g_debug ("color stuff");
     g_object_set(G_OBJECT(dialog),
                  "family", pango_font_description_get_family (fontdesc),
                  "size", pango_font_description_get_size (fontdesc)/PANGO_SCALE,
                  "bold", bold,
                  "italic", italic,
-//                 "color-set", TRUE,
-//                 "color", *settings->color,
+                 "color", settings->color,
                  NULL);
-    //    g_debug ("color stuff end");
 
 
     gtk_widget_show_all (GTK_WIDGET(dialog));
@@ -340,12 +336,8 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
                     "size", &size,
                     "bold", &bold,
                     "italic", &italic,
-                   // "color", &color,
+                    "color", &settings->color,
                     NULL);
-
-    //    if (settings->color != NULL)
-    //        gdk_color_free (settings->color);
-    //    settings->color = gdk_color_copy (&color);
 
         style = PANGO_STYLE_NORMAL;
         weight = PANGO_WEIGHT_NORMAL;
