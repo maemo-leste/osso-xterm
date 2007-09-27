@@ -2,7 +2,7 @@ osso-xterm (0.14.1) unstable; urgency=low
 
   * Modified context sensitive menu. (#70961, #71003)
   * Fixed localisation. (#70978, #70980, #71000)
-  * Fixed settings dialog (#70982, #71012, 71029)
+  * Fixed settings dialog (#70982, #71012, #71029, #71007)
   * Fixed HildonFontChooser color selection (#70993)
   * Fixed schemas unnessesary spaces
 
