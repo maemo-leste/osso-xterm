@@ -128,10 +128,8 @@ static void            terminal_app_select_all         (GtkAction       *action,
                                                              TerminalApp     *app);
 
 /* This keeps count of number of windows */
-//static guint window_id = 1;
 static gint windows = 0;
 static GSList *window_list = NULL;
-//static GSList *app_window_group; /* for grouping windows in menu */
 
 /* Show toolbar */
 static gboolean toolbar_fs = TRUE;
@@ -221,9 +219,7 @@ static const gchar ui_description[] =
  "<ui>"
  "  <popup name='popup-menu'>"
  "    <menuitem action='new-window'/>"
- "    <menuitem action='close-window'/>"
  "    <separator/>"
- "    <menuitem action='copy'/>"
  "    <menuitem action='paste'/>"
  "    <separator/>"
  "    <menuitem action='settings'/>"
