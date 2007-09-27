@@ -152,10 +152,10 @@ terminal_settings_init (TerminalSettings *settings)
 
     settings->fg_button = hildon_color_button_new_with_color(&fg);
     settings->bg_button = hildon_color_button_new_with_color(&bg);
-    settings->sb_spinner = gtk_spin_button_new_with_range(1.0, 10000.0, 1.0);
+//    settings->sb_spinner = gtk_spin_button_new_with_range(1.0, 10000.0, 1.0);
 
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(settings->sb_spinner), (gdouble)sb);
-    hildon_gtk_entry_set_input_mode(GTK_ENTRY(settings->sb_spinner), HILDON_GTK_INPUT_MODE_NUMERIC);
+//    gtk_spin_button_set_value(GTK_SPIN_BUTTON(settings->sb_spinner), (gdouble)sb);
+//    hildon_gtk_entry_set_input_mode(GTK_ENTRY(settings->sb_spinner), HILDON_GTK_INPUT_MODE_NUMERIC);
 
 	widget = gtk_label_new (dgettext ("osso-email-old", "mcen_ti_font_settings"));
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), widget);
@@ -166,7 +166,7 @@ terminal_settings_init (TerminalSettings *settings)
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), widget);
 
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->bg_button);
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->sb_spinner);
+//    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->sb_spinner);
 
     GtkWidget *button = gtk_button_new_with_label (_("weba_fi_plugin_details_shortcut"));
     g_signal_connect (button, "clicked", G_CALLBACK (terminal_widget_edit_shortcuts), (gpointer)settings);
@@ -202,7 +202,7 @@ terminal_settings_store (TerminalSettings *settings)
     const gchar *font = gtk_font_button_get_font_name(GTK_FONT_BUTTON(settings->font_button));
     const gchar *sep = g_utf8_strrchr(font, -1, ' ');
     gchar *color_name;
-    gint sb;
+//    gint sb;
     GdkColor *color;
 #if HILDON == 1
     GdkColor colors;
@@ -241,8 +241,8 @@ terminal_settings_store (TerminalSettings *settings)
     gconf_client_set_string(gc, OSSO_XTERM_GCONF_BG_COLOR, color_name, NULL);
     g_free(color_name);
 
-    sb = (gint)gtk_spin_button_get_value(GTK_SPIN_BUTTON(settings->sb_spinner));
-    gconf_client_set_int(gc, OSSO_XTERM_GCONF_SCROLLBACK, sb, NULL);
+  //  sb = (gint)gtk_spin_button_get_value(GTK_SPIN_BUTTON(settings->sb_spinner));
+//    gconf_client_set_int(gc, OSSO_XTERM_GCONF_SCROLLBACK, sb, NULL);
 
     g_object_unref(gc);
 
