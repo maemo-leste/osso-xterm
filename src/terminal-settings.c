@@ -45,7 +45,7 @@ static void terminal_settings_class_init    (TerminalSettingsClass *klass);
 static void terminal_settings_init          (TerminalSettings      *header);
 static void terminal_settings_finalize      (GObject               *object);
 static void terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data);
-static void terminal_widget_edit_shortcuts (GtkAction *action, gpointer *data);
+static void terminal_widget_edit_shortcuts (GtkButton *button, gpointer *data);
 struct _TerminalSettings
 {
   GtkDialog    __parent__;
@@ -156,7 +156,7 @@ terminal_settings_init (TerminalSettings *settings)
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->bg_button);
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->sb_spinner);
     GtkWidget *button = gtk_button_new_with_label (_("Toolbar"));
-    g_signal_connect (button, "clicked", G_CALLBACK (terminal_widget_edit_shortcuts), NULL);
+    g_signal_connect (button, "clicked", G_CALLBACK (terminal_widget_edit_shortcuts), (gpointer)settings);
     gtk_widget_show (button);
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), button);
 
@@ -251,11 +251,7 @@ terminal_settings_new (GtkWindow *parent)
 
     gtk_window_set_title(GTK_WINDOW(dialog), _("weba_ti_settings_title"));
 
-    if (parent)
-        gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
-
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
-
     gtk_window_set_destroy_with_parent(GTK_WINDOW(dialog), TRUE);
 
     return dialog;
@@ -370,11 +366,11 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 
 
 static void
-terminal_widget_edit_shortcuts (GtkAction    *action,
+terminal_widget_edit_shortcuts (GtkButton *button,
                            gpointer  *data)
 {
-  (void)action;
-  (void)data;
+  (void)button;
+//  (void)data;
 
-  update_shortcut_keys();
+  update_shortcut_keys(data);
 }
