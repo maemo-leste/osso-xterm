@@ -126,8 +126,18 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 	view_hbox = gtk_hbox_new(FALSE, 0);
 	view_vbox = gtk_vbox_new(FALSE, 0);
 
-	applet->view_up = gtk_button_new_from_stock(GTK_STOCK_GO_UP);
-	applet->view_down = gtk_button_new_from_stock(GTK_STOCK_GO_DOWN);
+//	applet->view_up = gtk_button_new_from_stock(GTK_STOCK_GO_UP);
+//	applet->view_down = gtk_button_new_from_stock(GTK_STOCK_GO_DOWN);
+
+	GtkWidget *arrow = gtk_arrow_new (GTK_ARROW_UP, GTK_EXPAND);
+    gtk_widget_show (arrow);
+	applet->view_up = gtk_button_new ();
+    gtk_button_set_image (GTK_BUTTON (applet->view_up), arrow);
+
+	arrow = gtk_arrow_new (GTK_ARROW_DOWN, GTK_EXPAND);
+    gtk_widget_show (arrow);
+	applet->view_down = gtk_button_new ();
+    gtk_button_set_image (GTK_BUTTON (applet->view_down), arrow);
 
 	g_signal_connect(applet->view_up, "clicked", G_CALLBACK(move_up), applet);
 	g_signal_connect(applet->view_down, "clicked", G_CALLBACK(move_down), applet);
@@ -151,8 +161,8 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 	g_signal_connect(applet->keys_dialog, "response",
 			G_CALLBACK(keys_dialog_response), applet);
 
-	gtk_widget_set_size_request (GTK_WIDGET (applet->keys_dialog), 400, 250);
 	gtk_widget_show_all(GTK_WIDGET(applet->keys_dialog));
+	gtk_widget_set_size_request (GTK_WIDGET (applet->keys_dialog), 400, 250);
 }
 
 static void keys_dialog_response(GtkDialog *dialog, gint response,

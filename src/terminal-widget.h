@@ -23,6 +23,7 @@
 #define __TERMINAL_WIDGET_H__
 
 #include <gtk/gtk.h>
+#include <hildon/hildon.h>
 #include <gconf/gconf-client.h>
 
 G_BEGIN_DECLS;
@@ -76,6 +77,8 @@ struct _TerminalWidget
 
   GtkIMContext        *im_context;
   gboolean	       im_pending;
+
+  GtkWindow			*app;
 };
 
 GType        terminal_widget_get_type                     (void) G_GNUC_CONST;
@@ -124,6 +127,9 @@ char      *terminal_widget_get_tag		      (TerminalWidget *widget,
 						       gint            x,
 						       gint            y,
 						       gint           *tag);
+
+void terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window);
+
 
 G_END_DECLS;
 

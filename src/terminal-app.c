@@ -697,7 +697,7 @@ terminal_app_finalize (GObject *object)
     gtk_main_quit ();
   }
 
-  //parent_class->finalize (object);
+  parent_class->finalize (object);
 }
 
 
@@ -828,6 +828,7 @@ terminal_app_action_new_window (GtkAction    *action,
   const gchar    *directory;
 
   g_assert (TERMINAL_IS_WIDGET (terminal));
+  terminal_widget_set_app_win (TERMINAL_WIDGET (terminal), HILDON_WINDOW (app));
 
   active = terminal_app_get_active (app);
   if (G_LIKELY (active != NULL))
@@ -1254,6 +1255,7 @@ terminal_app_launch (TerminalApp     *app,
 
   /* setup the terminal widget */
   terminal = terminal_widget_new ();
+  terminal_widget_set_app_win (TERMINAL_WIDGET (terminal), HILDON_WINDOW (app));
   terminal_widget_set_working_directory(TERMINAL_WIDGET(terminal),
 		 g_get_home_dir()); 
 

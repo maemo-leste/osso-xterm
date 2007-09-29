@@ -44,7 +44,7 @@
 #include "terminal-gconf.h"
 #include "terminal-widget.h"
 
-
+#include <hildon/hildon.h>
 
 enum
 {
@@ -162,13 +162,15 @@ static void     terminal_widget_emit_context_menu            (TerminalWidget *wi
 static void	terminal_widget_vte_ctrlify_notify	     (VteTerminal *terminal,
 							      GParamSpec  *pspec,
 							      TerminalWidget *widget);
-static void	terminal_widget_ctrlify_notify	     	     (GtkToggleToolButton *item,
-							      TerminalWidget *widget);
+/*static void	terminal_widget_ctrlify_notify	     	     (GtkToggleToolButton *item,
+							      TerminalWidget *widget);*/
 static void	terminal_widget_do_keys			     (TerminalWidget *widget,
 							      const gchar *key_string);
 static void	terminal_widget_do_key_button		     (GObject *button,
 							      TerminalWidget *widget);
 
+static void terminal_widget_ctrl_clicked (GtkButton    *item,
+					TerminalWidget *widget);
 
 static GObjectClass *parent_class;
 static guint widget_signals[LAST_SIGNAL];
@@ -457,25 +459,37 @@ terminal_widget_init (TerminalWidget *widget)
   widget->scrollbar = gtk_vscrollbar_new (VTE_TERMINAL (widget->terminal)->adjustment);
   gtk_box_pack_start (GTK_BOX (hbox), widget->scrollbar, FALSE, FALSE, 0);
 
+#if 1
+  widget->tbar = gtk_toolbar_new ();
+#else
   widget->tbar = g_object_new(GTK_TYPE_TOOLBAR, 
 		  "orientation", GTK_ORIENTATION_HORIZONTAL,
 		  NULL);
-  widget->cbutton = gtk_toggle_tool_button_new();
-  gtk_tool_item_set_expand(widget->cbutton, TRUE);
-  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
-  gtk_widget_show(GTK_WIDGET(widget->cbutton));
+#endif
+  gtk_widget_show (GTK_WIDGET (widget->tbar));
+
+  widget->cbutton = gtk_tool_button_new(NULL, "Ctrl"); /*gtk_toggle_tool_*/
+
+//  gtk_tool_item_set_expand(widget->cbutton, TRUE);
+//  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
+//  gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
   g_signal_connect (G_OBJECT(widget->terminal), "notify::ctrlify",
 		    G_CALLBACK(terminal_widget_vte_ctrlify_notify),
 		    widget);
+/*
   g_signal_connect (G_OBJECT(widget->cbutton), "toggled",
 		    G_CALLBACK(terminal_widget_ctrlify_notify),
+		    widget);
+*/
+  g_signal_connect (G_OBJECT(widget->cbutton), "clicked",
+		    G_CALLBACK(terminal_widget_ctrl_clicked),
 		    widget);
 
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar),
 		  widget->cbutton,
 		  -1);
-  gtk_box_pack_start (GTK_BOX (widget), widget->tbar, FALSE, FALSE, 0);
+//  gtk_box_pack_start (GTK_BOX (widget), widget->tbar, FALSE, FALSE, 0);
 
   /* apply current settings */
   gconf_value = gconf_client_get(widget->gconf_client,
@@ -1103,10 +1117,10 @@ static void
 terminal_widget_update_tool_bar (TerminalWidget *widget, gboolean show)
 {
     if (show) {
-        gtk_widget_show (widget->tbar);
+        gtk_widget_show_all (widget->tbar);
     }
     else {
-        gtk_widget_hide (widget->tbar);
+        gtk_widget_hide_all (widget->tbar);
     }
 }
 
@@ -1116,23 +1130,24 @@ terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_l
 	g_slist_foreach(widget->keys, (GFunc)gtk_widget_destroy, NULL);
 	g_slist_free(widget->keys);
 	widget->keys = NULL;
-	guint i = 0;
+//	guint i = 0;
 
 	while (keys && key_labels) {
-		GtkToolItem *button = gtk_tool_button_new(NULL,
-				key_labels->data);
+        g_debug ("%s - add %s",__FUNCTION__, (gchar *)key_labels->data);
+		GtkToolItem *button = gtk_tool_button_new(NULL, key_labels->data);
 /*		GtkToolItem *separator = gtk_separator_tool_item_new(); */
 		g_object_set_data_full(G_OBJECT(button), "keys", g_strdup(keys->data), g_free);
 /*		g_object_set_data_full(G_OBJECT(button), "separator", separator, (GDestroyNotify)gtk_widget_destroy); */
 
-		gtk_tool_item_set_expand(button, TRUE);
-		gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
-				button, i++);
+/*		gtk_tool_item_set_expand(button, TRUE);*/
+		gtk_widget_show(GTK_WIDGET(button));
 /*		gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
 				separator, i++); */
 
-		gtk_widget_show(GTK_WIDGET(button));
 /*		gtk_widget_show(GTK_WIDGET(separator)); */
+
+		gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
+				button, -1 /*i++*/);
 
 		g_signal_connect(G_OBJECT(button),
 				"clicked",
@@ -1310,6 +1325,13 @@ terminal_widget_new ()
 }
 
 
+void
+terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window)
+{
+	widget->app = GTK_WINDOW (window);
+    hildon_window_add_toolbar (HILDON_WINDOW (widget->app), GTK_TOOLBAR (widget->tbar));
+//    terminal_widget_update_tool_bar (widget, FALSE);
+}
 
 /**
  * terminal_widget_launch_child:
@@ -1738,6 +1760,117 @@ terminal_widget_vte_ctrlify_notify (VteTerminal    *terminal,
   }
 }
 
+typedef struct {
+    GtkWidget *dialog;
+    gchar *ret;
+} ctrl_dialog_data;
+
+static void
+terminal_widget_send_ctrl_key(GtkWindow *window,
+                           const char *str)
+{
+  GdkEventKey *key;
+
+  g_debug (__FUNCTION__);
+
+  key = (GdkEventKey *) gdk_event_new(GDK_KEY_PRESS);
+
+  key->window = GDK_WINDOW (GTK_WIDGET (window)->window);
+  key->time = GDK_CURRENT_TIME;
+  key->state = GDK_CONTROL_MASK;
+  key->keyval = gdk_keyval_from_name(str);
+  gdk_event_put ((GdkEvent *) key);
+
+  key->type = GDK_KEY_RELEASE;
+  key->state |= GDK_RELEASE_MASK;
+  gdk_event_put ((GdkEvent *) key);
+
+  gdk_event_free((GdkEvent *) key);
+}
+
+static gboolean ctrl_dialog_focus(GtkWidget *dialog,
+                                  GdkEventFocus *event,
+                                  GtkIMContext *imctx)
+{
+  g_debug (__FUNCTION__);
+
+  if (event->in) {
+    gtk_im_context_focus_in(imctx);
+    gtk_im_context_show(imctx);
+  } else
+    gtk_im_context_focus_out(imctx);
+  return FALSE;
+}
+
+static gboolean
+im_context_commit (GtkIMContext *ctx,
+                   const gchar *str,
+                   ctrl_dialog_data *data)
+{
+    g_debug (__FUNCTION__);
+    if (strlen(str) > 0) {
+      data->ret = g_strdup(str);
+      gtk_dialog_response(GTK_DIALOG(data->dialog), GTK_RESPONSE_ACCEPT);
+    }
+    g_debug ("%s - end", __FUNCTION__);
+
+    return TRUE;
+}
+
+static void
+terminal_widget_ctrl_clicked (GtkButton    *item,
+				TerminalWidget *widget)
+{
+  ctrl_dialog_data *data;
+  GtkWidget *dialog, *label;
+  GtkIMContext *imctx;
+  gchar label_text[256];
+
+  dialog = gtk_dialog_new_with_buttons("Control",
+                                       GTK_WINDOW(widget->app),
+                                       GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                       _("weba_bd_cancel"), GTK_RESPONSE_CANCEL,
+                                       NULL);
+
+  imctx = gtk_im_multicontext_new();
+
+  data = g_new0(ctrl_dialog_data, 1);
+  data->dialog = dialog;
+  g_signal_connect(imctx, "commit", G_CALLBACK(im_context_commit), data);
+
+  g_snprintf (label_text, 255, "Ctrl + [%s]", 
+              dgettext("osso-applet-textinput", "tein_ti_text_input_title"));
+  label = gtk_label_new(label_text);
+
+  gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dialog)->vbox), label);
+
+  gtk_widget_show_all(dialog);
+
+  gtk_im_context_set_client_window(imctx, GTK_WIDGET(dialog)->window);
+
+  g_signal_connect( G_OBJECT(dialog), "focus-in-event",
+          G_CALLBACK(ctrl_dialog_focus), imctx);
+  g_signal_connect( G_OBJECT(dialog), "focus-out-event",
+          G_CALLBACK(ctrl_dialog_focus), imctx);
+
+  gtk_dialog_run(GTK_DIALOG(dialog));
+
+  gtk_widget_hide(dialog);
+  gtk_widget_destroy(dialog);
+
+  gtk_im_context_focus_out(imctx);
+  g_object_unref(G_OBJECT(imctx));
+
+  if (data->ret != NULL) {
+    g_debug ("data->ret != NULL");
+    terminal_widget_send_ctrl_key(GTK_WINDOW (widget->app), data->ret);
+    g_free(data->ret);
+  }
+
+  g_free(data);
+
+}
+/*
 static void
 terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
 				TerminalWidget *widget)
@@ -1750,7 +1883,7 @@ terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
     g_object_set(widget->terminal, "ctrlify", bval, NULL);
   }
 }
-
+*/
 static void
 terminal_widget_send_key(TerminalWidget *widget,
 		         guint keyval,
