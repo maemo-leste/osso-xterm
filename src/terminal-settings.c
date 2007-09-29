@@ -156,10 +156,16 @@ terminal_settings_init (TerminalSettings *settings)
 //    gtk_spin_button_set_value(GTK_SPIN_BUTTON(settings->sb_spinner), (gdouble)sb);
 //    hildon_gtk_entry_set_input_mode(GTK_ENTRY(settings->sb_spinner), HILDON_GTK_INPUT_MODE_NUMERIC);
 
+    gtk_container_set_border_width (GTK_CONTAINER (GTK_DIALOG(settings)->vbox), 6);
+
     gchar labeltext[256];
     GtkWidget *hbox = gtk_hbox_new (TRUE, FALSE);
+    gtk_container_set_border_width (GTK_CONTAINER (hbox), 6);
+
     g_snprintf (labeltext, 255, "%s:", dgettext ("osso-email-old", "mcen_ti_font_settings"));
     GtkWidget *align = gtk_alignment_new (1, 0.5, 0, 0);
+    gtk_container_set_border_width (GTK_CONTAINER (align), 6);
+
 	widget = gtk_label_new (labeltext);
     gtk_container_add(GTK_CONTAINER(align), widget);
     gtk_container_add(GTK_CONTAINER(hbox), align);
@@ -167,8 +173,12 @@ terminal_settings_init (TerminalSettings *settings)
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), hbox);
 
     hbox = gtk_hbox_new (TRUE, FALSE);
+    gtk_container_set_border_width (GTK_CONTAINER (hbox), 6);
+
     g_snprintf (labeltext, 255, "%s:", dgettext ("osso-email-old", "mcen_me_editor_bgcolor"));
     align = gtk_alignment_new (1, 0.5, 0, 0);
+    gtk_container_set_border_width (GTK_CONTAINER (align), 6);
+
 	widget = gtk_label_new (labeltext);
     gtk_container_add(GTK_CONTAINER(align), widget);
     gtk_container_add(GTK_CONTAINER(hbox), align);
@@ -176,10 +186,14 @@ terminal_settings_init (TerminalSettings *settings)
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), hbox);
 
     GtkWidget *button = gtk_button_new_with_label (_("weba_fi_plugin_details_shortcut"));
+    align = gtk_alignment_new (0.5, 0.5, 1.0, 1.0);
+    gtk_container_set_border_width (GTK_CONTAINER (align), 6);
+
     g_signal_connect (button, "clicked", G_CALLBACK (terminal_widget_edit_shortcuts), (gpointer)settings);
     gtk_widget_show (button);
 
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), button);
+    gtk_container_add(GTK_CONTAINER(align), button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), align);
 
     gtk_dialog_add_buttons(GTK_DIALOG(settings),
                            _("weba_bd_ok"), GTK_RESPONSE_OK,
