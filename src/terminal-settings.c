@@ -156,16 +156,24 @@ terminal_settings_init (TerminalSettings *settings)
 //    gtk_spin_button_set_value(GTK_SPIN_BUTTON(settings->sb_spinner), (gdouble)sb);
 //    hildon_gtk_entry_set_input_mode(GTK_ENTRY(settings->sb_spinner), HILDON_GTK_INPUT_MODE_NUMERIC);
 
-	widget = gtk_label_new (dgettext ("osso-email-old", "mcen_ti_font_settings"));
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), widget);
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->font_button);
-//    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->fg_button);
+    gchar labeltext[256];
+    GtkWidget *hbox = gtk_hbox_new (TRUE, FALSE);
+    g_snprintf (labeltext, 255, "%s:", dgettext ("osso-email-old", "mcen_ti_font_settings"));
+    GtkWidget *align = gtk_alignment_new (1, 0.5, 0, 0);
+	widget = gtk_label_new (labeltext);
+    gtk_container_add(GTK_CONTAINER(align), widget);
+    gtk_container_add(GTK_CONTAINER(hbox), align);
+    gtk_container_add(GTK_CONTAINER(hbox), settings->font_button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), hbox);
 
-	widget = gtk_label_new (dgettext ("osso-email-old", "mcen_me_editor_bgcolor"));
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), widget);
-
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->bg_button);
-//    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), settings->sb_spinner);
+    hbox = gtk_hbox_new (TRUE, FALSE);
+    g_snprintf (labeltext, 255, "%s:", dgettext ("osso-email-old", "mcen_me_editor_bgcolor"));
+    align = gtk_alignment_new (1, 0.5, 0, 0);
+	widget = gtk_label_new (labeltext);
+    gtk_container_add(GTK_CONTAINER(align), widget);
+    gtk_container_add(GTK_CONTAINER(hbox), align);
+    gtk_container_add(GTK_CONTAINER(hbox), settings->bg_button);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), hbox);
 
     GtkWidget *button = gtk_button_new_with_label (_("weba_fi_plugin_details_shortcut"));
     g_signal_connect (button, "clicked", G_CALLBACK (terminal_widget_edit_shortcuts), (gpointer)settings);
@@ -179,7 +187,7 @@ terminal_settings_init (TerminalSettings *settings)
                            NULL);
 
     gtk_widget_show_all(GTK_WIDGET(settings));
-
+    gtk_widget_set_size_request (GTK_WIDGET(settings), 400, 300);
 }
 
 
