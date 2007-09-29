@@ -174,8 +174,8 @@ terminal_settings_init (TerminalSettings *settings)
     gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), button);
 
     gtk_dialog_add_buttons(GTK_DIALOG(settings),
-                           _("Ok"), GTK_RESPONSE_OK,
-                           _("Cancel"), GTK_RESPONSE_CANCEL,
+                           _("weba_bd_ok"), GTK_RESPONSE_OK,
+                           _("weba_bd_cancel"), GTK_RESPONSE_CANCEL,
                            NULL);
 
     gtk_widget_show_all(GTK_WIDGET(settings));
@@ -261,10 +261,17 @@ GtkWidget*
 terminal_settings_new (GtkWindow *parent)
 {
     GtkWidget *dialog;
-
+ 
     dialog = g_object_new (TERMINAL_TYPE_SETTINGS, NULL);
 
     gtk_window_set_title(GTK_WINDOW(dialog), _("weba_ti_settings_title"));
+
+#if 0
+    if (parent) {
+	  g_debug ("%s - Got parent", __FUNCTION__);
+      gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
+	}
+#endif
 
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
     gtk_window_set_destroy_with_parent(GTK_WINDOW(dialog), TRUE);

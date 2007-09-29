@@ -31,9 +31,13 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+#define GETTEXT_PACKAGE "osso-browser-ui"
+#include <glib/gi18n-lib.h>
+/*
 #include <libintl.h>
 #include <locale.h>
 #define _(String) gettext(String)
+*/
 
 #include <gconf/gconf-client.h>
 #include <gdk/gdkx.h>
@@ -1751,12 +1755,12 @@ terminal_widget_vte_ctrlify_notify (VteTerminal    *terminal,
 	tval);
   }
 }
-
+/*
 typedef struct {
     GtkWidget *dialog;
     gchar *ret;
 } ctrl_dialog_data;
-
+*/
 static void
 terminal_widget_send_ctrl_key(GtkWindow *window,
                            const char *str)
@@ -1780,6 +1784,7 @@ terminal_widget_send_ctrl_key(GtkWindow *window,
   gdk_event_free((GdkEvent *) key);
 }
 
+/*
 static gboolean ctrl_dialog_focus(GtkWidget *dialog,
                                   GdkEventFocus *event,
                                   GtkIMContext *imctx)
@@ -1787,13 +1792,12 @@ static gboolean ctrl_dialog_focus(GtkWidget *dialog,
   g_debug (__FUNCTION__);
 
   if (event->in) {
-    gtk_im_context_focus_in(imctx);
+//    gtk_im_context_focus_in(imctx);
     gtk_im_context_show(imctx);
   } else
     gtk_im_context_focus_out(imctx);
   return FALSE;
 }
-
 static gboolean
 im_context_commit (GtkIMContext *ctx,
                    const gchar *str,
@@ -1808,58 +1812,77 @@ im_context_commit (GtkIMContext *ctx,
 
     return TRUE;
 }
+*/
 
 static void
 terminal_widget_ctrl_clicked (GtkButton    *item,
 				TerminalWidget *widget)
 {
-  ctrl_dialog_data *data;
-  GtkWidget *dialog, *label;
-  GtkIMContext *imctx;
+//  ctrl_dialog_data *data;
+  GtkWidget *dialog, *label, *input;
+//  GtkIMContext *imctx;
   gchar label_text[256];
+  gchar *text = NULL;
 
   dialog = gtk_dialog_new_with_buttons("Control",
                                        GTK_WINDOW(widget->app),
                                        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                       _("weba_bd_cancel"), GTK_RESPONSE_CANCEL,
+                                       _("weba_bd_ok"), GTK_RESPONSE_OK,
                                        NULL);
 
-  imctx = gtk_im_multicontext_new();
+//  imctx = gtk_im_multicontext_new();
 
-  data = g_new0(ctrl_dialog_data, 1);
-  data->dialog = dialog;
-  g_signal_connect(imctx, "commit", G_CALLBACK(im_context_commit), data);
+//  data = g_new0(ctrl_dialog_data, 1);
+//  data->dialog = dialog;
+//  g_signal_connect(imctx, "commit", G_CALLBACK(im_context_commit), data);
 
   g_snprintf (label_text, 255, "Ctrl + [%s]", 
               dgettext("osso-applet-textinput", "tein_ti_text_input_title"));
   label = gtk_label_new(label_text);
-
   gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dialog)->vbox), label);
 
+  input = gtk_entry_new ();
+  gtk_entry_set_max_length (GTK_ENTRY (input), 1);
+  gtk_entry_set_width_chars (GTK_ENTRY (input), 1);
+  gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dialog)->vbox), input);
+  gtk_widget_grab_focus (input);
   gtk_widget_show_all(dialog);
 
+/*
   gtk_im_context_set_client_window(imctx, GTK_WIDGET(dialog)->window);
 
   g_signal_connect( G_OBJECT(dialog), "focus-in-event",
           G_CALLBACK(ctrl_dialog_focus), imctx);
   g_signal_connect( G_OBJECT(dialog), "focus-out-event",
           G_CALLBACK(ctrl_dialog_focus), imctx);
+*/
 
-  gtk_dialog_run(GTK_DIALOG(dialog));
+  switch (gtk_dialog_run(GTK_DIALOG(dialog))) {
+    case GTK_RESPONSE_OK:
+      text = g_strdup (gtk_entry_get_text (GTK_ENTRY (input)));
+      g_debug ("%s - %s",__FUNCTION__ , text);
+	  if (strlen (text) > 1) {
+	      text[1] = '\0';
+	  }
+      break;
+    default:
+      break;
+  }
+
 
   gtk_widget_hide(dialog);
   gtk_widget_destroy(dialog);
-
+/*
   gtk_im_context_focus_out(imctx);
-  g_object_unref(G_OBJECT(imctx));
-
-  if (data->ret != NULL) {
-    g_debug ("data->ret != NULL");
-    terminal_widget_send_ctrl_key(GTK_WINDOW (widget->app), data->ret);
-    g_free(data->ret);
+  gtk_object_unref(GTK_OBJECT(imctx));
+*/
+  if (text != NULL) {
+    g_debug ("text != NULL");
+    terminal_widget_send_ctrl_key(GTK_WINDOW (widget->app), text);
+    g_free (text);
   }
 
-  g_free(data);
+//  g_free(data);
 
 }
 /*

@@ -828,7 +828,6 @@ terminal_app_action_new_window (GtkAction    *action,
   const gchar    *directory;
 
   g_assert (TERMINAL_IS_WIDGET (terminal));
-  terminal_widget_set_app_win (TERMINAL_WIDGET (terminal), HILDON_WINDOW (app));
 
   active = terminal_app_get_active (app);
   if (G_LIKELY (active != NULL))
@@ -1211,8 +1210,9 @@ terminal_app_add (TerminalApp    *app,
     g_debug ("add weak pointer to app");
     g_object_add_weak_pointer(G_OBJECT(newapp), &newapp);
     g_debug ("show app");
-    gtk_widget_show (GTK_WIDGET (newapp));
+    gtk_widget_show_all (GTK_WIDGET (newapp));
     terminal_app_real_add (newapp, widget);
+    terminal_widget_set_app_win (TERMINAL_WIDGET (widget), HILDON_WINDOW (newapp));
   } else {
     g_debug ("App");
     terminal_app_real_add (app, widget);
