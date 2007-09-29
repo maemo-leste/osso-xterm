@@ -459,20 +459,18 @@ terminal_widget_init (TerminalWidget *widget)
   widget->scrollbar = gtk_vscrollbar_new (VTE_TERMINAL (widget->terminal)->adjustment);
   gtk_box_pack_start (GTK_BOX (hbox), widget->scrollbar, FALSE, FALSE, 0);
 
-#if 1
   widget->tbar = gtk_toolbar_new ();
-#else
-  widget->tbar = g_object_new(GTK_TYPE_TOOLBAR, 
+  g_object_set(widget->tbar, 
 		  "orientation", GTK_ORIENTATION_HORIZONTAL,
 		  NULL);
-#endif
   gtk_widget_show (GTK_WIDGET (widget->tbar));
 
-  widget->cbutton = gtk_tool_button_new(NULL, "Ctrl"); /*gtk_toggle_tool_*/
-
+  widget->cbutton = gtk_tool_button_new (NULL, "Ctrl");
 //  gtk_tool_item_set_expand(widget->cbutton, TRUE);
 //  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
-//  gtk_widget_show(GTK_WIDGET(widget->cbutton));
+  gtk_widget_show(GTK_WIDGET(widget->cbutton));
+
+  g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
 
   g_signal_connect (G_OBJECT(widget->terminal), "notify::ctrlify",
 		    G_CALLBACK(terminal_widget_vte_ctrlify_notify),
@@ -1130,24 +1128,16 @@ terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_l
 	g_slist_foreach(widget->keys, (GFunc)gtk_widget_destroy, NULL);
 	g_slist_free(widget->keys);
 	widget->keys = NULL;
-//	guint i = 0;
+	guint i = 0;
 
 	while (keys && key_labels) {
         g_debug ("%s - add %s",__FUNCTION__, (gchar *)key_labels->data);
 		GtkToolItem *button = gtk_tool_button_new(NULL, key_labels->data);
-/*		GtkToolItem *separator = gtk_separator_tool_item_new(); */
 		g_object_set_data_full(G_OBJECT(button), "keys", g_strdup(keys->data), g_free);
-/*		g_object_set_data_full(G_OBJECT(button), "separator", separator, (GDestroyNotify)gtk_widget_destroy); */
 
-/*		gtk_tool_item_set_expand(button, TRUE);*/
 		gtk_widget_show(GTK_WIDGET(button));
-/*		gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
-				separator, i++); */
-
-/*		gtk_widget_show(GTK_WIDGET(separator)); */
-
 		gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
-				button, -1 /*i++*/);
+				button, i++);
 
 		g_signal_connect(G_OBJECT(button),
 				"clicked",
@@ -1329,6 +1319,8 @@ void
 terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window)
 {
 	widget->app = GTK_WINDOW (window);
+    g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
+
     hildon_window_add_toolbar (HILDON_WINDOW (widget->app), GTK_TOOLBAR (widget->tbar));
 //    terminal_widget_update_tool_bar (widget, FALSE);
 }

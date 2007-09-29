@@ -1278,7 +1278,7 @@ terminal_app_launch (TerminalApp     *app,
   /* Keep IM open on startup */
   hildon_gtk_im_context_show(TERMINAL_WIDGET(terminal)->im_context);
 
-  gtk_widget_show(GTK_WIDGET(app));
+  gtk_widget_show_all(GTK_WIDGET(app));
 
   return TRUE;
 }
