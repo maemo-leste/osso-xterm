@@ -226,7 +226,7 @@ terminal_settings_store (TerminalSettings *settings)
 //    gint sb;
     GdkColor *color;
 #if HILDON == 1
-//    GdkColor colors;
+    GdkColor colors;
 //    color = &colors;
 #endif
 
@@ -252,7 +252,9 @@ terminal_settings_store (TerminalSettings *settings)
     g_debug ("color : %s", color_name);
     gconf_client_set_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, color_name, NULL);
     g_free(color_name);
+
     gdk_color_free (color);
+    color = &colors;
 
 #if HILDON == 0
     color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->bg_button));

@@ -107,6 +107,7 @@ main (int argc, char **argv)
 	"com.nokia.xterm",
 	"run_command");
     if (!msg) {
+      g_debug ("exit failure");
       exit(EXIT_FAILURE);
     }
     if (command) {
@@ -117,6 +118,7 @@ main (int argc, char **argv)
     dbus_message_set_no_reply(msg, TRUE);
     dbus_connection_send(session_bus, msg, NULL);
     dbus_connection_flush(session_bus);
+      g_debug ("exit success");
     exit(EXIT_SUCCESS);
   }
 
