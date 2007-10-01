@@ -216,12 +216,13 @@ static void keys_dialog_response(GtkDialog *dialog, gint response,
 
 static gboolean key_dialog_run(GtkWindow *parent, gchar **title, gchar **key)
 {
-	GtkWidget *dialog = gtk_dialog_new_with_buttons(_("Edit key"),
+	GtkWidget *dialog = gtk_dialog_new_with_buttons(_("webb_me_edit"),
 			parent,
 			GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
-			_("Done"), GTK_RESPONSE_ACCEPT,
-			_("Cancel"), GTK_RESPONSE_REJECT,
+			_("weba_bd_ok"), GTK_RESPONSE_ACCEPT,
+			_("weba_bd_cancel"), GTK_RESPONSE_REJECT,
 			NULL);
+
 	GtkWidget *title_entry = gtk_entry_new();
 	GtkWidget *key_entry = gtk_entry_new();
 	GtkSizeGroup *group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
