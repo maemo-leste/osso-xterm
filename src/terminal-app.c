@@ -34,7 +34,12 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <libosso.h>
+
+#ifdef HAVE_OSSO_BROWSER
 #include <osso-browser-interface.h>
+#else
+#include <tablet-browser-interface.h>
+#endif
 
 #include <libintl.h>
 #include <locale.h>
@@ -66,6 +71,17 @@
 
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 
+/* signals */
+enum
+{
+  SIGNAL_NEW_WINDOW = 1,
+  SIGNAL_CLOSE_WINDOW,
+  SIGNAL_APP_STATE_CHANGED,
+  LAST_SIGNAL
+};
+
+static guint terminal_app_signals[LAST_SIGNAL] = { 0 };
+
 static void            terminal_app_dispose                 (GObject         *object);
 static void            terminal_app_finalize                (GObject         *object);
 static void            terminal_app_update_actions          (TerminalApp     *app);
@@ -91,7 +107,7 @@ static void            terminal_app_action_reverse          (GtkToggleAction *ac
                                                              TerminalApp     *app);
 static void            terminal_app_action_fullscreen       (GtkToggleAction *action,
                                                              TerminalApp     *app);
-static void            terminal_app_action_scrollbar        (GtkToggleAction *action,
+static void            terminal_app_action_scrollbar       (GtkToggleAction *action,
                                                              TerminalApp     *app);
 static void            terminal_app_action_toolbar        (GtkToggleAction *action,
                                                              TerminalApp     *app);
@@ -130,6 +146,7 @@ static void            terminal_app_select_all         (GtkAction       *action,
 /* This keeps count of number of windows */
 static gint windows = 0;
 static GSList *window_list = NULL;
+
 
 /* Show toolbar */
 static gboolean toolbar_fs = TRUE;
@@ -242,12 +259,56 @@ static void
 terminal_app_class_init (TerminalAppClass *klass)
 {
   GObjectClass *gobject_class;
-  
+  GType param_types;
+
   parent_class = g_type_class_peek_parent (klass);
 
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->dispose = terminal_app_dispose;
   gobject_class->finalize = terminal_app_finalize;
+
+  param_types = G_TYPE_POINTER;
+  /* New window */
+  terminal_app_signals[SIGNAL_NEW_WINDOW] =
+            g_signal_newv ("new-window",
+                           G_TYPE_FROM_CLASS (klass),
+                           G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | 
+                           G_SIGNAL_NO_HOOKS,
+                           NULL,
+                           NULL,
+                           NULL,
+                           g_cclosure_marshal_VOID__POINTER,
+                           G_TYPE_NONE,
+                           1, 
+			   &param_types);
+  /* Delete window */
+  terminal_app_signals[SIGNAL_CLOSE_WINDOW] =
+            g_signal_newv ("close-window",
+                           G_TYPE_FROM_CLASS (klass),
+                           G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | 
+                           G_SIGNAL_NO_HOOKS,
+                           NULL,
+                           NULL,
+                           NULL,
+                           g_cclosure_marshal_VOID__VOID,
+                           G_TYPE_NONE,
+                           0,
+                           NULL);
+  /* For global state */
+  terminal_app_signals[SIGNAL_APP_STATE_CHANGED] =
+            g_signal_newv ("app-state-changed",
+                           G_TYPE_FROM_CLASS (klass),
+                           G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | 
+                           G_SIGNAL_NO_HOOKS,
+                           NULL,
+                           NULL,
+                           NULL,
+                           g_cclosure_marshal_VOID__VOID,
+                           G_TYPE_NONE,
+                           0,
+                           NULL);
+
+
 }
 
 static GtkWidget *
@@ -441,6 +502,30 @@ gboolean terminal_app_set_font_size(TerminalApp *app, int new_size) {
     return TRUE;
 }
 
+static void
+terminal_app_set_menu_normal (TerminalApp *app, 
+			      gboolean item_enabled)
+{
+  GtkAction *action = NULL;
+  g_debug (__FUNCTION__);
+  action = gtk_action_group_get_action (app->action_group,
+                                        "show-normal-screen");
+  gtk_toggle_action_set_active (GTK_TOGGLE_ACTION (action), item_enabled);
+
+
+}
+
+static void
+terminal_app_set_menu_fs (TerminalApp *app,
+			  gboolean item_enabled)
+{
+  GtkAction *action = NULL;
+  g_debug (__FUNCTION__);
+  action = gtk_action_group_get_action (app->action_group,
+                                        "show-full-screen");
+  gtk_toggle_action_set_active (GTK_TOGGLE_ACTION (action), item_enabled);
+
+}
 
 static gboolean
 terminal_app_key_press_event (TerminalApp *app,
@@ -456,15 +541,12 @@ terminal_app_key_press_event (TerminalApp *app,
             action = gtk_action_group_get_action(app->action_group,
                                                  "fullscreen");
             fs = gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(action));
-	    if (fs) {
-	 	    gtk_window_unfullscreen(GTK_WINDOW(app));
-            terminal_app_set_toolbar (toolbar_normal);
-	    } else {
- 		    gtk_window_fullscreen(GTK_WINDOW(app));
-            terminal_app_set_toolbar (toolbar_fs);
-	    }
+
             gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action),
                                          !fs);
+	    g_signal_emit (G_OBJECT (app), 
+			   terminal_app_signals[SIGNAL_APP_STATE_CHANGED], 0);
+
             return TRUE;
 
         case HILDON_HARDKEY_INCREASE: /* Zoom in */
@@ -645,7 +727,7 @@ terminal_app_init (TerminalApp *app)
   gtk_widget_tap_and_hold_setup(GTK_WIDGET(app), popup, NULL,
                                 GTK_TAP_AND_HOLD_NONE);
 
-#if 1
+#if 0
   g_signal_connect (G_OBJECT (app), "destroy",
                     G_CALLBACK (terminal_app_close_window), app);
 #endif
@@ -821,6 +903,7 @@ static void
 terminal_app_action_new_window (GtkAction    *action,
                              TerminalApp  *app)
 {
+
   GtkWidget      *terminal;
 
   terminal = terminal_widget_new ();
@@ -839,7 +922,13 @@ terminal_app_action_new_window (GtkAction    *action,
       terminal_widget_set_working_directory (TERMINAL_WIDGET (terminal),
                                              directory);
     }
-  terminal_app_add (app, TERMINAL_WIDGET (terminal));
+  g_debug (__FUNCTION__);
+  //  terminal_app_add (app, TERMINAL_WIDGET (terminal));
+  /* new-window signal */
+  g_signal_emit (G_OBJECT (app), 
+                 terminal_app_signals[SIGNAL_NEW_WINDOW], 0, terminal);
+
+
   terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
 
 }
@@ -911,18 +1000,11 @@ static void
 terminal_app_action_fullscreen (GtkToggleAction *action,
                                 TerminalApp     *app)
 {
-  gboolean fullscreen;
+  fs = gtk_toggle_action_get_active (action);
 
-  fullscreen = gtk_toggle_action_get_active (action);
-  if (fullscreen) {
-      gtk_window_fullscreen(GTK_WINDOW(app));
-      terminal_app_set_toolbar (toolbar_fs);
-      fs = TRUE;
-  } else {
-      gtk_window_unfullscreen(GTK_WINDOW(app));
-      terminal_app_set_toolbar (toolbar_normal);
-      fs = FALSE;
-  }
+  g_signal_emit (G_OBJECT (app), 
+		   terminal_app_signals[SIGNAL_APP_STATE_CHANGED], 0);
+
 }
 
 static void
@@ -1185,27 +1267,28 @@ terminal_app_real_add (TerminalApp    *app,
     window_list = g_slist_append(window_list, app);
 
 }
+
 /**
  * terminal_app_add:
  * @app    : A #TerminalApp.
  * @widget : A #TerminalWidget.
  **/
-void
+GtkWidget *
 terminal_app_add (TerminalApp    *app,
                   TerminalWidget *widget)
 {
-  g_return_if_fail (TERMINAL_IS_APP (app));
-  g_return_if_fail (TERMINAL_IS_WIDGET (widget));
+  gpointer newapp = NULL;
+  g_return_val_if_fail (TERMINAL_IS_APP (app), NULL);
+  g_return_val_if_fail (TERMINAL_IS_WIDGET (widget), NULL);
 
   gtk_widget_show (GTK_WIDGET (widget));
 
   if (windows != 0 ) {
-    gpointer newapp = NULL;
     g_debug ("New app");
     newapp = terminal_app_new ();
     if (newapp == NULL) {
       g_debug ("Couldn't create new app");
-      return;
+      return NULL;
     }
     g_debug ("add weak pointer to app");
     g_object_add_weak_pointer(G_OBJECT(newapp), &newapp);
@@ -1216,10 +1299,19 @@ terminal_app_add (TerminalApp    *app,
   } else {
     g_debug ("App");
     terminal_app_real_add (app, widget);
+    newapp = app;
   }
+
   g_object_ref (widget);
 
+  if (!fs) {
+     gtk_window_unfullscreen(GTK_WINDOW(newapp));
+  } else {
+     gtk_window_fullscreen(GTK_WINDOW(newapp));
+  }
+
   windows++;
+  return newapp;
 }
 
 
@@ -1259,7 +1351,12 @@ terminal_app_launch (TerminalApp     *app,
   terminal_widget_set_working_directory(TERMINAL_WIDGET(terminal),
 		 g_get_home_dir()); 
 
-  terminal_app_add (app, TERMINAL_WIDGET (terminal));
+  g_debug (__FUNCTION__);
+  (void *)terminal_app_add (app, TERMINAL_WIDGET (terminal));
+  /* new-window signal */
+  /* g_signal_emit (G_OBJECT (app), 
+                 terminal_app_signals[SIGNAL_NEW_WINDOW], 0, terminal);
+  */
   if (command) {
     gint argc;
     gchar **argv;
@@ -1283,23 +1380,17 @@ terminal_app_launch (TerminalApp     *app,
   return TRUE;
 }
 
-#if 1
 static void
 terminal_app_close_window(GtkAction *action, TerminalApp *app)
 {
   g_assert (app);
   g_assert (TERMINAL_IS_APP (app));
 
-  g_debug (__FUNCTION__);
+  /* close-window signal */
+  g_signal_emit (G_OBJECT (app), 
+                 terminal_app_signals[SIGNAL_CLOSE_WINDOW], 0);
 
-  /* Remove window menuitems from all windows */
-  //  g_object_unref (app->menuaction);
-
-    //gtk_widget_hide (GTK_WIDGET (app));
-  g_object_unref (G_OBJECT (app));
-//    gtk_widget_destroy (GTK_WIDGET (app));
 }
-#endif
 
 #if 0
 static void
@@ -1320,6 +1411,10 @@ terminal_app_action_show_full_screen (GtkToggleAction *action,
     if (fs == TRUE) {
         terminal_app_set_toolbar (toolbar_fs);  
     }
+
+    g_signal_emit (G_OBJECT (app), 
+		   terminal_app_signals[SIGNAL_APP_STATE_CHANGED], 0);
+
 }
 
 static void
@@ -1330,6 +1425,8 @@ terminal_app_action_show_normal_screen(GtkToggleAction *action,
     if (fs == FALSE) {
         terminal_app_set_toolbar (toolbar_normal);      
     }
+    g_signal_emit (G_OBJECT (app), 
+		   terminal_app_signals[SIGNAL_APP_STATE_CHANGED], 0);
 }
 
 static void
@@ -1342,3 +1439,19 @@ terminal_app_select_all (GtkAction    *action,
     g_debug(__FUNCTION__);
 }
 
+void terminal_app_set_state      (TerminalApp    *app)
+{
+    g_debug ("%s : tb_normal: %d - tb_fs: %d", 
+	   __FUNCTION__, toolbar_normal, toolbar_fs);
+
+    terminal_app_set_menu_normal (app, toolbar_normal);
+    terminal_app_set_menu_fs (app, toolbar_fs);
+
+    if (!fs) {
+        gtk_window_unfullscreen(GTK_WINDOW(app));
+        terminal_app_set_toolbar (toolbar_normal);      
+    } else {
+        gtk_window_fullscreen(GTK_WINDOW(app));
+        terminal_app_set_toolbar (toolbar_fs);      
+    }
+}

@@ -59,7 +59,7 @@ GType      terminal_app_get_type (void) G_GNUC_CONST;
 
 GtkWidget *terminal_app_new      (void);
 
-void       terminal_app_add      (TerminalApp    *app,
+GtkWidget *terminal_app_add      (TerminalApp    *app,
                                   TerminalWidget *widget);
 
 void       terminal_app_remove   (TerminalApp *app,
@@ -68,6 +68,10 @@ void       terminal_app_remove   (TerminalApp *app,
 gboolean   terminal_app_launch (TerminalApp     *app,
     				const gchar     *command,
                                 GError          **error);
+
+void terminal_app_new_window (TerminalApp  *app);
+
+void terminal_app_set_state      (TerminalApp    *app);
 
 G_END_DECLS;
 

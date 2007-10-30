@@ -2,7 +2,7 @@ Source: osso-xterm
 Section: user/Applications
 Priority: optional
 Maintainer: Santtu Lakkala <inz@inz.fi>
-Build-Depends: debhelper (>= 4.0.0), libvte-dev, libdbus-1-dev, libgconf2-dev, libdbus-glib-1-dev, libglib2.0-dev, libhildon1-dev (>= 0.9.9) | hildon-libs-dev (>= 0.12.0), libosso-dev, maemo-browser-interface-dev | osso-browser-interface-dev
+Build-Depends: debhelper (>= 4.0.0), libvte-dev, libdbus-1-dev, libgconf2-dev, libdbus-glib-1-dev, libglib2.0-dev, libhildon1-dev (>= 0.9.9) | hildon-libs-dev (>= 0.12.0), libosso-dev, tablet-browser-interface-dev | maemo-browser-interface-dev | osso-browser-interface-dev
 Standards-Version: 3.6.2.1
 
 Package: osso-xterm

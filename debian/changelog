@@ -1,3 +1,11 @@
+osso-xterm (0.14.mh1.1) unstable; urgency=low
+
+  * Added tablet-browser-interface dependency 
+  * Fixed fullscreen and normalscreen toolbar menu. Fixes: NB#70969
+  * Application menu of x-term displayed on TN. Fixes: NB#71039
+
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Wed, 30 Oct 2007 18:08:35 +0300
+
 osso-xterm (0.14.mh1) unstable; urgency=low
 
   * Fixed ctrl to work. Fixes: NB#71346, NB#70972

@@ -42,7 +42,16 @@ else
 	PKG_CHECK_MODULES(HILDON_LIBS, hildon-libs >= 0.12.0)
 	AC_DEFINE(HILDON, 0, [Version of hildon libraries])
 fi
-PKG_CHECK_MODULES(BROWSER, maemo-browser-interface, [], [PKG_CHECK_MODULES(BROWSER, osso-browser-interface)])
+PKG_CHECK_MODULES(BROWSER, maemo-browser-interface, [], [
+	PKG_CHECK_MODULES(BROWSER, osso-browser-interface,[], [ 
+		PKG_CHECK_MODULES(BROWSER, tablet-browser-interface)
+	])
+])
+PKG_CHECK_MODULES(TABLET_BROWSER, tablet-browser-interface, tabletbrowser=yes, tabletbrowser=no)
+if test "x$tabletbrowser" == "xno"; then
+	AC_DEFINE(HAVE_OSSO_BROWSER, 1, [have osso-browser])
+fi
+	
 AC_SUBST(HILDON_LIBS)
 AC_SUBST(HILDON_CFLAGS)
 AC_SUBST(HILDON_LIBS_LIBS)

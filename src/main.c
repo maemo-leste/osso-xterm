@@ -34,11 +34,22 @@
 #include <string.h>
 
 #include <gtk/gtk.h>
+#include <glib-object.h>
 /*#include <dbus/dbus-glib-lowlevel.h> */
 
 #include <libosso.h>
 
 #include "terminal-app.h"
+
+
+static void new_window (GObject *obj, gpointer data);
+static void close_window (GObject *obj, gpointer data);
+static void state_changed (GObject *obj, gpointer data);
+
+static void add_signals (gpointer app);
+
+
+static GList *windows = NULL;
 
 static gint osso_xterm_incoming(const gchar *interface,
     const gchar *method,
@@ -123,6 +134,11 @@ main (int argc, char **argv)
   }
 
   app = terminal_app_new();
+
+  /* add window to list and add signals */
+  add_signals (app);
+  windows = g_list_append (windows, app);
+
   g_object_add_weak_pointer(G_OBJECT(app), &app);
 
   osso_context = osso_initialize("xterm", VERSION, FALSE, NULL);
@@ -154,4 +170,55 @@ main (int argc, char **argv)
   osso_deinitialize(osso_context);
 
   return EXIT_SUCCESS;
+}
+
+
+static void
+add_signals (gpointer app)
+{
+  /* add signals */
+  g_signal_connect (app, "new-window", G_CALLBACK (new_window), NULL);
+  g_signal_connect (app, "app-state-changed", G_CALLBACK (state_changed), NULL);
+  g_signal_connect (app, "close-window", G_CALLBACK (close_window), NULL);
+}
+
+
+/* new window is wanted to add */
+static void 
+new_window (GObject *obj, gpointer data)
+{
+  //  gpointer newapp = terminal_app_new_window (TERMINAL_APP (obj));
+  gpointer newapp = terminal_app_add (TERMINAL_APP (obj), data);
+
+  g_debug (__FUNCTION__);
+
+  if (newapp != NULL) {
+    add_signals (newapp);
+    windows = g_list_append (windows, newapp);
+  } else {
+    g_error ("Couldn't add new window");
+  }
+}
+
+static void
+close_window (GObject *obj, gpointer data)
+{
+  g_debug (__FUNCTION__);
+  windows = g_list_remove (windows, obj);
+  g_object_unref (obj);
+}
+
+static void
+change_state_helper (gpointer app, gpointer data)
+{
+  g_debug ("app - %p : data - %p", app, data);
+  terminal_app_set_state (app);
+}
+
+/* Global state changed */
+static void 
+state_changed (GObject *obj, gpointer data)
+{
+  g_debug (__FUNCTION__);
+  g_list_foreach (windows, (GFunc)change_state_helper, data);
 }
