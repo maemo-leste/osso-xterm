@@ -308,6 +308,7 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 
   /* Create dialog */
   GtkWidget *dialog = hildon_font_selection_dialog_new (NULL, NULL);
+  gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (settings));
   if (dialog == NULL) {
     g_debug ("Couldn't create Dialog");
     return;

@@ -140,8 +140,10 @@ static void            terminal_app_action_show_full_screen (GtkToggleAction *ac
 static void            terminal_app_action_show_normal_screen(GtkToggleAction *action,
                                                               TerminalApp     *app);
 static void            terminal_app_set_toolbar (gboolean show);
-static void            terminal_app_select_all         (GtkAction       *action,
-                                                             TerminalApp     *app);
+static void            terminal_app_select_all (GtkAction       *action,
+                                                TerminalApp     *app);
+static void            terminal_widget_destroyed (GObject *obj, gpointer data);
+
 
 /* This keeps count of number of windows */
 static gint windows = 0;
@@ -592,7 +594,7 @@ terminal_app_init (TerminalApp *app)
 {
   GtkAction           *action;
   GtkAccelGroup       *accel_group;
-  GtkWidget           *popup;
+  //  GtkWidget           *popup;
   GError              *error = NULL;
   gchar               *role;
   gint                 font_size;
@@ -723,10 +725,12 @@ terminal_app_init (TerminalApp *app)
 
   populate_menubar(app, accel_group);
 
+  /*
   popup = gtk_ui_manager_get_widget (app->ui_manager, "/popup-menu");
   gtk_widget_tap_and_hold_setup(GTK_WIDGET(app), popup, NULL,
                                 GTK_TAP_AND_HOLD_NONE);
-
+  */
+  
 #if 0
   g_signal_connect (G_OBJECT (app), "destroy",
                     G_CALLBACK (terminal_app_close_window), app);
@@ -825,8 +829,10 @@ terminal_app_context_menu (TerminalWidget  *widget,
                            GdkEvent        *event,
                            TerminalApp     *app)
 {
+/* Copy & paste didn't work quite well from popup menu*/
+#if 0
   TerminalWidget *terminal;
-  GtkWidget      *popup;
+  //  GtkWidget      *popup;
   gint            button = 0;
   gint            time;
 
@@ -834,8 +840,10 @@ terminal_app_context_menu (TerminalWidget  *widget,
 
   if (G_LIKELY (widget == terminal))
     {
+      
       popup = gtk_ui_manager_get_widget (app->ui_manager, "/popup-menu");
       gtk_widget_show_all(GTK_WIDGET(popup));
+      
 
       if (G_UNLIKELY (popup == NULL))
         return;
@@ -874,6 +882,7 @@ terminal_app_context_menu (TerminalWidget  *widget,
       gtk_menu_popup (GTK_MENU (popup), NULL, NULL,
                       NULL, NULL, button, time);
     }
+#endif
 }
 
 
@@ -1243,6 +1252,12 @@ terminal_app_new (void)
   return g_object_new (TERMINAL_TYPE_APP, NULL);
 }
 
+static void 
+terminal_widget_destroyed (GObject *obj, gpointer data)
+{
+  g_debug (__FUNCTION__);
+  g_signal_emit (G_OBJECT (data), terminal_app_signals[SIGNAL_CLOSE_WINDOW], 0);
+}
 
 static void
 terminal_app_real_add (TerminalApp    *app,
@@ -1262,6 +1277,8 @@ terminal_app_real_add (TerminalApp    *app,
   		    G_CALLBACK(terminal_app_notify_title), app);
     g_signal_connect (G_OBJECT (widget), "context-menu",
                       G_CALLBACK (terminal_app_context_menu), app);
+    g_signal_connect (G_OBJECT (widget), "destroy",
+                      G_CALLBACK (terminal_widget_destroyed), app);
     g_signal_connect_swapped (G_OBJECT (widget), "selection-changed",
                               G_CALLBACK (terminal_app_update_actions), app);
     terminal_app_update_actions (app);

@@ -1,7 +1,10 @@
 osso-xterm (0.14.mh2) unstable; urgency=low
 
-  * Fixed settings dialog behavior. Fixes: NB#71743
-  * Fixed setted size of the CTRL-dialog. Fixes: NB#71755
+  * Fixed settings dialog behavior. Fixes: NB#71743, NB#71348, NB#72986
+  * Fixed CTRL-dialog. Fixes: NB#71755
+  * Added app listen terminal_widget destroy signal. Fixes: NB#71752, NB#71357
+  * Fixed font dialog to be transient to settings. Fixes: NB#70986
+  * Dropped CMS away. Fixes: NB#71006
   * Removed separators from dialogs
   * Intended terminal-settings and terminal-widget with 2 spaces
   * Fixed previous logs wrong weekday
