@@ -42,7 +42,7 @@ struct _TerminalSettingsClass
 
 GType      terminal_settings_get_type (void) G_GNUC_CONST;
 
-GtkWidget *terminal_settings_new      (GtkWindow *parent);
+GtkWidget *terminal_settings_new      (void);
 
 gboolean   terminal_settings_store    (TerminalSettings *settings);
 

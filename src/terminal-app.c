@@ -1206,8 +1206,8 @@ terminal_app_action_settings (GtkAction    *action,
 {
     GtkWidget *settings;
     
-    settings = terminal_settings_new(GTK_WINDOW(app));
-	gtk_widget_set_size_request (GTK_WIDGET (settings), 300, 200);
+    settings = terminal_settings_new();
+    gtk_window_set_transient_for (GTK_WINDOW (settings), GTK_WINDOW (app));
 
     switch (gtk_dialog_run(GTK_DIALOG(settings))) {
         case GTK_RESPONSE_OK:
@@ -1218,7 +1218,8 @@ terminal_app_action_settings (GtkAction    *action,
         default:
             break;
     }
-    gtk_widget_destroy(settings);
+    gtk_widget_hide (settings);
+    gtk_widget_destroy (settings);
 }
 
 

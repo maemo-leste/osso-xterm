@@ -100,8 +100,8 @@ static void ui_create_main_dialog(GraphApplet *applet, gpointer window)
 			NULL));
 
 //    gtk_window_set_transient_for(GTK_WINDOW(applet->keys_dialog), GTK_WINDOW (window));
-    gtk_window_set_modal(GTK_WINDOW (applet->keys_dialog), TRUE);
-    gtk_window_set_destroy_with_parent(GTK_WINDOW(applet->keys_dialog), TRUE);
+	gtk_window_set_modal(GTK_WINDOW (applet->keys_dialog), TRUE);
+	gtk_window_set_destroy_with_parent(GTK_WINDOW(applet->keys_dialog), TRUE);
 
 	model = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
 

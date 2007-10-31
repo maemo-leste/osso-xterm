@@ -1,10 +1,20 @@
+osso-xterm (0.14.mh2) unstable; urgency=low
+
+  * Fixed settings dialog behavior. Fixes: NB#71743
+  * Fixed setted size of the CTRL-dialog. Fixes: NB#71755
+  * Removed separators from dialogs
+  * Intended terminal-settings and terminal-widget with 2 spaces
+  * Fixed previous logs wrong weekday
+
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Wed, 31 Oct 2007 13:09:53 +0300
+
 osso-xterm (0.14.mh1.1) unstable; urgency=low
 
   * Added tablet-browser-interface dependency 
   * Fixed fullscreen and normalscreen toolbar menu. Fixes: NB#70969
   * Application menu of x-term displayed on TN. Fixes: NB#71039
 
- -- Joni Valtanen <jvaltane@kapsi.fi>  Wed, 30 Oct 2007 18:08:35 +0300
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Tue, 30 Oct 2007 18:08:35 +0300
 
 osso-xterm (0.14.mh1) unstable; urgency=low
 
