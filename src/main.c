@@ -187,7 +187,6 @@ add_signals (gpointer app)
 static void 
 new_window (GObject *obj, gpointer data)
 {
-  //  gpointer newapp = terminal_app_new_window (TERMINAL_APP (obj));
   gpointer newapp = terminal_app_add (TERMINAL_APP (obj), data);
 
   g_debug (__FUNCTION__);
@@ -205,7 +204,6 @@ close_window (GObject *obj, gpointer data)
 {
   g_debug (__FUNCTION__);
   windows = g_list_remove (windows, obj);
-  g_object_unref (obj);
 }
 
 static void
