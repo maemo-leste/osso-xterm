@@ -43,6 +43,16 @@
 			</locale>
 		</schema>
 		<schema>
+			<key>/schemas/apps/osso/xterm/toolbar_fullscreen</key>
+			<applyto>/apps/osso/xterm/toolbar_fullscreen</applyto>
+			<owner>osso-xterm</owner>
+			<type>bool</type>
+			<default>true</default>
+			<locale name="C">
+				<short>Show tool bar in fullscreen window</short>
+			</locale>
+		</schema>
+		<schema>
 			<key>/schemas/apps/osso/xterm/keys</key>
 			<applyto>/apps/osso/xterm/keys</applyto>
 			<owner>osso-xterm</owner>

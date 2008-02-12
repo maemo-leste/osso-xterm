@@ -140,6 +140,7 @@ static void            terminal_app_action_show_full_screen (GtkToggleAction *ac
 static void            terminal_app_action_show_normal_screen(GtkToggleAction *action,
                                                               TerminalApp     *app);
 static void            terminal_app_set_toolbar (gboolean show);
+static void            terminal_app_set_toolbar_fullscreen (gboolean show);
 static void            terminal_app_select_all (GtkAction       *action,
                                                 TerminalApp     *app);
 static void            terminal_widget_destroyed (GObject *obj, gpointer data);
@@ -645,7 +646,6 @@ terminal_app_init (TerminalApp *app)
   gconf_value = gconf_client_get(gconf_client,
                                  OSSO_XTERM_GCONF_TOOLBAR,
                                  &error);
-
   if (error != NULL) {
       g_printerr("Unable to get toolbar setting from gconf: %s\n",
                  error->message);
@@ -654,10 +654,33 @@ terminal_app_init (TerminalApp *app)
   }
   toolbar = OSSO_XTERM_DEFAULT_TOOLBAR;
   if (gconf_value) {
-          if (gconf_value->type == GCONF_VALUE_BOOL)
-                  toolbar = gconf_value_get_bool(gconf_value);
-          gconf_value_free(gconf_value);
+      if (gconf_value->type == GCONF_VALUE_BOOL) {
+          toolbar = gconf_value_get_bool(gconf_value);
+          g_debug ("Normal toolbar: %s", toolbar==TRUE?"TRUE":"FALSE");
+      }
+      gconf_value_free(gconf_value);
   }
+  toolbar_normal = toolbar;
+
+  /* toolbar to fullscreen */
+  gconf_value = gconf_client_get(gconf_client,
+                                 OSSO_XTERM_GCONF_TOOLBAR_FULLSCREEN,
+                                 &error);
+  if (error != NULL) {
+      g_printerr("Unable to get toolbar setting from gconf: %s\n",
+                 error->message);
+      g_error_free(error);
+      error = NULL;
+  }
+  toolbar = OSSO_XTERM_DEFAULT_TOOLBAR_FULLSCREEN;
+  if (gconf_value) {
+      if (gconf_value->type == GCONF_VALUE_BOOL) {
+          toolbar = gconf_value_get_bool(gconf_value);
+          g_debug ("FS toolbar: %s", toolbar==TRUE?"TRUE":"FALSE");
+      }
+      gconf_value_free(gconf_value);
+  }
+  toolbar_fs = toolbar;
 
   gconf_value = gconf_client_get(gconf_client,
                                  OSSO_XTERM_GCONF_REVERSE,
@@ -701,7 +724,7 @@ terminal_app_init (TerminalApp *app)
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), scrollbar);
 
   action = gtk_action_group_get_action(app->action_group, "toolbar");
-  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), toolbar);
+  gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), TRUE); //toolbar);
 
   action = gtk_action_group_get_action(app->action_group, "show-full-screen");
   gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), toolbar_fs);
@@ -1025,6 +1048,20 @@ terminal_app_set_toolbar (gboolean show)
 
     gconf_client_set_bool (client,
                            OSSO_XTERM_GCONF_TOOLBAR,
+                           show,
+                           NULL);
+
+    g_object_unref(G_OBJECT(client));
+}
+
+static void
+terminal_app_set_toolbar_fullscreen (gboolean show)
+{
+    GConfClient *client;
+    client = gconf_client_get_default();
+
+    gconf_client_set_bool (client,
+                           OSSO_XTERM_GCONF_TOOLBAR_FULLSCREEN,
                            show,
                            NULL);
 
@@ -1428,7 +1465,7 @@ terminal_app_action_show_full_screen (GtkToggleAction *action,
 {
     toolbar_fs = gtk_toggle_action_get_active (action);
     if (fs == TRUE) {
-        terminal_app_set_toolbar (toolbar_fs);  
+        terminal_app_set_toolbar_fullscreen (toolbar_fs);  
     }
 
     g_signal_emit (G_OBJECT (app), 
@@ -1468,9 +1505,10 @@ void terminal_app_set_state      (TerminalApp    *app)
 
     if (!fs) {
         gtk_window_unfullscreen(GTK_WINDOW(app));
-        terminal_app_set_toolbar (toolbar_normal);      
     } else {
         gtk_window_fullscreen(GTK_WINDOW(app));
-        terminal_app_set_toolbar (toolbar_fs);      
     }
+
+    terminal_app_set_toolbar (toolbar_normal);
+    terminal_app_set_toolbar_fullscreen (toolbar_fs);
 }

@@ -160,6 +160,9 @@ main (int argc, char **argv)
       osso_xterm_incoming,
       app);
 
+  /* set loaded settings */
+  terminal_app_set_state (app);
+
   gtk_main ();
 
   if (app != NULL)
