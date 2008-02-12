@@ -204,6 +204,7 @@ close_window (GObject *obj, gpointer data)
 {
   g_debug (__FUNCTION__);
   windows = g_list_remove (windows, obj);
+  gtk_widget_destroy (GTK_WIDGET (obj));
 }
 
 static void

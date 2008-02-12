@@ -876,6 +876,8 @@ static void
 terminal_widget_vte_child_exited (VteTerminal    *terminal,
                                   TerminalWidget *widget)
 {
+  g_debug (__FUNCTION__);
+
   g_return_if_fail (VTE_IS_TERMINAL (terminal));
   g_return_if_fail (TERMINAL_IS_WIDGET (widget));
 

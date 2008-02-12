@@ -465,6 +465,7 @@ populate_menubar (TerminalApp *app, GtkAccelGroup *accelgroup)
   //  gtk_widget_show (menuitem);
   //  gtk_menu_shell_append(GTK_MENU_SHELL(app->windows_menu), 
   //			menuitem);
+
   attach_item(app->windows_menu, actiongroup, accelgroup, "new-window");
   app->menubar = menubar;
   gtk_widget_show_all(app->menubar);
