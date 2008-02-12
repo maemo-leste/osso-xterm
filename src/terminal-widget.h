@@ -66,6 +66,7 @@ struct _TerminalWidget
   guint                scrollbar_conid;
   guint		       scrollback_conid;
   guint                toolbar_conid;
+  guint                toolbar_fs_conid;
   guint                keys_conid;
   guint                key_labels_conid;
   guint                font_size_conid;
@@ -130,6 +131,8 @@ char      *terminal_widget_get_tag		      (TerminalWidget *widget,
 
 void terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window);
 
+void terminal_widget_send_keys(TerminalWidget *widget,
+                               const gchar *key_string);
 
 G_END_DECLS;
 

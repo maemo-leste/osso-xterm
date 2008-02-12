@@ -132,6 +132,10 @@ static void     terminal_widget_gconf_toolbar               (GConfClient    *cli
 							     guint           conn_id,
 							     GConfEntry     *entry,
 							     TerminalWidget *widget);
+static void     terminal_widget_gconf_toolbar_fs            (GConfClient    *client,
+							     guint           conn_id,
+							     GConfEntry     *entry,
+							     TerminalWidget *widget);
 static void     terminal_widget_gconf_keys               (GConfClient    *client,
 							  guint           conn_id,
 							  GConfEntry     *entry,
@@ -342,6 +346,11 @@ terminal_widget_init (TerminalWidget *widget)
 						  (GConfClientNotifyFunc)terminal_widget_gconf_toolbar,
 						  widget,
 						  NULL, &err);
+  widget->toolbar_fs_conid = gconf_client_notify_add(widget->gconf_client,
+						  OSSO_XTERM_GCONF_TOOLBAR_FULLSCREEN,
+						  (GConfClientNotifyFunc)terminal_widget_gconf_toolbar_fs,
+						  widget,
+						  NULL, &err);
   widget->keys_conid = gconf_client_notify_add(widget->gconf_client,
 					       OSSO_XTERM_GCONF_KEYS,
 					       (GConfClientNotifyFunc)terminal_widget_gconf_keys,
@@ -474,7 +483,9 @@ terminal_widget_init (TerminalWidget *widget)
   //  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
+#ifdef DEBUG
   g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
+#endif
 
   g_signal_connect (G_OBJECT(widget->terminal), "notify::ctrlify",
 		    G_CALLBACK(terminal_widget_vte_ctrlify_notify),
@@ -600,6 +611,8 @@ terminal_widget_finalize (GObject *object)
                              widget->scrollbar_conid);
   gconf_client_notify_remove(widget->gconf_client,
                              widget->toolbar_conid);
+  gconf_client_notify_remove(widget->gconf_client,
+                             widget->toolbar_fs_conid);
   gconf_client_notify_remove(widget->gconf_client,
                              widget->keys_conid);
   gconf_client_notify_remove(widget->gconf_client,
@@ -876,7 +889,9 @@ static void
 terminal_widget_vte_child_exited (VteTerminal    *terminal,
                                   TerminalWidget *widget)
 {
+#ifdef DEBUG
   g_debug (__FUNCTION__);
+#endif
 
   g_return_if_fail (VTE_IS_TERMINAL (terminal));
   g_return_if_fail (TERMINAL_IS_WIDGET (widget));
@@ -1137,7 +1152,9 @@ terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_l
   guint i = 0;
 
   while (keys && key_labels) {
+#ifdef DEBUG
     g_debug ("%s - add %s",__FUNCTION__, (gchar *)key_labels->data);
+#endif
     GtkToolItem *button = gtk_tool_button_new(NULL, key_labels->data);
     g_object_set_data_full(G_OBJECT(button), "keys", g_strdup(keys->data), g_free);
 
@@ -1197,6 +1214,19 @@ terminal_widget_gconf_scrollbar(GConfClient    *client,
 
 static void
 terminal_widget_gconf_toolbar(GConfClient    *client,
+			      guint           conn_id,
+			      GConfEntry     *entry,
+			      TerminalWidget *widget) {
+  GConfValue *value;
+  gboolean toolbar;
+
+  value = gconf_entry_get_value(entry);
+  toolbar = gconf_value_get_bool(value);
+  terminal_widget_update_tool_bar(widget, toolbar);
+}
+
+static void
+terminal_widget_gconf_toolbar_fs(GConfClient    *client,
 			      guint           conn_id,
 			      GConfEntry     *entry,
 			      TerminalWidget *widget) {
@@ -1325,7 +1355,9 @@ void
 terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window)
 {
   widget->app = GTK_WINDOW (window);
+#ifdef DEBUG
   g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
+#endif
 
   hildon_window_add_toolbar (HILDON_WINDOW (widget->app), GTK_TOOLBAR (widget->tbar));
   //    terminal_widget_update_tool_bar (widget, FALSE);
@@ -2019,6 +2051,7 @@ static const gchar *parse_key(const gchar *source,
     *keyval = gdk_keyval_from_name(key_start);
     return source;
   }
+  return NULL;
 }
 
 static void terminal_widget_do_keys(TerminalWidget *widget,
@@ -2049,4 +2082,14 @@ terminal_widget_select_all (TerminalWidget *widget)
   return TRUE;
 }
 
+void terminal_widget_send_keys(TerminalWidget *widget,
+                               const gchar *key_string)
+{
+        guint keyval = 0;
+        guint state = 0;
 
+        while (key_string && *key_string) {
+                key_string = parse_key(key_string, &keyval, &state);
+                terminal_widget_send_key(widget, keyval, state);
+        }
+}

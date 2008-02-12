@@ -20,8 +20,8 @@
  * Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __TERMINAL_APP_H__
-#define __TERMINAL_APP_H__
+#ifndef __TERMINAL_WINDOW_H__
+#define __TERMINAL_WINDOW_H__
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -36,46 +36,44 @@
 
 G_BEGIN_DECLS;
 
-#define TERMINAL_TYPE_APP            (terminal_app_get_type ())
-#define TERMINAL_APP(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TERMINAL_TYPE_APP, TerminalApp))
-#define TERMINAL_APP_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_APP, TerminalAppClass))
-#define TERMINAL_IS_APP(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TERMINAL_TYPE_APP))
-#define TERMINAL_IS_APP_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_APP))
-#define TERMINAL_APP_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), TERMINAL_TYPE_APP, TerminalAppClass))
+#define TERMINAL_TYPE_WINDOW            (terminal_window_get_type ())
+#define TERMINAL_WINDOW(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), TERMINAL_TYPE_WINDOW, TerminalWindow))
+#define TERMINAL_WINDOW_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_WINDOW, TerminalWindowClass))
+#define TERMINAL_IS_WINDOW(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TERMINAL_TYPE_WINDOW))
+#define TERMINAL_IS_WINDOW_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), TERMINAL_TYPE_WINDOW))
+#define TERMINAL_WINDOW_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), TERMINAL_TYPE_WINDOW, TerminalWindowClass))
 
-typedef struct _TerminalAppClass TerminalAppClass;
-typedef struct _TerminalApp      TerminalApp;
+typedef struct _TerminalWindowClass TerminalWindowClass;
+typedef struct _TerminalWindow      TerminalWindow;
 
-struct _TerminalAppClass
+struct _TerminalWindowClass
 {
   HildonWindowClass __parent__;
 
   /* signals */
-  void (*new_window) (TerminalApp *app,
+  void (*new_window) (TerminalWindow *window,
                       const gchar *working_directory);
 };
 
-GType      terminal_app_get_type (void) G_GNUC_CONST;
+GType      terminal_window_get_type (void) G_GNUC_CONST;
 
-GtkWidget *terminal_app_new      (void);
+GtkWidget *terminal_window_new      (void);
 
-GtkWidget *terminal_app_add      (TerminalApp    *app,
+GtkWidget *terminal_window_add      (TerminalWindow    *window,
                                   TerminalWidget *widget);
 
-void       terminal_app_remove   (TerminalApp *app,
+void       terminal_window_remove   (TerminalWindow *window,
                                   TerminalWidget *widget);
 
-gboolean   terminal_app_launch (TerminalApp     *app,
+gboolean   terminal_window_launch (TerminalWindow     *window,
     				const gchar     *command,
                                 GError          **error);
 
-gboolean   terminal_app_new_with_command (TerminalApp     *app,
-					  const gchar     *command);
 
-void terminal_app_new_window (TerminalApp  *app);
+void terminal_window_new_window (TerminalWindow  *window);
 
-void terminal_app_set_state      (TerminalApp    *app);
+void terminal_window_set_state      (TerminalWindow    *window);
 
 G_END_DECLS;
 
-#endif /* !__TERMINAL_APP_H__ */
+#endif /* !__TERMINAL_WINDOW_H__ */

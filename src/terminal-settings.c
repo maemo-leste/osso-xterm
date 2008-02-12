@@ -109,8 +109,10 @@ terminal_settings_init (TerminalSettings *settings)
   if (!color_name) {
     gdk_color_parse(OSSO_XTERM_DEFAULT_FONT_COLOR, &fg);
   } else {
-    if(gdk_color_parse(color_name, &fg) == FALSE) {
+    if(gdk_color_parse(color_name, &fg) == FALSE) { 
+#ifdef DEBUG
       g_debug ("color parsing failed");
+#endif
       gdk_color_parse(OSSO_XTERM_DEFAULT_FONT_COLOR, &fg);
     }
     g_free(color_name);
@@ -251,7 +253,9 @@ terminal_settings_store (TerminalSettings *settings)
   color = gdk_color_copy(settings->color);
 #endif
   color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
+#ifdef DEBUG
   g_debug ("color : %s", color_name);
+#endif
   gconf_client_set_string(gc, OSSO_XTERM_GCONF_FONT_COLOR, color_name, NULL);
   g_free(color_name);
 
@@ -303,21 +307,25 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 
   gboolean bold = FALSE;
   gboolean italic = FALSE;
-
+#ifdef DEBUG
   g_debug (__FUNCTION__);
-
+#endif
   /* Create dialog */
   GtkWidget *dialog = hildon_font_selection_dialog_new (NULL, NULL);
   gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (settings));
   if (dialog == NULL) {
+#ifdef DEBUG
     g_debug ("Couldn't create Dialog");
+#endif
     return;
   }
 
   fontdesc = pango_font_description_from_string (
 						 gtk_font_button_get_font_name(GTK_FONT_BUTTON (settings->font_button)));
   if (fontdesc == NULL) {
+#ifdef DEBUG
     g_debug ("Couldn't create font description");
+#endif
     gtk_widget_destroy (dialog);
     return;
   }
