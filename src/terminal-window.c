@@ -110,10 +110,6 @@ static void            terminal_window_action_scrollbar       (GtkToggleAction *
                                                              TerminalWindow     *window);
 static void            terminal_window_action_toolbar        (GtkToggleAction *action,
                                                              TerminalWindow     *window);
-static void            terminal_window_action_prev_tab         (GtkAction       *action,
-                                                             TerminalWindow     *window);
-static void            terminal_window_action_next_tab         (GtkAction       *action,
-                                                             TerminalWindow     *window);
 static void            terminal_window_action_font_size        (GtkRadioAction  *action,
                                                              GtkRadioAction  *current,
                                                              TerminalWindow     *window);
@@ -173,8 +169,6 @@ static GtkActionEntry action_entries[] =
   { "close-tab", NULL, N_ ("Close Tab"), NULL, NULL, G_CALLBACK (terminal_window_action_close_tab), },
   { "shortcuts", NULL, N_ ("Shortcuts..."), NULL, NULL, G_CALLBACK (terminal_window_action_edit_shortcuts), },
   { "go-menu", NULL, N_ ("Go"), },
-  { "prev-tab", NULL, N_ ("Previous Tab"), NULL, NULL, G_CALLBACK (terminal_window_action_prev_tab), },
-  { "next-tab", NULL, N_ ("Next Tab"), NULL, NULL, G_CALLBACK (terminal_window_action_next_tab), },
   { "font-menu", NULL, N_ ("Font size"), },
   { "terminal-menu", NULL, N_ ("Terminal"), },
   { "reset", NULL, N_ ("Reset"), NULL, NULL, G_CALLBACK (terminal_window_action_reset), },
@@ -184,11 +178,13 @@ static GtkActionEntry action_entries[] =
 
 
   { "view-menu", NULL, ("webb_me_view"), },
+
   { "edit-menu", NULL, N_("weba_me_edit"),  },
   { "copy", NULL, N_("weba_me_copy"), NULL, NULL, G_CALLBACK (terminal_window_action_copy), },
   { "paste", NULL, N_("weba_me_paste"), NULL, NULL, G_CALLBACK (terminal_window_action_paste), },
   { "tools-menu", NULL, N_("weba_me_tools"), },
   { "close-menu", NULL, N_("weba_me_close"), },
+
   { "windows-menu", NULL, ("weba_me_windows"), },
   { "new-window", NULL, N_("weba_me_new_window"), NULL, NULL, G_CALLBACK (terminal_window_action_new_window), }, 
   { "tools", NULL, N_("weba_me_tools"), },
@@ -294,7 +290,8 @@ terminal_window_class_init (TerminalWindowClass *klass)
 
 static GtkWidget *
 attach_menu(GtkWidget *parent, GtkActionGroup *actiongroup,
-            GtkAccelGroup *accelgroup, const gchar *name) {
+            GtkAccelGroup *accelgroup, const gchar *name) 
+{
     GtkAction *action;
     GtkWidget *menuitem, *menu;
 
@@ -310,7 +307,8 @@ attach_menu(GtkWidget *parent, GtkActionGroup *actiongroup,
 
 static void
 attach_item(GtkWidget *parent, GtkActionGroup *actiongroup,
-            GtkAccelGroup *accelgroup, const gchar *name) {
+            GtkAccelGroup *accelgroup, const gchar *name) 
+{
     GtkAction *action;
     GtkWidget *menuitem;
 
@@ -360,19 +358,21 @@ populate_menubar (TerminalWindow *window, GtkAccelGroup *accelgroup)
 }
 
 static int
-terminal_window_get_font_size(TerminalWindow *window) {
+terminal_window_get_font_size(TerminalWindow *window) 
+{
     GtkAction *action;
 
     action = gtk_action_group_get_action(window->action_group, "-8pt");
     if (!action) {
-        return 0xf00b4;
+        return 0xf00b4; /* ?????? fooba(r) ????? */
     }
 
     return gtk_radio_action_get_current_value(GTK_RADIO_ACTION(action));
 }
 
-static
-gboolean terminal_window_set_font_size(TerminalWindow *window, int new_size) {
+static gboolean 
+terminal_window_set_font_size(TerminalWindow *window, int new_size) 
+{
     GtkAction *action;
     char new_name[5];
 
@@ -425,8 +425,8 @@ terminal_window_set_menu_fs (TerminalWindow *window,
 static gboolean
 terminal_window_key_press_event (TerminalWindow *window,
                               GdkEventKey *event,
-                              gpointer user_data) {
-
+                              gpointer user_data) 
+{
     int font_size;
     GtkAction *action;
 
@@ -493,12 +493,8 @@ terminal_window_init (TerminalWindow *window)
   gint                 font_size;
   gboolean             scrollbar, toolbar, reverse;
   GConfValue          *gconf_value;
-  //  HildonProgram       *program;
   GSList              *keys;
   GSList              *key_labels;
-
-  //  program = hildon_program_get_instance();
-  //  hildon_program_add_window(program, HILDON_WINDOW(window));
 
   window->terminal = NULL;
   gtk_window_set_title(GTK_WINDOW(window), "osso_xterm");
@@ -660,8 +656,6 @@ terminal_window_init (TerminalWindow *window)
                                  GCONF_VALUE_STRING,
                                  &error);
 
-  //terminal_window_update_keys(TERMINAL_WINDOW(window), keys, key_labels);
-
   g_slist_foreach(keys, (GFunc)g_free, NULL);
   g_slist_foreach(key_labels, (GFunc)g_free, NULL);
   g_slist_free(keys);
@@ -745,7 +739,10 @@ terminal_window_context_menu (TerminalWidget  *widget,
                            GdkEvent        *event,
                            TerminalWindow     *window)
 {
-/* Copy & paste didn't work quite well from popup menu*/
+
+/* Copy & paste didn't work quite well from popup menu and there was only one 
+ * item left in the menu so removed
+ */
 #if 0
   TerminalWidget *terminal;
   //  GtkWidget      *popup;
@@ -800,8 +797,6 @@ terminal_window_context_menu (TerminalWidget  *widget,
     }
 #endif
 }
-
-
 
 static void
 terminal_window_open_url (GtkAction	*action,
@@ -968,19 +963,6 @@ terminal_window_action_scrollbar (GtkToggleAction *action,
 
 
 static void
-terminal_window_action_prev_tab (GtkAction    *action,
-                              TerminalWindow  *window)
-{
-}
-
-
-static void
-terminal_window_action_next_tab (GtkAction    *action,
-                              TerminalWindow  *window)
-{
-}
-
-static void
 terminal_window_action_font_size (GtkRadioAction *action,
                                GtkRadioAction *current,
                                TerminalWindow    *window)
@@ -1069,7 +1051,7 @@ im_context_commit (GtkIMContext *ctx,
 
 static void
 terminal_window_action_ctrl (GtkAction    *action,
-                          TerminalWindow  *window)
+                             TerminalWindow  *window)
 {
   ctrl_dialog_data *data;
   GtkWidget *dialog, *label;
