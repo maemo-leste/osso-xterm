@@ -563,6 +563,9 @@ terminal_window_init (TerminalWindow *window)
   if (gconf_value) {
       if (gconf_value->type == GCONF_VALUE_BOOL) {
           toolbar = gconf_value_get_bool(gconf_value);
+#ifdef DEBUG
+          g_debug ("fs-toolbar: %s", toolbar==TRUE?"TRUE":"FALSE");
+#endif
       }
       gconf_value_free(gconf_value);
   }
@@ -924,6 +927,10 @@ terminal_window_set_toolbar_fullscreen (gboolean show)
     GConfClient *client;
     client = gconf_client_get_default();
 
+#ifdef DEBUG
+    g_debug ("%s - %s", __FUNCTION__, show==TRUE?"TRUE":"FALSE");
+#endif
+
     gconf_client_set_bool (client,
                            OSSO_XTERM_GCONF_TOOLBAR_FULLSCREEN,
                            show,
@@ -1221,6 +1228,9 @@ terminal_window_remove (TerminalWindow    *window,
   g_return_if_fail (TERMINAL_IS_WINDOW (window));
   g_return_if_fail (TERMINAL_IS_WIDGET (widget));
 
+  terminal_window_set_toolbar (toolbar_normal);
+  terminal_window_set_toolbar_fullscreen (toolbar_fs);
+
   gtk_widget_destroy (GTK_WIDGET (widget));
 }
 
@@ -1283,9 +1293,9 @@ terminal_window_action_show_full_screen (GtkToggleAction *action,
                                       TerminalWindow     *window)
 {
     toolbar_fs = gtk_toggle_action_get_active (action);
-    if (fs == TRUE) {
+    //if (fs == TRUE) {
         terminal_window_set_toolbar_fullscreen (toolbar_fs);  
-    }
+	//}
 
     g_signal_emit (G_OBJECT (window), 
 		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
@@ -1297,9 +1307,9 @@ terminal_window_action_show_normal_screen(GtkToggleAction *action,
                                        TerminalWindow     *window)
 {
     toolbar_normal = gtk_toggle_action_get_active (action);
-    if (fs == FALSE) {
+    //if (fs == FALSE) {
         terminal_window_set_toolbar (toolbar_normal);      
-    }
+	//}
     g_signal_emit (G_OBJECT (window), 
 		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
 }
@@ -1329,9 +1339,11 @@ void terminal_window_set_state      (TerminalWindow    *window)
     if (!fs) {
       gtk_window_unfullscreen(GTK_WINDOW(window));
       terminal_window_set_toolbar (toolbar_normal);
+      terminal_widget_update_tool_bar(window->terminal, toolbar_normal);
     } else {
       gtk_window_fullscreen(GTK_WINDOW(window));
       terminal_window_set_toolbar_fullscreen (toolbar_fs);
+      terminal_widget_update_tool_bar(window->terminal, toolbar_fs);
     }
 
 }

@@ -128,6 +128,8 @@ char      *terminal_widget_get_tag		      (TerminalWidget *widget,
 						       gint            x,
 						       gint            y,
 						       gint           *tag);
+void      terminal_widget_update_tool_bar             (TerminalWidget *widget,
+						       gboolean show);
 
 void terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window);
 

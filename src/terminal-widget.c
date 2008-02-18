@@ -153,8 +153,6 @@ static void     terminal_widget_update_font                   (TerminalWidget *w
                                                                gint size);
 static void     terminal_widget_update_scrolling_bar          (TerminalWidget *widget,
                                                                gboolean show);
-static void     terminal_widget_update_tool_bar          (TerminalWidget *widget,
-							  gboolean show);
 static void     terminal_widget_update_keys          (TerminalWidget *widget,
 						      GSList *keys,
 						      GSList *key_labels);
@@ -1132,7 +1130,7 @@ terminal_widget_update_scrolling_bar (TerminalWidget *widget, gboolean show)
   }
 }
 
-static void
+void
 terminal_widget_update_tool_bar (TerminalWidget *widget, gboolean show)
 {
   if (show) {
@@ -1222,7 +1220,7 @@ terminal_widget_gconf_toolbar(GConfClient    *client,
 
   value = gconf_entry_get_value(entry);
   toolbar = gconf_value_get_bool(value);
-  terminal_widget_update_tool_bar(widget, toolbar);
+  //  terminal_widget_update_tool_bar(widget, toolbar);
 }
 
 static void
@@ -1235,7 +1233,7 @@ terminal_widget_gconf_toolbar_fs(GConfClient    *client,
 
   value = gconf_entry_get_value(entry);
   toolbar = gconf_value_get_bool(value);
-  terminal_widget_update_tool_bar(widget, toolbar);
+  //  terminal_widget_update_tool_bar(widget, toolbar);
 }
 
 static void
