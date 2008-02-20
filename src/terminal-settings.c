@@ -161,7 +161,7 @@ terminal_settings_init (TerminalSettings *settings)
   gtk_widget_show (hbox);
 
   /* FIXME: g_...dup should be used */
-  g_snprintf (labeltext, 255, "%s:", dgettext ("osso-email-old", "mcen_ti_font_settings"));
+  g_snprintf (labeltext, 255, "%s:", dgettext ("hildon-libs", "ecdg_ti_font"));
 
   GtkWidget *align = gtk_alignment_new (1, 0.5, 0, 0);
   gtk_container_set_border_width (GTK_CONTAINER (align), 6);
@@ -179,7 +179,7 @@ terminal_settings_init (TerminalSettings *settings)
   gtk_container_set_border_width (GTK_CONTAINER (hbox), 6);
   gtk_widget_show (hbox);
 
-  g_snprintf (labeltext, 255, "%s:", dgettext ("osso-email-old", "mcen_me_editor_bgcolor"));
+  g_snprintf (labeltext, 255, "%s:", dgettext ("maemo-af-desktop", "home_fi_set_backgr_color"));
   align = gtk_alignment_new (1, 0.5, 0, 0);
   gtk_widget_show (align);
   gtk_container_set_border_width (GTK_CONTAINER (align), 6);
