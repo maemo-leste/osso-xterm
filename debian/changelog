@@ -1,3 +1,13 @@
+osso-xterm (0.14.mh4) unstable; urgency=low
+
+  * Changed logical strings and domains in settings. Fixes: NB#80071
+  * Destroy terminal-widget in right place. Fixes: NB#76335, NB#76337, NB#76399
+  * Modified debian/rules. Fixes: NB#76959
+  * Fixed toolbar problems. Fixes: NB#76420, NB#80083
+  * Changed ctrl-button behaviour as it was in original. Fixes: NB#79688
+
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Wed, 20 Feb 2008 13:00:03 +0300
+
 osso-xterm (0.14.mh3) unstable; urgency=low
 
   * Fixed one Glib critical when closing window. Fixes: NB#74616

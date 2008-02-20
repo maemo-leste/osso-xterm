@@ -168,16 +168,16 @@ static void     terminal_widget_emit_context_menu            (TerminalWidget *wi
 static void	terminal_widget_vte_ctrlify_notify	     (VteTerminal *terminal,
 							      GParamSpec  *pspec,
 							      TerminalWidget *widget);
-/*static void	terminal_widget_ctrlify_notify	     	     (GtkToggleToolButton *item,
-  TerminalWidget *widget);*/
+static void	terminal_widget_ctrlify_notify	     	     (GtkToggleToolButton *item,
+							      TerminalWidget *widget);
 static void	terminal_widget_do_keys			     (TerminalWidget *widget,
 							      const gchar *key_string);
 static void	terminal_widget_do_key_button		     (GObject *button,
 							      TerminalWidget *widget);
-
+#if 0
 static void terminal_widget_ctrl_clicked (GtkButton    *item,
 					  TerminalWidget *widget);
-
+#endif
 static GObjectClass *parent_class;
 static guint widget_signals[LAST_SIGNAL];
 
@@ -335,30 +335,30 @@ terminal_widget_init (TerminalWidget *widget)
   }
 
   widget->scrollbar_conid = gconf_client_notify_add(widget->gconf_client,
-						    OSSO_XTERM_GCONF_SCROLLBAR,
-						    (GConfClientNotifyFunc)terminal_widget_gconf_scrollbar,
-						    widget,
-						    NULL, &err);
+	  OSSO_XTERM_GCONF_SCROLLBAR,
+	  (GConfClientNotifyFunc)terminal_widget_gconf_scrollbar,
+	  widget,
+	  NULL, &err);
   widget->toolbar_conid = gconf_client_notify_add(widget->gconf_client,
-						  OSSO_XTERM_GCONF_TOOLBAR,
-						  (GConfClientNotifyFunc)terminal_widget_gconf_toolbar,
-						  widget,
-						  NULL, &err);
+	  OSSO_XTERM_GCONF_TOOLBAR,
+	  (GConfClientNotifyFunc)terminal_widget_gconf_toolbar,
+	  widget,
+	  NULL, &err);
   widget->toolbar_fs_conid = gconf_client_notify_add(widget->gconf_client,
-						  OSSO_XTERM_GCONF_TOOLBAR_FULLSCREEN,
-						  (GConfClientNotifyFunc)terminal_widget_gconf_toolbar_fs,
-						  widget,
-						  NULL, &err);
+	  OSSO_XTERM_GCONF_TOOLBAR_FULLSCREEN,
+	  (GConfClientNotifyFunc)terminal_widget_gconf_toolbar_fs,
+	  widget,
+	  NULL, &err);
   widget->keys_conid = gconf_client_notify_add(widget->gconf_client,
-					       OSSO_XTERM_GCONF_KEYS,
-					       (GConfClientNotifyFunc)terminal_widget_gconf_keys,
-					       widget,
-					       NULL, &err);
+	  OSSO_XTERM_GCONF_KEYS,
+	  (GConfClientNotifyFunc)terminal_widget_gconf_keys,
+	  widget,
+	  NULL, &err);
   widget->key_labels_conid = gconf_client_notify_add(widget->gconf_client,
-						     OSSO_XTERM_GCONF_KEY_LABELS,
-						     (GConfClientNotifyFunc)terminal_widget_gconf_keys,
-						     widget,
-						     NULL, &err);
+	  OSSO_XTERM_GCONF_KEY_LABELS,
+	  (GConfClientNotifyFunc)terminal_widget_gconf_keys,
+	  widget,
+	  NULL, &err);
   if (err != NULL) {
     g_printerr("scrollbar notify add failed: %s\n", err->message);
     g_clear_error(&err);
@@ -476,9 +476,9 @@ terminal_widget_init (TerminalWidget *widget)
 	       NULL);
   gtk_widget_show (GTK_WIDGET (widget->tbar));
 
-  widget->cbutton = gtk_tool_button_new (NULL, "Ctrl");
-  //  gtk_tool_item_set_expand(widget->cbutton, TRUE);
-  //  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
+  widget->cbutton = gtk_toggle_tool_button_new (); //NULL, "Ctrl");
+  gtk_tool_item_set_expand(widget->cbutton, FALSE);
+  gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
 #ifdef DEBUG
@@ -488,15 +488,16 @@ terminal_widget_init (TerminalWidget *widget)
   g_signal_connect (G_OBJECT(widget->terminal), "notify::ctrlify",
 		    G_CALLBACK(terminal_widget_vte_ctrlify_notify),
 		    widget);
-  /*
-    g_signal_connect (G_OBJECT(widget->cbutton), "toggled",
+
+  g_signal_connect (G_OBJECT(widget->cbutton), "toggled",
     G_CALLBACK(terminal_widget_ctrlify_notify),
     widget);
-  */
-  g_signal_connect (G_OBJECT(widget->cbutton), "clicked",
+
+ 
+  /*  g_signal_connect (G_OBJECT(widget->cbutton), "clicked",
 		    G_CALLBACK(terminal_widget_ctrl_clicked),
 		    widget);
-
+  */
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar),
 		     widget->cbutton,
 		     -1);
@@ -1064,6 +1065,7 @@ terminal_widget_vte_button_release_event (VteTerminal    *terminal,
   return FALSE;
 }
 
+/* Only from N810-keyboard, propably also from bt/usb keyboards */
 static gboolean
 terminal_widget_vte_key_press_event (VteTerminal    *terminal,
                                      GdkEventKey    *event,
@@ -1086,7 +1088,8 @@ terminal_widget_vte_realize (VteTerminal    *terminal,
   vte_terminal_set_allow_bold (terminal, TRUE);
   terminal_widget_timer_background (TERMINAL_WIDGET (widget));
 
-  gtk_im_context_set_client_window (widget->im_context, widget->terminal->window);
+  gtk_im_context_set_client_window (widget->im_context, GTK_WIDGET (terminal)->window);
+  g_object_ref (terminal); /* Why ?? */
 }
 
 
@@ -1778,174 +1781,46 @@ terminal_widget_vte_ctrlify_notify (VteTerminal    *terminal,
 				    TerminalWidget *widget)
 {
   gboolean bval = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(
-									   widget->cbutton));
+						    widget->cbutton));
   gboolean tval;
+
   g_object_get(widget->terminal, "ctrlify", &tval, NULL);
 
   if (bval != tval) {
+#ifdef DEBUG
+    g_debug ("%s - ctrlfy: %s", __FUNCTION__, bval==TRUE?"TRUE":"FALSE");
+#endif
     gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(widget->cbutton),
 				      tval);
   }
 }
-/*
-  typedef struct {
-  GtkWidget *dialog;
-  gchar *ret;
-  } ctrl_dialog_data;
-*/
-static void
-terminal_widget_send_ctrl_key(GtkWindow *window,
-			      const char *str)
-{
-  GdkEventKey *key;
-
-  g_debug (__FUNCTION__);
-
-  key = (GdkEventKey *) gdk_event_new(GDK_KEY_PRESS);
-
-  key->window = GDK_WINDOW (GTK_WIDGET (window)->window);
-  key->time = GDK_CURRENT_TIME;
-  key->state = GDK_CONTROL_MASK;
-  key->keyval = gdk_keyval_from_name(str);
-  gdk_event_put ((GdkEvent *) key);
-
-  key->type = GDK_KEY_RELEASE;
-  key->state |= GDK_RELEASE_MASK;
-  gdk_event_put ((GdkEvent *) key);
-
-  gdk_event_free((GdkEvent *) key);
-}
-
-/*
-  static gboolean ctrl_dialog_focus(GtkWidget *dialog,
-  GdkEventFocus *event,
-  GtkIMContext *imctx)
-  {
-  g_debug (__FUNCTION__);
-
-  if (event->in) {
-  //    gtk_im_context_focus_in(imctx);
-  gtk_im_context_show(imctx);
-  } else
-  gtk_im_context_focus_out(imctx);
-  return FALSE;
-  }
-  static gboolean
-  im_context_commit (GtkIMContext *ctx,
-  const gchar *str,
-  ctrl_dialog_data *data)
-  {
-  g_debug (__FUNCTION__);
-  if (strlen(str) > 0) {
-  data->ret = g_strdup(str);
-  gtk_dialog_response(GTK_DIALOG(data->dialog), GTK_RESPONSE_ACCEPT);
-  }
-  g_debug ("%s - end", __FUNCTION__);
-
-  return TRUE;
-  }
-*/
 
 static void
-terminal_widget_ctrl_clicked (GtkButton    *item,
-			      TerminalWidget *widget)
+terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
+                                TerminalWidget *widget)
 {
-  //  ctrl_dialog_data *data;
-  GtkWidget *dialog, *label, *input;
-  //  GtkIMContext *imctx;
-  gchar label_text[256];
-  gchar *text = NULL;
-
-  dialog = gtk_dialog_new_with_buttons("Control",
-                                       GTK_WINDOW(widget->app),
-                                       GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                       _("weba_bd_ok"), GTK_RESPONSE_OK,
-                                       NULL);
-
-  //  imctx = gtk_im_multicontext_new();
-
-  //  data = g_new0(ctrl_dialog_data, 1);
-  //  data->dialog = dialog;
-  //  g_signal_connect(imctx, "commit", G_CALLBACK(im_context_commit), data);
-
-  /* FIXME */
-  g_snprintf (label_text, 255, "Ctrl + [%s]", 
-              dgettext("osso-applet-textinput", "tein_ti_text_input_title"));
-  label = gtk_label_new(label_text);
-  gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dialog)->vbox), label);
-  gtk_widget_show (label);
-
-  input = gtk_entry_new ();
-  gtk_entry_set_max_length (GTK_ENTRY (input), 1);
-  gtk_entry_set_width_chars (GTK_ENTRY (input), 1);
-  //gtk_widget_set_size_request (input, 100, 30);
-  gtk_widget_show (input);
-
-  gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dialog)->vbox), input);
-  gtk_widget_grab_focus (input);
-  gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (widget->app));
-  gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
-
-  //gtk_widget_show_all(dialog);
-
-  /*
-    gtk_im_context_set_client_window(imctx, GTK_WIDGET(dialog)->window);
-
-    g_signal_connect( G_OBJECT(dialog), "focus-in-event",
-    G_CALLBACK(ctrl_dialog_focus), imctx);
-    g_signal_connect( G_OBJECT(dialog), "focus-out-event",
-    G_CALLBACK(ctrl_dialog_focus), imctx);
-  */
-
-  switch (gtk_dialog_run(GTK_DIALOG(dialog))) {
-  case GTK_RESPONSE_OK:
-    text = g_strdup (gtk_entry_get_text (GTK_ENTRY (input)));
-    //      g_debug ("%s - %s",__FUNCTION__ , text);
-    if (strlen (text) > 1) {
-      text[1] = '\0';
-    }
-    break;
-  default:
-    break;
-  }
-
-
-  gtk_widget_hide(dialog);
-  gtk_widget_destroy(dialog);
-  /*
-    gtk_im_context_focus_out(imctx);
-    gtk_object_unref(GTK_OBJECT(imctx));
-  */
-  if (text != NULL) {
-    g_debug ("text != NULL");
-    terminal_widget_send_ctrl_key(GTK_WINDOW (widget->app), text);
-    g_free (text);
-  }
-
-  //  g_free(data);
-
-}
-/*
-  static void
-  terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
-  TerminalWidget *widget)
-  {
   gboolean bval = gtk_toggle_tool_button_get_active(item);
   gboolean tval;
+
   g_object_get(widget->terminal, "ctrlify", &tval, NULL);
 
   if (bval != tval) {
-  g_object_set(widget->terminal, "ctrlify", bval, NULL);
+#ifdef DEBUG
+    g_debug ("%s - ctrlfy: %s", __FUNCTION__, bval==TRUE?"TRUE":"FALSE");
+#endif
+    g_object_set(widget->terminal, "ctrlify", bval, NULL);
   }
-  }
-*/
+}
+
 static void
 terminal_widget_send_key(TerminalWidget *widget,
 		         guint keyval,
 			 guint state)
 {
   GdkEventKey *key;
-
+#ifdef DEBUG
+  g_debug (__FUNCTION__);
+#endif
   key = (GdkEventKey *) gdk_event_new(GDK_KEY_PRESS);
 
   key->window = GTK_WIDGET(widget->terminal)->window;
@@ -1960,6 +1835,9 @@ terminal_widget_send_key(TerminalWidget *widget,
 
   g_object_ref(key->window);
   gdk_event_free((GdkEvent *) key);
+#ifdef DEBUG
+  g_debug ("%s - end", __FUNCTION__);
+#endif
 }
 
 static const struct {
@@ -1996,7 +1874,9 @@ static const gchar *parse_key(const gchar *source,
 {
   const gchar *tag_start = NULL;
   const gchar *key_start = NULL;
-
+#ifdef DEBUG
+  g_debug (__FUNCTION__);
+#endif
   if (!source || !keyval || !state) {
     return NULL;
   }
@@ -2052,8 +1932,9 @@ static const gchar *parse_key(const gchar *source,
   return NULL;
 }
 
-static void terminal_widget_do_keys(TerminalWidget *widget,
-				    const gchar *key_string)
+static void 
+terminal_widget_do_keys(TerminalWidget *widget,
+			const gchar *key_string)
 {
   guint keyval = 0;
   guint state = 0;
@@ -2063,8 +1944,10 @@ static void terminal_widget_do_keys(TerminalWidget *widget,
     terminal_widget_send_key(widget, keyval, state);
   }
 }
-static void terminal_widget_do_key_button(GObject *button,
-					  TerminalWidget *widget)
+
+static void 
+terminal_widget_do_key_button(GObject *button,
+			      TerminalWidget *widget)
 {
   terminal_widget_do_keys(widget, g_object_get_data(button, "keys"));
 }
@@ -2072,14 +1955,16 @@ static void terminal_widget_do_key_button(GObject *button,
 gboolean   
 terminal_widget_select_all (TerminalWidget *widget)
 {
+#ifdef DEBUG
   g_debug (__FUNCTION__);
+#endif
 #if 0
   VteTerminal *term = VTE_TERMINAL(widget->terminal);
   GTK_WIDGET (term->widget);
 #endif
   return TRUE;
 }
-
+#if 0
 void terminal_widget_send_keys(TerminalWidget *widget,
                                const gchar *key_string)
 {
@@ -2091,3 +1976,4 @@ void terminal_widget_send_keys(TerminalWidget *widget,
                 terminal_widget_send_key(widget, keyval, state);
         }
 }
+#endif

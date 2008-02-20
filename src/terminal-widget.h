@@ -133,8 +133,10 @@ void      terminal_widget_update_tool_bar             (TerminalWidget *widget,
 
 void terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window);
 
+#if 0
 void terminal_widget_send_keys(TerminalWidget *widget,
                                const gchar *key_string);
+#endif
 
 G_END_DECLS;
 

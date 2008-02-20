@@ -1015,6 +1015,9 @@ terminal_window_send_ctrl_key(TerminalWindow *window,
                            const char *str)
 {
   GdkEventKey *key;
+#ifdef DEBUG
+  g_debug (__FUNCTION__);
+#endif
 
   key = (GdkEventKey *) gdk_event_new(GDK_KEY_PRESS);
 
@@ -1038,8 +1041,9 @@ static gboolean ctrl_dialog_focus(GtkWidget *dialog,
   if (event->in) {
     gtk_im_context_focus_in(imctx);
     gtk_im_context_show(imctx);
-  } else
+  } else {
     gtk_im_context_focus_out(imctx);
+  }
   return FALSE;
 }
 
@@ -1048,6 +1052,9 @@ im_context_commit (GtkIMContext *ctx,
                    const gchar *str,
                    ctrl_dialog_data *data)
 {
+#ifdef DEBUG
+    g_debug (__FUNCTION__);
+#endif
     if (strlen(str) > 0) {
       data->ret = g_strdup(str);
       gtk_dialog_response(GTK_DIALOG(data->dialog), GTK_RESPONSE_ACCEPT);
@@ -1063,6 +1070,9 @@ terminal_window_action_ctrl (GtkAction    *action,
   ctrl_dialog_data *data;
   GtkWidget *dialog, *label;
   GtkIMContext *imctx;
+#ifdef DEBUG
+  g_debug (__FUNCTION__);
+#endif
 
   dialog = gtk_dialog_new_with_buttons("Control",
                                        GTK_WINDOW(window),
@@ -1293,9 +1303,7 @@ terminal_window_action_show_full_screen (GtkToggleAction *action,
                                       TerminalWindow     *window)
 {
     toolbar_fs = gtk_toggle_action_get_active (action);
-    //if (fs == TRUE) {
-        terminal_window_set_toolbar_fullscreen (toolbar_fs);  
-	//}
+    terminal_window_set_toolbar_fullscreen (toolbar_fs);  
 
     g_signal_emit (G_OBJECT (window), 
 		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
@@ -1307,9 +1315,8 @@ terminal_window_action_show_normal_screen(GtkToggleAction *action,
                                        TerminalWindow     *window)
 {
     toolbar_normal = gtk_toggle_action_get_active (action);
-    //if (fs == FALSE) {
-        terminal_window_set_toolbar (toolbar_normal);      
-	//}
+    terminal_window_set_toolbar (toolbar_normal);
+
     g_signal_emit (G_OBJECT (window), 
 		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
 }
