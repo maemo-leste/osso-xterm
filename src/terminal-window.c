@@ -422,6 +422,20 @@ terminal_window_set_menu_fs (TerminalWindow *window,
 
 }
 
+#if 0
+static gboolean
+terminal_window_focus_in_event (TerminalWindow *window,
+				GdkEventFocus *event,
+				gpointer user_data) 
+{
+  g_debug (__FUNCTION__);
+
+  hildon_gtk_im_context_show(TERMINAL_WIDGET(window->terminal)->im_context);
+
+  return TRUE;
+}
+#endif
+
 static gboolean
 terminal_window_key_press_event (TerminalWindow *window,
                               GdkEventKey *event,
@@ -501,7 +515,10 @@ terminal_window_init (TerminalWindow *window)
 
   g_signal_connect( G_OBJECT(window), "key-press-event",
                     G_CALLBACK(terminal_window_key_press_event), NULL);
-
+#if 0
+  g_signal_connect( G_OBJECT(window), "focus-in-event",
+                    G_CALLBACK(terminal_window_focus_in_event), NULL);
+#endif
   window->gconf_client = gconf_client_get_default();
   
   font_size = gconf_client_get_int(window->gconf_client,
@@ -1281,10 +1298,11 @@ terminal_window_launch (TerminalWindow     *window,
   }
   terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
 
+  gtk_widget_show_all(GTK_WIDGET(window));
+
   /* Keep IM open on startup */
   hildon_gtk_im_context_show(TERMINAL_WIDGET(terminal)->im_context);
 
-  gtk_widget_show_all(GTK_WIDGET(window));
 
   return TRUE;
 }
