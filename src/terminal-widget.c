@@ -1060,6 +1060,7 @@ terminal_widget_vte_button_release_event (VteTerminal    *terminal,
     {
       widget->im_pending = FALSE;
       hildon_gtk_im_context_show(widget->im_context);
+      gtk_im_context_focus_in (widget->im_context);
     }
 
   return FALSE;
@@ -1812,6 +1813,7 @@ terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
   }
   if (bval == TRUE) {
     hildon_gtk_im_context_show(widget->im_context);
+    gtk_im_context_focus_in (widget->im_context);
   }
 }
 

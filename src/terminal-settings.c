@@ -254,11 +254,9 @@ terminal_settings_store (TerminalSettings *settings, TerminalWidget *terminal)
   const gchar *font = gtk_font_button_get_font_name(GTK_FONT_BUTTON(settings->font_button));
   const gchar *sep = g_utf8_strrchr(font, -1, ' ');
   gchar *color_name;
-  //    gint sb;
   GdkColor *color;
 #if HILDON == 1
   GdkColor colors;
-  //    color = &colors;
 #endif
 
   if (!sep) return FALSE;
@@ -270,15 +268,7 @@ terminal_settings_store (TerminalSettings *settings, TerminalWidget *terminal)
 
   g_free(font_name);
 
-#if 0
-#if HILDON == 0
-  color = hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button));
-#elif HILDON == 1
-  hildon_color_button_get_color(HILDON_COLOR_BUTTON(settings->fg_button), color);
-#endif
-#else
   color = gdk_color_copy(settings->color);
-#endif
   color_name = g_strdup_printf("#%02x%02x%02x", color->red >> 8, color->green >> 8, color->blue >> 8);
 #ifdef DEBUG
   g_debug ("color : %s", color_name);

@@ -160,7 +160,9 @@ add_encoding_if_suitable (TerminalEncoding *encoding)
 
   /* Only success/nonsuccess is intresting */
   if (error != NULL) {
+#ifdef DEBUG
     g_debug ("Error: %s", error->message);
+#endif
     g_clear_error (&error);
     return;
   }

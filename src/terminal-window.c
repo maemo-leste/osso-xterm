@@ -433,20 +433,6 @@ terminal_window_set_menu_fs (TerminalWindow *window,
 
 }
 
-#if 0
-static gboolean
-terminal_window_focus_in_event (TerminalWindow *window,
-				GdkEventFocus *event,
-				gpointer user_data) 
-{
-  g_debug (__FUNCTION__);
-
-  hildon_gtk_im_context_show(TERMINAL_WIDGET(window->terminal)->im_context);
-
-  return TRUE;
-}
-#endif
-
 static gboolean
 terminal_window_key_press_event (TerminalWindow *window,
                               GdkEventKey *event,
@@ -528,10 +514,6 @@ terminal_window_init (TerminalWindow *window)
 
   g_signal_connect( G_OBJECT(window), "key-press-event",
                     G_CALLBACK(terminal_window_key_press_event), NULL);
-#if 0
-  g_signal_connect( G_OBJECT(window), "focus-in-event",
-                    G_CALLBACK(terminal_window_focus_in_event), NULL);
-#endif
   window->gconf_client = gconf_client_get_default();
   
   font_size = gconf_client_get_int(window->gconf_client,
@@ -1340,6 +1322,7 @@ terminal_window_launch (TerminalWindow     *window,
 
   /* Keep IM open on startup */
   hildon_gtk_im_context_show(TERMINAL_WIDGET(terminal)->im_context);
+  gtk_im_context_focus_in (TERMINAL_WIDGET(terminal)->im_context);
 
   if (window->encoding == NULL) {
     gconf_client_set_string(window->gconf_client, OSSO_XTERM_GCONF_ENCODING, 
@@ -1349,22 +1332,6 @@ terminal_window_launch (TerminalWindow     *window,
   } else {
     g_object_set (window->terminal, "encoding", window->encoding, NULL);
   }
-
-#if 0
-  {
-    GtkAction *action = NULL;
-    gchar *encoding = NULL;
-    gchar *name = NULL;
-
-    g_object_get (window->terminal, "encoding", &encoding, NULL);
-    name = terminal_encoding_get_name_to_encoding (encoding);
-    g_debug ("encoding : %s, name: %s", encoding, name);
-
-    action = gtk_action_group_get_action (window->action_group,
-					  "curencoding");
-    g_object_set (action, "label", name, NULL);
-  }
-#endif
 
   return TRUE;
 }
