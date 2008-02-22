@@ -23,6 +23,8 @@
 
 #include <gtk/gtk.h>
 
+#include "terminal-widget.h"
+
 G_BEGIN_DECLS;
 
 #define TERMINAL_TYPE_SETTINGS            (terminal_settings_get_type ())
@@ -44,7 +46,7 @@ GType      terminal_settings_get_type (void) G_GNUC_CONST;
 
 GtkWidget *terminal_settings_new      (void);
 
-gboolean   terminal_settings_store    (TerminalSettings *settings);
+gboolean   terminal_settings_store    (TerminalSettings *settings, TerminalWidget *terminal);
 
 G_END_DECLS;
 

@@ -66,6 +66,7 @@
 #include "terminal-settings.h"
 #include "terminal-tab-header.h"
 #include "terminal-window.h"
+#include "terminal-encoding.h"
 #include "shortcuts.h"
 
 
@@ -119,6 +120,9 @@ static void            terminal_window_action_reset_and_clear  (GtkAction       
                                                              TerminalWindow     *window);
 static void            terminal_window_action_ctrl             (GtkAction       *action,
                                                              TerminalWindow     *window);
+static void            terminal_window_action_encoding         (GtkAction       *action,
+								TerminalWindow  *window);
+
 static void            terminal_window_action_settings         (GtkAction       *action,
                                                              TerminalWindow     *window);
 static void            terminal_window_action_quit             (GtkAction       *action,
@@ -156,7 +160,7 @@ struct _TerminalWindow
   GSList              *keys;
 
   TerminalWidget *terminal;
-
+  gchar *encoding;
 };
 
 static GObjectClass *parent_class;
@@ -194,6 +198,10 @@ static GtkActionEntry action_entries[] =
   { "show-toolbar-menu", NULL, N_("webb_me_show_toolbar"), },
 
   { "settings", NULL, N_("weba_me_settings"), NULL, NULL, G_CALLBACK (terminal_window_action_settings), },
+  { "encoding", NULL, N_("weba_fi_encoding_method"), NULL, NULL, G_CALLBACK (terminal_window_action_encoding), },
+#if 0
+  { "curencoding", NULL, "", NULL, NULL, NULL, },
+#endif
   { "select-all", NULL, ("weba_me_select_all"), NULL, NULL, G_CALLBACK (terminal_window_select_all), },
 
 };
@@ -237,7 +245,6 @@ static const gchar ui_description[] =
 */
 
 G_DEFINE_TYPE (TerminalWindow, terminal_window, HILDON_TYPE_WINDOW);
-
 
 typedef struct {
     GtkWidget *dialog;
@@ -345,6 +352,10 @@ populate_menubar (TerminalWindow *window, GtkAccelGroup *accelgroup)
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "tools-menu");
   attach_item(parent, actiongroup, accelgroup, "settings");
+  attach_item(parent, actiongroup, accelgroup, "encoding");
+#if 0
+  attach_item(parent, actiongroup, accelgroup, "curencoding");
+#endif
 
   parent = attach_menu(menubar, actiongroup, accelgroup, "close-menu");
   //  attach_item(parent, actiongroup, accelgroup, "close-window");
@@ -511,6 +522,8 @@ terminal_window_init (TerminalWindow *window)
   GSList              *key_labels;
 
   window->terminal = NULL;
+  window->encoding = NULL;
+
   gtk_window_set_title(GTK_WINDOW(window), "osso_xterm");
 
   g_signal_connect( G_OBJECT(window), "key-press-event",
@@ -580,9 +593,6 @@ terminal_window_init (TerminalWindow *window)
   if (gconf_value) {
       if (gconf_value->type == GCONF_VALUE_BOOL) {
           toolbar = gconf_value_get_bool(gconf_value);
-#ifdef DEBUG
-          g_debug ("fs-toolbar: %s", toolbar==TRUE?"TRUE":"FALSE");
-#endif
       }
       gconf_value_free(gconf_value);
   }
@@ -604,7 +614,15 @@ terminal_window_init (TerminalWindow *window)
           gconf_value_free(gconf_value);
   }
 
-
+  window->encoding = gconf_client_get_string (window->gconf_client, 
+					      OSSO_XTERM_GCONF_ENCODING,
+					      &error);
+  if (error != NULL) {
+      g_printerr("Unable to get encoding setting from gconf: %s\n",
+                 error->message);
+      g_error_free(error);
+      error = NULL;
+  }
 
   window->action_group = gtk_action_group_new ("terminal-window");
   gtk_action_group_set_translation_domain (window->action_group,
@@ -685,6 +703,7 @@ terminal_window_init (TerminalWindow *window)
   role = g_strdup_printf ("Terminal-%p-%d-%d", window, getpid (), (gint) time (NULL));
   gtk_window_set_role (GTK_WINDOW (window), role);
   g_free (role);
+
 }
 
 
@@ -1131,6 +1150,23 @@ terminal_window_action_ctrl (GtkAction    *action,
   g_free(data);
 }
 
+static void
+terminal_window_action_encoding (GtkAction       *action,
+				 TerminalWindow  *window)
+{
+  gchar *retval = NULL;
+  gchar *encoding = NULL;
+  g_object_get (window->terminal, "encoding", &encoding, NULL);
+  retval = terminal_encoding_dialog (window->terminal, GTK_WINDOW (window), 
+				     encoding);
+#ifdef DEBUG
+  g_debug ("%s - retval: %s",__FUNCTION__, retval);
+#endif
+
+  g_free (retval);
+
+
+}
 
 static void
 terminal_window_action_settings (GtkAction    *action,
@@ -1143,7 +1179,8 @@ terminal_window_action_settings (GtkAction    *action,
 
     switch (gtk_dialog_run(GTK_DIALOG(settings))) {
         case GTK_RESPONSE_OK:
-            terminal_settings_store(TERMINAL_SETTINGS(settings));
+	  terminal_settings_store(TERMINAL_SETTINGS(settings), 
+				  window->terminal);
             break;
         case GTK_RESPONSE_CANCEL:
             break;
@@ -1274,6 +1311,7 @@ terminal_window_launch (TerminalWindow     *window,
                      GError          **error)
 {
   GtkWidget *terminal;
+
   g_return_val_if_fail (TERMINAL_IS_WINDOW (window), FALSE);
 
   /* setup the terminal widget */
@@ -1303,6 +1341,30 @@ terminal_window_launch (TerminalWindow     *window,
   /* Keep IM open on startup */
   hildon_gtk_im_context_show(TERMINAL_WIDGET(terminal)->im_context);
 
+  if (window->encoding == NULL) {
+    gconf_client_set_string(window->gconf_client, OSSO_XTERM_GCONF_ENCODING, 
+			    OSSO_XTERM_DEFAULT_ENCODING, NULL);
+    g_object_set (window->terminal, "encoding", 
+		  OSSO_XTERM_DEFAULT_ENCODING, NULL);
+  } else {
+    g_object_set (window->terminal, "encoding", window->encoding, NULL);
+  }
+
+#if 0
+  {
+    GtkAction *action = NULL;
+    gchar *encoding = NULL;
+    gchar *name = NULL;
+
+    g_object_get (window->terminal, "encoding", &encoding, NULL);
+    name = terminal_encoding_get_name_to_encoding (encoding);
+    g_debug ("encoding : %s, name: %s", encoding, name);
+
+    action = gtk_action_group_get_action (window->action_group,
+					  "curencoding");
+    g_object_set (action, "label", name, NULL);
+  }
+#endif
 
   return TRUE;
 }

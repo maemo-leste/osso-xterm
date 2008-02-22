@@ -36,6 +36,7 @@ osso_xterm_headers =							\
 	terminal-widget.h						\
 	terminal-window.h						\
 	terminal-manager.h						\
+	terminal-encoding.h						\
 	shortcuts.h
 
 osso_xterm_SOURCES =							\
@@ -46,6 +47,7 @@ osso_xterm_SOURCES =							\
 	terminal-widget.c						\
 	terminal-window.c						\
 	terminal-manager.c						\
+	terminal-encoding.c						\
 	shortcuts.c
 
 clean-local:

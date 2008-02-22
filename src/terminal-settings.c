@@ -42,15 +42,19 @@
 
 #include "terminal-gconf.h"
 #include "terminal-settings.h"
+#include "terminal-encoding.h"
 #include "shortcuts.h"
 
 #define MAX_FONT_NAME_LENGHT 256
+#define DEFAULT_BUTTON_HEIGHT 50
 
 static void terminal_settings_class_init    (TerminalSettingsClass *klass);
 static void terminal_settings_init          (TerminalSettings      *header);
 static void terminal_settings_finalize      (GObject               *object);
 static void terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data);
 static void terminal_widget_edit_shortcuts (GtkButton *button, gpointer *data);
+static void terminal_settings_set_default_charset (GtkButton *button, 
+						   gpointer data);
 
 struct _TerminalSettings
 {
@@ -62,6 +66,7 @@ struct _TerminalSettings
   GtkWidget   *bg_button;
   GtkWidget   *sb_spinner;
 
+  gchar *encoding;
 };
 
 
@@ -94,6 +99,7 @@ terminal_settings_init (TerminalSettings *settings)
   gchar *font_name = gconf_client_get_string(gc, OSSO_XTERM_GCONF_FONT_NAME, NULL);
   gchar *font = NULL;
 
+  settings->encoding = NULL;
   settings->color = NULL;
 
   if (!font_name) {
@@ -140,6 +146,8 @@ terminal_settings_init (TerminalSettings *settings)
   font_name = NULL;
 
   settings->font_button = gtk_font_button_new_with_font(font);
+  gtk_widget_set_size_request (settings->font_button, 
+			       -1, DEFAULT_BUTTON_HEIGHT);
   gtk_widget_show (settings->font_button);
 
   /* FIXME: way to do this is subclassing */
@@ -152,6 +160,8 @@ terminal_settings_init (TerminalSettings *settings)
   font = NULL;
 
   settings->bg_button = hildon_color_button_new_with_color(&bg);
+  gtk_widget_set_size_request (settings->bg_button, 
+			       -1, DEFAULT_BUTTON_HEIGHT);
   gtk_container_set_border_width (GTK_CONTAINER (GTK_DIALOG(settings)->vbox), 6);
   gtk_widget_show (settings->bg_button);
 
@@ -188,10 +198,27 @@ terminal_settings_init (TerminalSettings *settings)
   gtk_widget_show (widget);
   gtk_container_add(GTK_CONTAINER(align), widget);
   gtk_container_add(GTK_CONTAINER(hbox), align);
+
   gtk_container_add(GTK_CONTAINER(hbox), settings->bg_button);
   gtk_container_add(GTK_CONTAINER(GTK_DIALOG(settings)->vbox), hbox);
 
-  GtkWidget *button = gtk_button_new_with_label (_("weba_fi_plugin_details_shortcut"));
+
+  GtkWidget *button = gtk_button_new_with_label (_("weba_me_encoding"));
+  gtk_widget_set_size_request (button, -1, DEFAULT_BUTTON_HEIGHT);
+  g_signal_connect (button, "clicked", 
+		    G_CALLBACK (terminal_settings_set_default_charset), 
+		    (gpointer)settings);
+  gtk_widget_show (button);
+
+  align = gtk_alignment_new (0.5, 0.5, 1.0, 1.0);
+  gtk_widget_show (align);
+  gtk_container_set_border_width (GTK_CONTAINER (align), 6);
+
+  gtk_container_add (GTK_CONTAINER(align), button);
+  gtk_container_add (GTK_CONTAINER (GTK_DIALOG (settings)->vbox), align);
+
+  button = gtk_button_new_with_label (_("weba_fi_plugin_details_shortcut"));
+  gtk_widget_set_size_request (button, -1, DEFAULT_BUTTON_HEIGHT);
   align = gtk_alignment_new (0.5, 0.5, 1.0, 1.0);
   gtk_widget_show (align);
   gtk_container_set_border_width (GTK_CONTAINER (align), 6);
@@ -221,7 +248,7 @@ terminal_settings_finalize (GObject *object)
 
 
 gboolean
-terminal_settings_store (TerminalSettings *settings)
+terminal_settings_store (TerminalSettings *settings, TerminalWidget *terminal)
 {
   GConfClient *gc = gconf_client_get_default();
   const gchar *font = gtk_font_button_get_font_name(GTK_FONT_BUTTON(settings->font_button));
@@ -271,6 +298,11 @@ terminal_settings_store (TerminalSettings *settings)
   gconf_client_set_string(gc, OSSO_XTERM_GCONF_BG_COLOR, color_name, NULL);
   g_free(color_name);
 
+  if (settings->encoding != NULL) {
+    gconf_client_set_string(gc, OSSO_XTERM_GCONF_ENCODING, settings->encoding, 
+			    NULL);
+    g_object_set (terminal, "encoding", settings->encoding, NULL);
+  }
   g_object_unref(gc);
 
   return TRUE;
@@ -410,4 +442,25 @@ terminal_widget_edit_shortcuts (GtkButton *button,
   (void)button;
 
   update_shortcut_keys(data);
+}
+
+static void
+terminal_settings_set_default_charset (GtkButton *button, gpointer data)
+{
+  TerminalSettings *settings = TERMINAL_SETTINGS (data);
+  GConfClient *gc = gconf_client_get_default();
+  gchar *retval = NULL;
+  GError *error = NULL;
+
+  settings->encoding = gconf_client_get_string (gc, 
+						OSSO_XTERM_GCONF_ENCODING,
+						&error);
+
+  retval = terminal_encoding_dialog (NULL, GTK_WINDOW (settings), 
+				     settings->encoding);
+  settings->encoding = retval;
+  //g_free (retval);
+
+  //  g_object_get (window->terminal, "encoding", &settings->encoding, NULL);
+
 }

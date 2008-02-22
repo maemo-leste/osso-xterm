@@ -124,5 +124,15 @@
 				<short>Color of the terminal font</short>
 			</locale>
 		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/encoding</key>
+			<applyto>/apps/osso/xterm/encoding</applyto>
+			<owner>osso-xterm</owner>
+			<type>string</type>
+			<default>UTF-8</default>
+			<locale name="C">
+				<short>Default encoding of the terminal</short>
+			</locale>
+		</schema>
 	</schemalist>
 </gconfschemafile>
