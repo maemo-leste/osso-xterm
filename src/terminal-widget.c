@@ -1810,6 +1810,9 @@ terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
 #endif
     g_object_set(widget->terminal, "ctrlify", bval, NULL);
   }
+  if (bval == TRUE) {
+    hildon_gtk_im_context_show(widget->im_context);
+  }
 }
 
 static void
