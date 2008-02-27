@@ -1280,6 +1280,16 @@ terminal_window_remove (TerminalWindow    *window,
   gtk_widget_destroy (GTK_WIDGET (widget));
 }
 
+static gboolean 
+_im_context_focus (TerminalWidget *terminal)
+{
+  /* Keep IM open on startup */
+  hildon_gtk_im_context_show(terminal->im_context);
+  gtk_im_context_focus_in (terminal->im_context);
+  
+  return FALSE;
+}
+
 /**
  * terminal_window_launch
  * @window         : A #TerminalWindow.
@@ -1320,10 +1330,6 @@ terminal_window_launch (TerminalWindow     *window,
 
   gtk_widget_show_all(GTK_WIDGET(window));
 
-  /* Keep IM open on startup */
-  hildon_gtk_im_context_show(TERMINAL_WIDGET(terminal)->im_context);
-  gtk_im_context_focus_in (TERMINAL_WIDGET(terminal)->im_context);
-
   if (window->encoding == NULL) {
     gconf_client_set_string(window->gconf_client, OSSO_XTERM_GCONF_ENCODING, 
 			    OSSO_XTERM_DEFAULT_ENCODING, NULL);
@@ -1332,6 +1338,8 @@ terminal_window_launch (TerminalWindow     *window,
   } else {
     g_object_set (window->terminal, "encoding", window->encoding, NULL);
   }
+
+  g_idle_add ((GSourceFunc)_im_context_focus, window->terminal);
 
   return TRUE;
 }
