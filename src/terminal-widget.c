@@ -633,6 +633,7 @@ terminal_widget_finalize (GObject *object)
 			  NULL);
 
   g_object_unref(G_OBJECT(widget->gconf_client));
+  g_object_unref(G_OBJECT(widget->terminal));
 
   parent_class->finalize (object);
 }
