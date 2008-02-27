@@ -1,3 +1,14 @@
+osso-xterm (0.14.mh6) unstable; urgency=low
+
+  * Added to the terminal-widgets finalize vte-terminal unref. Now releases also
+    ptys.
+  * Hope im_context selection is fixed.
+  * Fixed some encoding dialog problems.
+  * Replaced debian/control.s ${shlibs:Depends} with static strings to avoid
+    problems.
+
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Wed, 27 Feb 2008 12:40:02 +0300
+
 osso-xterm (0.14.mh5) unstable; urgency=low
 
   * Added some im-context focus and show. Fixes: NB#75405
