@@ -442,15 +442,17 @@ terminal_settings_set_default_charset (GtkButton *button, gpointer data)
   gchar *retval = NULL;
   GError *error = NULL;
 
-  settings->encoding = gconf_client_get_string (gc, 
-						OSSO_XTERM_GCONF_ENCODING,
-						&error);
+  if (settings->encoding == NULL) {
+    settings->encoding = gconf_client_get_string (gc, 
+						  OSSO_XTERM_GCONF_ENCODING,
+						  &error);
+  }
 
   retval = terminal_encoding_dialog (NULL, GTK_WINDOW (settings), 
 				     settings->encoding);
   settings->encoding = retval;
-  //g_free (retval);
 
-  //  g_object_get (window->terminal, "encoding", &settings->encoding, NULL);
+  //g_free (retval);
+  //g_object_get (window->terminal, "encoding", &settings->encoding, NULL);
 
 }

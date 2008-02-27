@@ -234,6 +234,9 @@ create_tree_from_list (GSList *list, const gchar *curenc)
       GtkTreeSelection *selection;
       selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (tree));
       gtk_tree_selection_select_iter (selection, &siter);
+
+      gtk_tree_view_scroll_to_cell (GTK_TREE_VIEW (tree), tpath, NULL, TRUE,
+				    0.0, 0.0);
       gtk_tree_row_reference_free (rowref);
     }
 
