@@ -32,6 +32,7 @@ struct _TerminalManager
   HildonProgram __parent__;
 
   GSList *windows;
+  TerminalWindow *current;
 };
 
 GType            terminal_manager_get_type (void) G_GNUC_CONST;
