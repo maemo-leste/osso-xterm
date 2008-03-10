@@ -284,7 +284,6 @@ terminal_encoding_dialog (TerminalWidget *terminal, GtkWindow *parent,
   GtkWidget *dialog = NULL;
   GtkWidget *tree = NULL;
   GtkWidget *scrolled = NULL;
-  gchar *current_encoding = NULL;
 
   list = terminal_encoding_get_list ();
 
@@ -307,18 +306,18 @@ terminal_encoding_dialog (TerminalWidget *terminal, GtkWindow *parent,
   gtk_widget_set_size_request (scrolled, 350, 150);
 
   gtk_widget_show_all(dialog);
+
   if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
     if (terminal != NULL) {
       g_object_set (terminal, "encoding", selected_encoding.encoding, NULL);
     }
+    gtk_widget_destroy (dialog);
+    return (gchar *)selected_encoding.encoding;
   }
-  if (terminal != NULL) {
-    g_object_get (terminal, "encoding", &current_encoding, NULL);
-  }
-
+  
   gtk_widget_destroy (dialog);
-
-  return (gchar *)selected_encoding.encoding;
+  return (gchar *)defenc;
+ 
 }
 
 static void 

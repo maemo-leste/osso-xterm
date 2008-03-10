@@ -329,9 +329,11 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 
   gboolean bold = FALSE;
   gboolean italic = FALSE;
+
 #ifdef DEBUG
   g_debug (__FUNCTION__);
 #endif
+
   /* Create dialog */
   GtkWidget *dialog = hildon_font_selection_dialog_new (NULL, NULL);
   gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (settings));
@@ -371,7 +373,6 @@ terminal_settings_show_hildon_font_dialog (GtkButton *button, gpointer data)
 	       "italic", italic,
 	       "color", settings->color,
 	       NULL);
-
 
   gtk_widget_show_all (GTK_WIDGET(dialog));
 
@@ -451,8 +452,5 @@ terminal_settings_set_default_charset (GtkButton *button, gpointer data)
   retval = terminal_encoding_dialog (NULL, GTK_WINDOW (settings), 
 				     settings->encoding);
   settings->encoding = retval;
-
-  //g_free (retval);
-  //g_object_get (window->terminal, "encoding", &settings->encoding, NULL);
 
 }
