@@ -163,9 +163,7 @@ static void terminal_manager_focus_in_actions (TerminalWindow *window,
 					       GdkEventFocus *event,
 					       TerminalManager *manager)
 {
-  //  g_debug (__FUNCTION__);
   if ((event->type == GDK_FOCUS_CHANGE) && (manager->current != window)) {
-    //    g_debug ("%s - set current (%p)", __FUNCTION__, window);
     manager->current = window;
   }
 }
@@ -175,7 +173,7 @@ static void terminal_manager_global_state_changed (TerminalWindow *window,
 {
   g_slist_foreach (manager->windows, (GFunc)_state_change_helper, NULL);
 
-  if (manager->current) {
+  if (manager->current != NULL) {
     g_idle_add ((GSourceFunc)_set_window_to_top, manager->current);
   }
 }
@@ -190,7 +188,6 @@ _state_change_helper (gpointer window, gpointer data)
 static gboolean
 _set_window_to_top (GtkWindow *window)
 {
-  g_assert (window);
   gtk_window_present (window);
   return FALSE;
 }
