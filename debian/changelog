@@ -1,7 +1,13 @@
+osso-xterm (0.14.mh9) unstable; urgency=low
+
+  * Added lazy fullscreen-system. Now really should fix following bug. Fixes: NB#81620
+
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Mon, 17 Mar 2008 14:04:24 +0300
+
 osso-xterm (0.14.mh8) unstable; urgency=low
 
-  * Fixed focus problem with fullscreen. Fixes: NB#81620
   * Fixed problem with font size field in settings. Fixes: NB#81303
+  * Fixed focus problem with fullscreen. Fixes: NB#81620
   * Fixed encoding settings problem. Fixes: NB#81609
 
  -- Joni Valtanen <jvaltane@kapsi.fi>  Mon, 10 Mar 2008 17:34:12 +0300
