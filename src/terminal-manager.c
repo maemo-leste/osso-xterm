@@ -22,9 +22,13 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
 static void terminal_manager_last_window_closed (TerminalManager *manager);
 static void terminal_manager_global_state_changed (TerminalWindow *window,
 						   TerminalManager *manager);
+static void terminal_manager_focus_in_actions (TerminalWindow *window,
+					    GdkEventFocus *event,
+					    TerminalManager *manager);
 
-/* Helper */
+/* Helpers */
 static void _state_change_helper (gpointer window, gpointer data);
+static gboolean _set_window_to_top (GtkWindow *window);
 
 G_DEFINE_TYPE (TerminalManager, terminal_manager, HILDON_TYPE_PROGRAM);
 
@@ -35,7 +39,6 @@ TerminalManager *terminal_manager_get_instance (void)
   if (!manager) {
     manager = g_object_new(TERMINAL_TYPE_MANAGER, NULL);
   }
-  
   return manager;
 }
 
@@ -78,6 +81,7 @@ static void terminal_manager_class_init (TerminalManagerClass *klass)
 static void terminal_manager_init (TerminalManager *manager)
 {
   manager->windows = NULL;
+  manager->current = NULL;
 }
 
 gboolean terminal_manager_new_window (TerminalManager *manager,
@@ -99,6 +103,12 @@ gboolean terminal_manager_new_window (TerminalManager *manager,
                     G_CALLBACK (terminal_manager_global_state_changed), 
                     manager);
 
+  /* when focused */
+  g_signal_connect (window, 
+                    "focus-in-event", 
+                    G_CALLBACK (terminal_manager_focus_in_actions), 
+                    manager);
+
   manager->windows = g_slist_append(manager->windows, window);
   g_object_set_data(G_OBJECT(window), "osso", g_object_get_data(G_OBJECT(manager), "osso"));
 
@@ -110,7 +120,9 @@ gboolean terminal_manager_new_window (TerminalManager *manager,
     return FALSE;
   }
 
-  terminal_window_set_state (window);
+  terminal_window_set_state (window, window);
+
+  manager->current = window;
 
   return TRUE;
 }
@@ -147,16 +159,35 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
   }
 }
 
+static void terminal_manager_focus_in_actions (TerminalWindow *window,
+					       GdkEventFocus *event,
+					       TerminalManager *manager)
+{
+  if ((event->type == GDK_FOCUS_CHANGE) && (manager->current != window)) {
+    manager->current = window;
+    terminal_window_set_state (window, window);
+  }
+}
+
 static void terminal_manager_global_state_changed (TerminalWindow *window,
 						   TerminalManager *manager)
 {
-  g_slist_foreach (manager->windows, (GFunc)_state_change_helper, NULL);
+  g_slist_foreach (manager->windows, (GFunc)_state_change_helper, manager);
+  if (manager->current != NULL) {
+    g_idle_add ((GSourceFunc)_set_window_to_top, manager->current);
+  }
 }
 
 /* Helpers */
 static void
 _state_change_helper (gpointer window, gpointer data)
 {
-  terminal_window_set_state (window);
+  terminal_window_set_state (window, TERMINAL_MANAGER(data)->current);
 }
 
+static gboolean
+_set_window_to_top (GtkWindow *window)
+{
+  gtk_window_present (window);
+  return FALSE;
+}

@@ -1388,7 +1388,7 @@ terminal_window_select_all (GtkAction    *action,
     /* terminal_widget_select_all (TERMINAL_WIDGET (window->terminal)); */
 }
 
-void terminal_window_set_state      (TerminalWindow    *window)
+void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
 {
 #ifdef DEBUG
     g_debug ("%s : tb_normal: %d - tb_fs: %d", 
@@ -1399,11 +1399,13 @@ void terminal_window_set_state      (TerminalWindow    *window)
     terminal_window_set_menu_fs (window, toolbar_fs);
 
     if (!fs) {
-      gtk_window_unfullscreen(GTK_WINDOW(window));
+      if (window == current)
+	gtk_window_unfullscreen(GTK_WINDOW(window));
       terminal_window_set_toolbar (toolbar_normal);
       terminal_widget_update_tool_bar(window->terminal, toolbar_normal);
     } else {
-      gtk_window_fullscreen(GTK_WINDOW(window));
+      if (window == current)
+	gtk_window_fullscreen(GTK_WINDOW(window));
       terminal_window_set_toolbar_fullscreen (toolbar_fs);
       terminal_widget_update_tool_bar(window->terminal, toolbar_fs);
     }
