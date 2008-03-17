@@ -120,7 +120,7 @@ gboolean terminal_manager_new_window (TerminalManager *manager,
     return FALSE;
   }
 
-  terminal_window_set_state (window);
+  terminal_window_set_state (window, window);
 
   manager->current = window;
 
@@ -165,14 +165,14 @@ static void terminal_manager_focus_in_actions (TerminalWindow *window,
 {
   if ((event->type == GDK_FOCUS_CHANGE) && (manager->current != window)) {
     manager->current = window;
+    terminal_window_set_state (window, window);
   }
 }
 
 static void terminal_manager_global_state_changed (TerminalWindow *window,
 						   TerminalManager *manager)
 {
-  g_slist_foreach (manager->windows, (GFunc)_state_change_helper, NULL);
-
+  g_slist_foreach (manager->windows, (GFunc)_state_change_helper, manager);
   if (manager->current != NULL) {
     g_idle_add ((GSourceFunc)_set_window_to_top, manager->current);
   }
@@ -182,7 +182,7 @@ static void terminal_manager_global_state_changed (TerminalWindow *window,
 static void
 _state_change_helper (gpointer window, gpointer data)
 {
-  terminal_window_set_state (window);
+  terminal_window_set_state (window, TERMINAL_MANAGER(data)->current);
 }
 
 static gboolean
