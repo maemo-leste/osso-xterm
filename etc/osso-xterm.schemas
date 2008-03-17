@@ -79,7 +79,7 @@
 			<applyto>/apps/osso/xterm/font_size</applyto>
 			<owner>osso-xterm</owner>
 			<type>int</type>
-			<default>14</default>
+			<default>16</default>
 			<locale name="C">
 				<short>Size of the terminal font</short>
 			</locale>
