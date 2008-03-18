@@ -72,7 +72,7 @@ gboolean   terminal_window_launch (TerminalWindow     *window,
 
 void terminal_window_new_window (TerminalWindow  *window);
 
-void terminal_window_set_state      (TerminalWindow    *window);
+void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current);
 
 G_END_DECLS;
 
