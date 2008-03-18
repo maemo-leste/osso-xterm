@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh10) unstable; urgency=low
+
+  * Changed font size to 16. Schemas is updated also. Really Fixes: NB#81303
+
+ -- Joni Valtanen <jvaltane@kapsi.fi>  Mon, 18 Mar 2008 13:56:15 +0300
+
 osso-xterm (0.14.mh9) unstable; urgency=low
 
   * Added lazy fullscreen-system. Now really should fix following bug. Fixes: NB#81620
