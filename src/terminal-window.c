@@ -493,6 +493,20 @@ terminal_window_key_press_event (TerminalWindow *window,
     return FALSE;
 }
 
+#if 0
+static void terminal_window_focus_in_event (TerminalWindow *window,
+					       GdkEventFocus *event,
+					       gpointer data)
+{
+}
+
+static void terminal_window_focus_out_event (TerminalWindow *window,
+					     GdkEventFocus *event,
+					     gpointer data)
+{
+}
+#endif
+
 static void
 terminal_window_init (TerminalWindow *window)
 {
@@ -511,7 +525,16 @@ terminal_window_init (TerminalWindow *window)
   window->encoding = NULL;
 
   gtk_window_set_title(GTK_WINDOW(window), "osso_xterm");
-
+#if 0
+  g_signal_connect (window, 
+                    "focus-in-event", 
+                    G_CALLBACK (terminal_window_focus_in_event), 
+                    NULL);
+  g_signal_connect (window, 
+                    "focus-out-event", 
+                    G_CALLBACK (terminal_window_focus_out_event), 
+                    NULL);
+#endif
   g_signal_connect( G_OBJECT(window), "key-press-event",
                     G_CALLBACK(terminal_window_key_press_event), NULL);
   window->gconf_client = gconf_client_get_default();
@@ -1399,15 +1422,41 @@ void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
     terminal_window_set_menu_fs (window, toolbar_fs);
 
     if (!fs) {
-      if (window == current)
+      if (window == current) {
 	gtk_window_unfullscreen(GTK_WINDOW(window));
+      }
       terminal_window_set_toolbar (toolbar_normal);
       terminal_widget_update_tool_bar(window->terminal, toolbar_normal);
     } else {
-      if (window == current)
+      if (window == current) {
 	gtk_window_fullscreen(GTK_WINDOW(window));
+
+      }
       terminal_window_set_toolbar_fullscreen (toolbar_fs);
       terminal_widget_update_tool_bar(window->terminal, toolbar_fs);
     }
 
+    /*
+       FIXME: Next block is dirty hack and should be removed.
+       
+       There is signaled actual vte terminal widget to be or not to be focused.
+    */
+    if (GTK_WIDGET_REALIZED (TERMINAL_WIDGET (window->terminal)->terminal)) {
+      GdkEventFocus event;
+
+      event.type = GDK_FOCUS_CHANGE; 
+      event.window = 
+	GTK_WIDGET (TERMINAL_WIDGET (window->terminal)->terminal)->window;
+      event.send_event = FALSE;
+
+      if (window == current) {
+	event.in = TRUE;
+	g_signal_emit_by_name (TERMINAL_WIDGET (window->terminal)->terminal, 
+			       "focus-in-event", &event);
+      } else {
+	event.in = FALSE;
+	g_signal_emit_by_name (TERMINAL_WIDGET (window->terminal)->terminal, 
+			       "focus-out-event", &event);
+      }
+    }
 }
