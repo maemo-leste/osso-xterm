@@ -22,9 +22,9 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
 static void terminal_manager_last_window_closed (TerminalManager *manager);
 static void terminal_manager_global_state_changed (TerminalWindow *window,
 						   TerminalManager *manager);
-static void terminal_manager_focus_in_actions (TerminalWindow *window,
-					    GdkEventFocus *event,
-					    TerminalManager *manager);
+static gboolean terminal_manager_focus_in_actions (TerminalWindow *window,
+						   GdkEventFocus *event,
+						   TerminalManager *manager);
 
 /* Helpers */
 static void _state_change_helper (gpointer window, gpointer data);
@@ -85,8 +85,8 @@ static void terminal_manager_init (TerminalManager *manager)
 }
 
 gboolean terminal_manager_new_window (TerminalManager *manager,
-				  const gchar *command,
-				  GError **error)
+				      const gchar *command,
+				      GError **error)
 {
   TerminalWindow *window = TERMINAL_WINDOW(terminal_window_new());
 
@@ -159,14 +159,15 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
   }
 }
 
-static void terminal_manager_focus_in_actions (TerminalWindow *window,
-					       GdkEventFocus *event,
-					       TerminalManager *manager)
+static gboolean terminal_manager_focus_in_actions (TerminalWindow *window,
+						   GdkEventFocus *event,
+						   TerminalManager *manager)
 {
   if ((event->type == GDK_FOCUS_CHANGE) && (manager->current != window)) {
     manager->current = window;
     terminal_window_set_state (window, window);
   }
+  return FALSE;
 }
 
 static void terminal_manager_global_state_changed (TerminalWindow *window,

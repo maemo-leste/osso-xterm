@@ -1436,27 +1436,4 @@ void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
       terminal_widget_update_tool_bar(window->terminal, toolbar_fs);
     }
 
-    /*
-       FIXME: Next block is dirty hack and should be removed.
-       
-       There is signaled actual vte terminal widget to be or not to be focused.
-    */
-    if (GTK_WIDGET_REALIZED (TERMINAL_WIDGET (window->terminal)->terminal)) {
-      GdkEventFocus event;
-
-      event.type = GDK_FOCUS_CHANGE; 
-      event.window = 
-	GTK_WIDGET (TERMINAL_WIDGET (window->terminal)->terminal)->window;
-      event.send_event = FALSE;
-
-      if (window == current) {
-	event.in = TRUE;
-	g_signal_emit_by_name (TERMINAL_WIDGET (window->terminal)->terminal, 
-			       "focus-in-event", &event);
-      } else {
-	event.in = FALSE;
-	g_signal_emit_by_name (TERMINAL_WIDGET (window->terminal)->terminal, 
-			       "focus-out-event", &event);
-      }
-    }
 }
