@@ -434,6 +434,21 @@ terminal_window_set_menu_fs (TerminalWindow *window,
 }
 
 static gboolean
+terminal_window_set_menu_fs_idle (TerminalWindow *window)
+{
+  gboolean test = FALSE;
+  GtkAction *action = NULL;
+  action = gtk_action_group_get_action (window->action_group,
+                                        "fullscreen");
+  test = gtk_toggle_action_get_active (GTK_TOGGLE_ACTION (action));
+  if (fs != test) {
+    gtk_toggle_action_set_active (GTK_TOGGLE_ACTION (action), fs);
+  }
+
+  return FALSE;
+}
+
+static gboolean
 terminal_window_key_press_event (TerminalWindow *window,
                               GdkEventKey *event,
                               gpointer user_data) 
@@ -1417,20 +1432,20 @@ void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
     g_debug ("%s : tb_normal: %d - tb_fs: %d", 
 	   __FUNCTION__, toolbar_normal, toolbar_fs);
 #endif
-
     terminal_window_set_menu_normal (window, toolbar_normal);
     terminal_window_set_menu_fs (window, toolbar_fs);
 
     if (!fs) {
       if (window == current) {
 	gtk_window_unfullscreen(GTK_WINDOW(window));
+	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
       }
       terminal_window_set_toolbar (toolbar_normal);
       terminal_widget_update_tool_bar(window->terminal, toolbar_normal);
     } else {
       if (window == current) {
 	gtk_window_fullscreen(GTK_WINDOW(window));
-
+	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
       }
       terminal_window_set_toolbar_fullscreen (toolbar_fs);
       terminal_widget_update_tool_bar(window->terminal, toolbar_fs);
