@@ -97,6 +97,8 @@ static void            terminal_window_action_new_window          (GtkAction    
                                                              TerminalWindow     *window);
 static void            terminal_window_action_close_tab        (GtkAction       *action,
                                                              TerminalWindow     *window);
+static void            terminal_window_action_edit             (GtkAction       *action,
+                                                             TerminalWindow     *window);
 static void            terminal_window_action_copy             (GtkAction       *action,
                                                              TerminalWindow     *window);
 static void            terminal_window_action_paste            (GtkAction       *action,
@@ -183,7 +185,7 @@ static GtkActionEntry action_entries[] =
 
   { "view-menu", NULL, ("webb_me_view"), },
 
-  { "edit-menu", NULL, N_("weba_me_edit"),  },
+  { "edit-menu", NULL, N_("weba_me_edit"), NULL, NULL, G_CALLBACK (terminal_window_action_edit), },
   { "copy", NULL, N_("weba_me_copy"), NULL, NULL, G_CALLBACK (terminal_window_action_copy), },
   { "paste", NULL, N_("weba_me_paste"), NULL, NULL, G_CALLBACK (terminal_window_action_paste), },
   { "tools-menu", NULL, N_("weba_me_tools"), },
@@ -778,7 +780,6 @@ terminal_window_update_actions (TerminalWindow *window)
     }
 }
 
-
 static void
 terminal_window_notify_title(TerminalWidget *terminal,
                           GParamSpec   *pspec,
@@ -896,6 +897,22 @@ terminal_window_action_close_tab (GtkAction    *action,
   gtk_widget_hide (GTK_WIDGET (window));
   gtk_widget_destroy (GTK_WIDGET (window));
 
+}
+
+/* Check is paste enabled */
+static void
+terminal_window_action_edit (GtkAction *action,
+                             TerminalWindow *window)
+{
+  GtkAction *pasteaction;
+  GdkAtom target = gdk_atom_intern ("CLIPBOARD", FALSE);
+  GtkClipboard *clipboard = gtk_clipboard_get (target);
+  gboolean paste_enabled = gtk_clipboard_wait_is_text_available (clipboard);
+
+  pasteaction = gtk_action_group_get_action (window->action_group, "paste");
+  if (pasteaction != NULL) {
+    g_object_set (G_OBJECT (pasteaction), "sensitive", paste_enabled, NULL);
+  }
 }
 
 
