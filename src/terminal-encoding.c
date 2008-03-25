@@ -3,7 +3,6 @@
 
 #define GETTEXT_PACKAGE "osso-browser-ui"
 #include <glib/gi18n-lib.h>
-
 #include <libintl.h>
 
 #include "terminal-encoding.h"
@@ -11,20 +10,17 @@
 #define TEST_STRING "assdfghhjy"
 #define TEST_STRING_LEN 10
 
-
-static TerminalEncoding selected_encoding;
-
 static GtkWidget *create_tree_from_list (GSList *list, const gchar *curenc);
-
 static void selection_changed(GtkTreeSelection *sel, GtkListStore *model2);
-
 static void add_encoding_if_suitable (TerminalEncoding *encoding);
 
+static TerminalEncoding selected_encoding;
+static GSList *enc = NULL;
 
+/* Array of tested encodings */
 static TerminalEncoding encodings[] = {
   /* name , encoding */
   { NULL, "UTF-8"},
-  { NULL, "UTF-16"},
 
   { NULL, "ISO-8859-1"},
   { NULL, "ISO-8859-15"},
@@ -42,11 +38,15 @@ static TerminalEncoding encodings[] = {
   { NULL, "EUC-TW"},
 
   { NULL, "KOI8-R"},
-
 };
 
-
-
+/**
+ * name_to_encode_index
+ *
+ * @index : index of encoding
+ *
+ * Return value : localized name of encoding
+ */
 static gchar *
 name_to_encode_index (guint index)
 {
@@ -56,42 +56,39 @@ name_to_encode_index (guint index)
     retval = _("weba_va_encoding_utf_8");
     break;
   case 1:
-    retval = _("weba_va_encoding_utf_16");
-    break;
-  case 2:
     retval = _("weba_va_encoding_iso_8859_1");
     break;
-  case 3:
+  case 2:
     retval = _("weba_va_encoding_iso_8859_15");
     break;
-  case 4:
+  case 3:
     retval = _("weba_va_encoding_iso_8859_2");
     break;
-  case 5:
+  case 4:
     retval = _("weba_va_encoding_iso_8859_7");
     break;
-  case 6:
+  case 5:
     retval = _("weba_va_encoding_iso_8859_9");
     break;
-  case 7:
+  case 6:
     retval = _("weba_va_encoding_big5");
     break;
-  case 8:
+  case 7:
     retval = _("weba_va_encoding_win_1250");
     break;
-  case 9:
+  case 8:
     retval = _("weba_va_encoding_win_1251");
     break;
-  case 10:
+  case 9:
     retval = _("weba_va_encoding_win_1253");
     break;
-  case 11:
+  case 10:
     retval = _("weba_va_encoding_win_1254");
     break;
-  case 12:
+  case 11:
     retval = _("weba_va_encoding_euc_tw");
     break;
-  case 13:
+  case 12:
     retval = _("weba_va_encoding_win_koi_8r");
     break;
   default:
@@ -101,8 +98,11 @@ name_to_encode_index (guint index)
   return g_strdup (retval);
 }
 
-static GSList *enc = NULL;
-
+/**
+ * terminal_encoding_get_list
+ * 
+ * Return value : GSList of encodings
+ */
 GSList *
 terminal_encoding_get_list (void)
 {
@@ -118,6 +118,11 @@ terminal_encoding_get_list (void)
   return enc;
 }
 
+/**
+ * terminal_encoding_free_list
+ * 
+ * list : GSList of encodings
+ */
 void
 terminal_encoding_free_list (GSList *list)
 {
@@ -133,7 +138,6 @@ terminal_encoding_free_list (GSList *list)
   list = NULL;
   enc = NULL;
 }
-
 
 static void
 add_encoding_if_suitable (TerminalEncoding *encoding)
@@ -153,23 +157,11 @@ add_encoding_if_suitable (TerminalEncoding *encoding)
                          &bytes_written,
                          &error);
 
-#ifdef DEBUG
-  g_debug ("%s - name : %s",__FUNCTION__, encoding->name);
-  g_debug ("encoding : %s", encoding->encoding);
-#endif
-
   /* Only success/nonsuccess is intresting */
   if (error != NULL) {
-#ifdef DEBUG
-    g_debug ("Error: %s", error->message);
-#endif
     g_clear_error (&error);
     return;
   }
-#ifdef DEBUG
-  g_debug ("This string can be weird : %s", converted);
-#endif
-
   g_free (converted);
 
   /* Add this encoding to list */
@@ -245,6 +237,13 @@ create_tree_from_list (GSList *list, const gchar *curenc)
   return tree;
 }
 
+/**
+ * terminal_encoding_get_name_to_encoding
+ *
+ * @encoding : predefined name of from TerminalEncoding
+ *
+ * Return value : localized name of encoding
+ */
 gchar *
 terminal_encoding_get_name_to_encoding (const gchar *encoding)
 {
@@ -270,11 +269,12 @@ terminal_encoding_get_name_to_encoding (const gchar *encoding)
 
 /**
  * terminal_encoding_dialog
+ *
  * @terminal : Terminal widget
  * @parent : Dialogs parent-window
- * Return value : encoding of current codeset (duplicated???)
+ * @defenc : default encoding
  *
- * Duplicates return-value. remember to free it.???
+ * Return value : encoding of current codeset
  */
 gchar *
 terminal_encoding_dialog (TerminalWidget *terminal, GtkWindow *parent, 
