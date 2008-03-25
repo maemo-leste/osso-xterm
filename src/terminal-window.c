@@ -510,20 +510,6 @@ terminal_window_key_press_event (TerminalWindow *window,
     return FALSE;
 }
 
-#if 0
-static void terminal_window_focus_in_event (TerminalWindow *window,
-					       GdkEventFocus *event,
-					       gpointer data)
-{
-}
-
-static void terminal_window_focus_out_event (TerminalWindow *window,
-					     GdkEventFocus *event,
-					     gpointer data)
-{
-}
-#endif
-
 static void
 terminal_window_init (TerminalWindow *window)
 {
@@ -542,18 +528,10 @@ terminal_window_init (TerminalWindow *window)
   window->encoding = NULL;
 
   gtk_window_set_title(GTK_WINDOW(window), "osso_xterm");
-#if 0
-  g_signal_connect (window, 
-                    "focus-in-event", 
-                    G_CALLBACK (terminal_window_focus_in_event), 
-                    NULL);
-  g_signal_connect (window, 
-                    "focus-out-event", 
-                    G_CALLBACK (terminal_window_focus_out_event), 
-                    NULL);
-#endif
+
   g_signal_connect( G_OBJECT(window), "key-press-event",
                     G_CALLBACK(terminal_window_key_press_event), NULL);
+
   window->gconf_client = gconf_client_get_default();
   
   font_size = gconf_client_get_int(window->gconf_client,
@@ -700,6 +678,7 @@ terminal_window_init (TerminalWindow *window)
                                 GTK_TAP_AND_HOLD_NONE);
   */
   
+  /* FIXME: is this really nessary fullscreen is available in matchbox+hildon */
   /* setup fullscreen mode */
   if (!gdk_net_wm_supports (gdk_atom_intern ("_NET_WM_STATE_FULLSCREEN", FALSE)))
     {
@@ -801,7 +780,7 @@ terminal_window_context_menu (TerminalWidget  *widget,
 {
 
 /* Copy & paste didn't work quite well from popup menu and there was only one 
- * item left in the menu so removed
+ * item left in the menu so it was removed
  */
 #if 0
   TerminalWidget *terminal;
@@ -905,9 +884,8 @@ terminal_window_action_edit (GtkAction *action,
                              TerminalWindow *window)
 {
   GtkAction *pasteaction;
-  GdkAtom target = gdk_atom_intern ("CLIPBOARD", FALSE);
-  GtkClipboard *clipboard = gtk_clipboard_get (target);
-  gboolean paste_enabled = gtk_clipboard_wait_is_text_available (clipboard);
+  gboolean paste_enabled = 
+    gtk_clipboard_wait_is_text_available (gtk_clipboard_get (GDK_NONE));
 
   pasteaction = gtk_action_group_get_action (window->action_group, "paste");
   if (pasteaction != NULL) {
@@ -923,8 +901,9 @@ terminal_window_action_copy (GtkAction    *action,
   TerminalWidget *terminal;
 
   terminal = terminal_window_get_active (window);
-  if (G_LIKELY (terminal != NULL))
+  if (G_LIKELY (terminal != NULL)) {
     terminal_widget_copy_clipboard (terminal);
+  }
 }
 
 
@@ -1001,7 +980,7 @@ terminal_window_set_toolbar_fullscreen (gboolean show)
     client = gconf_client_get_default();
 
 #ifdef DEBUG
-    g_debug ("%s - %s", __FUNCTION__, show==TRUE?"TRUE":"FALSE");
+    g_debug ("%s - %s", __FUNCTION__, show?"TRUE":"FALSE");
 #endif
 
     gconf_client_set_bool (client,
