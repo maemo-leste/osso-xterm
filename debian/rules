@@ -21,16 +21,15 @@ ifeq "$(strip $(LAUNCHER))" "yes"
 	LAUNCHER_LDFLAGS = -shared
 endif
 
-configure: configure-stamp
-configure-stamp:
-
+config.status:
 	dh_testdir
-	test -e ./configure || ./autogen.sh
-	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/sbin --enable-final
-	touch configure-stamp
+	-make squeaky
+	./autogen.sh
+	# Add here commands to configure the package.
+	CFLAGS="$(CFLAGS)" ./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/sbin --enable-final
+build: build-stamp
 
-build: configure build-stamp
-build-stamp:
+build-stamp: config.status
 
 	dh_testdir
 	$(MAKE) \
