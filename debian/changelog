@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh13) unstable; urgency=low
+
+  * Building for Fremantle
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 19 Jan 2009 15:43:17 +0200
+
 osso-xterm (0.14.mh12) unstable; urgency=low
 
   * Added actionhandler to edit-menu-item. That checks is there something to
