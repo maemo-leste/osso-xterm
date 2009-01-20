@@ -61,6 +61,7 @@
 #endif
 #include <gconf/gconf-client.h>
 #include <gdk/gdkkeysyms.h>
+#include <gdk/gdkx.h>
 
 #include "terminal-gconf.h"
 #include "terminal-settings.h"
@@ -1346,7 +1347,7 @@ terminal_window_launch (TerminalWindow     *window,
 		 g_get_home_dir());
   terminal_widget_set_app_win (TERMINAL_WIDGET (terminal), HILDON_WINDOW (window));
 
-  (void *)terminal_window_add (window, TERMINAL_WIDGET (terminal));
+  terminal_window_add (window, TERMINAL_WIDGET (terminal));
   if (command) {
     gint argc;
     gchar **argv;
