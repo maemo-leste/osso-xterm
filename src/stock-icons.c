@@ -1,4 +1,3 @@
-#include <config.h>
 #include "stock-icons.h"
 #include "stock-icon-list.h"
 

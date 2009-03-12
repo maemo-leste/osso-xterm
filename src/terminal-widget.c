@@ -20,10 +20,6 @@
  * Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <memory.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1137,7 +1133,6 @@ terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_l
   g_slist_foreach(widget->keys, (GFunc)gtk_widget_destroy, NULL);
   g_slist_free(widget->keys);
   widget->keys = NULL;
-  guint i = 0;
 
   while (keys && key_labels) {
 #ifdef DEBUG
@@ -1148,7 +1143,7 @@ terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_l
 
     gtk_widget_show(GTK_WIDGET(button));
     gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), 
-		       button, i++);
+		       button, -1);
 
     g_signal_connect(G_OBJECT(button),
 		     "clicked",

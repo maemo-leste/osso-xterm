@@ -1,7 +1,6 @@
 AC_INIT([osso-xterm],[0.13.mh24])
 
 dnl Initialize automake
-AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 AM_MAINTAINER_MODE
 
@@ -28,7 +27,7 @@ AC_ARG_WITH(
 if test "x$svgpix" != "xno"; then
   PKG_CHECK_MODULES(LIBRSVG, librsvg-2.0,
     [
-    AC_DEFINE(HAVE_SVG) 
+    AC_DEFINE(HAVE_SVG)
     svgpix="yes"
     ],
     [

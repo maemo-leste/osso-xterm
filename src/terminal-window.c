@@ -23,10 +23,6 @@
  * where initially written by Owen Taylor.
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>

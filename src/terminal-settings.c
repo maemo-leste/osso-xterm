@@ -18,10 +18,6 @@
 * Place, Suite 330, Boston, MA  02111-1307  USA.
 */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #define GETTEXT_PACKAGE "osso-browser-ui"
 
 #include <gconf/gconf-client.h>
