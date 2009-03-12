@@ -4,6 +4,7 @@ INCLUDES =                      \
 	-DDBUS_API_SUBJECT_TO_CHANGE  \
 	-D_GNU_SOURCE                 \
 	-DG_LOG_DOMAIN=\"osso-xterm\" \
+  -DDATADIR="\"$(datadir)\""    \
 	$(NULL)
 
 bin_PROGRAMS = osso-xterm
@@ -32,8 +33,10 @@ EXTRA_DIST =           \
   vte-marshallers.list \
   $(NULL)
 
-BUILT_SOURCES =                       \
-  vte-marshallers.c vte-marshallers.h \
+BUILT_SOURCES =     \
+  stock-icon-list.h \
+  vte-marshallers.c \
+  vte-marshallers.h \
   $(NULL)
 
 osso_xterm_LDFLAGS =  \
@@ -50,6 +53,7 @@ osso_xterm_headers =    \
 	terminal-manager.h    \
 	terminal-encoding.h   \
 	shortcuts.h           \
+  stock-icons.h         \
   $(NULL)
 
 osso_xterm_SOURCES =    \
@@ -63,6 +67,7 @@ osso_xterm_SOURCES =    \
 	terminal-manager.c    \
 	terminal-encoding.c   \
 	shortcuts.c           \
+  stock-icons.c         \
   $(NULL)
 
 nodist_osso_xterm_SOURCES = $(BUILT_SOURCES)
@@ -77,5 +82,23 @@ vte-marshallers.h: vte-marshallers.list
 
 clean-local:
 	$(RM) *.core core core.* stamp-*.h *~
+
+if HAVE_SVG
+ICON_EXTENSION = svg
+else
+ICON_EXTENSION = png
+endif
+
+stock-icon-list.h: $(shell ls ../pixmaps/*.$(ICON_EXTENSION))
+	echo -n ''                                                                                                        > $@.tmp
+	echo '#ifndef _HAVE_STOCK_ICON_LIST_H_'                                                                          >> $@.tmp
+	echo '#define _HAVE_STOCK_ICON_LIST_H_'                                                                          >> $@.tmp
+	echo 'static struct { const char *fname ; const char *stock_name ; } stock_icon_list[] = {'                      >> $@.tmp
+	ls ../pixmaps | grep -v Makefile | grep '\.$(ICON_EXTENSION)' | while read ; do \
+	  echo '{ .fname = "'$$REPLY'", .stock_name = "'@PACKAGE@-$$(echo $$REPLY | sed 's/\.$(ICON_EXTENSION)//')'" },' >> $@.tmp ; \
+	done ;
+	echo '};'                                                                                                        >> $@.tmp
+	echo '#endif /* !_HAVE_STOCK_ICON_LIST_H_ */'                                                                    >> $@.tmp
+	mv $@.tmp $@
 
 CLEANFILES = $(BUILT_SOURCES) vte-marshallers.c.tmp vte-marshallers.h.tmp

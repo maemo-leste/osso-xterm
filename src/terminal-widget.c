@@ -50,6 +50,9 @@
 
 #include <hildon/hildon.h>
 
+#define TERMINAL_WIDGET_STOCK_PAN        PACKAGE "-pan"
+#define TERMINAL_WIDGET_STOCK_DO_NOT_PAN PACKAGE "-do-not-pan"
+
 enum
   {
     PROP_0,
@@ -309,7 +312,7 @@ maybe_set_pan_mode(GObject *bt_pan, GParamSpec *pspec, GObject *mvte)
   gboolean active, sensitive;
 
   g_object_get(bt_pan, "active", &active, "sensitive", &sensitive, NULL);
-  g_object_set(bt_pan, "stock-id", active ? PACKAGE "-do-not-pan" : PACKAGE "-pan", NULL);
+  g_object_set(bt_pan, "stock-id", active ? TERMINAL_WIDGET_STOCK_DO_NOT_PAN : TERMINAL_WIDGET_STOCK_PAN, NULL);
   g_object_set(mvte, "pan-mode", !active && sensitive, NULL);
 }
 
@@ -484,7 +487,7 @@ terminal_widget_init (TerminalWidget *widget)
   gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
-  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "stock-id", PACKAGE "-pan", NULL);
+  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "stock-id", TERMINAL_WIDGET_STOCK_PAN, NULL);
   gtk_tool_item_set_expand(widget->pan_button, FALSE);
   gtk_widget_show(GTK_WIDGET(widget->pan_button));
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), widget->pan_button, -1);

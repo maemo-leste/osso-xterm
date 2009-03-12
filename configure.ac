@@ -19,6 +19,28 @@ AX_CFLAGS_GCC_OPTION(-Wmissing-declarations)
 AX_CFLAGS_GCC_OPTION(-Wunreachable-code)
 AX_CFLAGS_GCC_OPTION(-Wwrite-strings)
 
+AC_ARG_WITH(
+  svgpix, 
+  [  --with-svgpix[[=ARG]]     use SVG icons ARG=[[detect]]|yes|no ], 
+  [ svgpix=$withval ],
+  [ svgpix=detect ])
+
+if test "x$svgpix" != "xno"; then
+  PKG_CHECK_MODULES(LIBRSVG, librsvg-2.0,
+    [
+    AC_DEFINE(HAVE_SVG) 
+    svgpix="yes"
+    ],
+    [
+    if test "x$svgpix" = "xyes"; then
+      AC_ERROR([ librsvg not found. Either install the library and its devel package, or turn off --with-svgpix at configure time.])
+    fi
+    svgpix="no"
+    ]
+    )
+fi
+AM_CONDITIONAL(HAVE_SVG, test "x$svgpix" = "xyes")
+
 PKG_CHECK_MODULES(VTE, vte >= 0.11.0)
 AC_SUBST(VTE_LIBS)
 AC_SUBST(VTE_CFLAGS)
