@@ -51,8 +51,8 @@ struct _TerminalWidget
 {
   GtkHBox              __parent__;
   GtkWidget           *terminal;
-  GtkWidget           *scrollbar;
   GtkWidget	      *tbar;
+  GtkToolItem *pan_button;
   GtkToolItem         *cbutton;
   GSList	      *keys;
 

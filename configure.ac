@@ -59,6 +59,12 @@ AC_SUBST(HILDON_LIBS_CFLAGS)
 
 AC_DEFINE_UNQUOTED(LOCALEDIR, "/usr/share/locale", Locale dir)
 
+AC_PATH_PROG(GLIB_GENMARSHAL, glib-genmarshal)
+if test "x$GLIB_GENMARSHAL" == "x"; then
+  AC_ERROR([Can't find glib-genmarshal in path. Fix your installation.])
+fi
+AC_SUBST([GLIB_GENMARSHAL])
+
 AC_OUTPUT([
 Makefile
 icons/Makefile
@@ -68,4 +74,5 @@ icons/48x48/Makefile
 icons/64x64/Makefile
 etc/Makefile
 src/Makefile
+pixmaps/Makefile
 ])

@@ -43,7 +43,7 @@
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 #include <glib-object.h>
-#include <vte/vte.h>
+#include "maemo-vte.h"
 
 #include "terminal-gconf.h"
 #include "terminal-widget.h"
@@ -124,10 +124,6 @@ static void     terminal_widget_vte_selection_changed         (VteTerminal    *t
 static void     terminal_widget_vte_window_title_changed      (VteTerminal    *terminal,
                                                                TerminalWidget *widget);
 static gboolean terminal_widget_timer_background              (gpointer        user_data);
-static void     terminal_widget_gconf_scrollbar               (GConfClient    *client,
-                                                               guint           conn_id,
-                                                               GConfEntry     *entry,
-                                                               TerminalWidget *widget);
 static void     terminal_widget_gconf_toolbar               (GConfClient    *client,
 							     guint           conn_id,
 							     GConfEntry     *entry,
@@ -151,8 +147,6 @@ static void     terminal_widget_gconf_font_size               (GConfClient    *c
 static void     terminal_widget_update_font                   (TerminalWidget *widget,
 							       const gchar *name,
                                                                gint size);
-static void     terminal_widget_update_scrolling_bar          (TerminalWidget *widget,
-                                                               gboolean show);
 static void     terminal_widget_update_keys          (TerminalWidget *widget,
 						      GSList *keys,
 						      GSList *key_labels);
@@ -310,10 +304,25 @@ terminal_widget_vte_focus_out_event (VteTerminal    *terminal,
 }
 
 static void
+maybe_set_pan_mode(GObject *bt_pan, GParamSpec *pspec, GObject *mvte)
+{
+  gboolean active, sensitive;
+
+  g_object_get(bt_pan, "active", &active, "sensitive", &sensitive, NULL);
+  g_object_set(bt_pan, "stock-id", active ? PACKAGE "-do-not-pan" : PACKAGE "-pan", NULL);
+  g_object_set(mvte, "pan-mode", !active && sensitive, NULL);
+}
+
+static void
+vte_adj_changed(GtkAdjustment *adj, GtkWidget *bt_pan)
+{
+  g_object_set(G_OBJECT(bt_pan), "sensitive", adj->upper - adj->page_size > adj->lower, NULL);
+}
+
+static void
 terminal_widget_init (TerminalWidget *widget)
 {
   GError *err = NULL;
-  gboolean scrollbar;
   gboolean toolbar;
   GSList *keys;
   GSList *key_labels;
@@ -334,11 +343,6 @@ terminal_widget_init (TerminalWidget *widget)
     g_clear_error(&err);
   }
 
-  widget->scrollbar_conid = gconf_client_notify_add(widget->gconf_client,
-	  OSSO_XTERM_GCONF_SCROLLBAR,
-	  (GConfClientNotifyFunc)terminal_widget_gconf_scrollbar,
-	  widget,
-	  NULL, &err);
   widget->toolbar_conid = gconf_client_notify_add(widget->gconf_client,
 	  OSSO_XTERM_GCONF_TOOLBAR,
 	  (GConfClientNotifyFunc)terminal_widget_gconf_toolbar,
@@ -360,7 +364,6 @@ terminal_widget_init (TerminalWidget *widget)
 	  widget,
 	  NULL, &err);
   if (err != NULL) {
-    g_printerr("scrollbar notify add failed: %s\n", err->message);
     g_clear_error(&err);
   }
 
@@ -423,7 +426,7 @@ terminal_widget_init (TerminalWidget *widget)
   }
 
   widget->im_context = gtk_im_multicontext_new ();
-  widget->terminal = vte_terminal_new ();
+  widget->terminal = g_object_new(MAEMO_VTE_TYPE, "pan-mode", TRUE, NULL);
 
   g_signal_connect (G_OBJECT (widget->terminal), "focus-in-event",
                     G_CALLBACK (terminal_widget_vte_focus_in_event), widget);
@@ -448,9 +451,12 @@ terminal_widget_init (TerminalWidget *widget)
   g_signal_connect (G_OBJECT (widget->terminal), "window-title-changed",
                     G_CALLBACK (terminal_widget_vte_window_title_changed), widget);
 
-  hbox = gtk_hbox_new (FALSE, FALSE);
+  hbox = g_object_new(HILDON_TYPE_PANNABLE_AREA,
+    "hovershoot-max", 0,
+    "vovershoot-max", 0,
+    "child", widget->terminal,
+    NULL);
   gtk_widget_show (hbox);
-  gtk_box_pack_start (GTK_BOX (hbox), widget->terminal, TRUE, TRUE, 0);
 
   gtk_box_pack_start (GTK_BOX (widget), hbox, TRUE, TRUE, 0);
   gtk_widget_show (widget->terminal);
@@ -467,9 +473,6 @@ terminal_widget_init (TerminalWidget *widget)
 
   gtk_widget_grab_focus(widget->terminal);
 
-  widget->scrollbar = gtk_vscrollbar_new (VTE_TERMINAL (widget->terminal)->adjustment);
-  gtk_box_pack_start (GTK_BOX (hbox), widget->scrollbar, FALSE, FALSE, 0);
-
   widget->tbar = gtk_toolbar_new ();
   g_object_set(widget->tbar, 
 	       "orientation", GTK_ORIENTATION_HORIZONTAL,
@@ -481,11 +484,20 @@ terminal_widget_init (TerminalWidget *widget)
   gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
+  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "stock-id", PACKAGE "-pan", NULL);
+  gtk_tool_item_set_expand(widget->pan_button, FALSE);
+  gtk_widget_show(GTK_WIDGET(widget->pan_button));
+  gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), widget->pan_button, -1);
+
+  g_signal_connect(G_OBJECT(vte_terminal_get_adjustment(VTE_TERMINAL(widget->terminal))), "changed", (GCallback)vte_adj_changed, widget->pan_button);
+  g_signal_connect(G_OBJECT(widget->pan_button), "notify::active", (GCallback)maybe_set_pan_mode, widget->terminal);
+  g_signal_connect(G_OBJECT(widget->pan_button), "notify::sensitive", (GCallback)maybe_set_pan_mode, widget->terminal);
+
 #ifdef DEBUG
   g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
 #endif
 
-  g_signal_connect (G_OBJECT(widget->terminal), "notify::ctrlify",
+  g_signal_connect (G_OBJECT(widget->terminal), "notify::control-mask",
 		    G_CALLBACK(terminal_widget_vte_ctrlify_notify),
 		    widget);
 
@@ -502,22 +514,6 @@ terminal_widget_init (TerminalWidget *widget)
 		     widget->cbutton,
 		     -1);
   //  gtk_box_pack_start (GTK_BOX (widget), widget->tbar, FALSE, FALSE, 0);
-
-  /* apply current settings */
-  gconf_value = gconf_client_get(widget->gconf_client,
-                                 OSSO_XTERM_GCONF_SCROLLBAR,
-                                 &err);
-  if (err != NULL) {
-    g_printerr("Unable to get scrollbar setting from gconf: %s\n",
-	       err->message);
-    g_clear_error(&err);
-  }
-  scrollbar = OSSO_XTERM_DEFAULT_SCROLLBAR;
-  if (gconf_value) {
-    if (gconf_value->type == GCONF_VALUE_BOOL)
-      scrollbar = gconf_value_get_bool(gconf_value);
-    gconf_value_free(gconf_value);
-  }
 
   /* apply current settings */
   gconf_value = gconf_client_get(widget->gconf_client,
@@ -544,7 +540,6 @@ terminal_widget_init (TerminalWidget *widget)
 				     GCONF_VALUE_STRING,
 				     &err);
 
-  terminal_widget_update_scrolling_bar(TERMINAL_WIDGET(widget), scrollbar);
   terminal_widget_update_tool_bar(TERMINAL_WIDGET(widget), toolbar);
   terminal_widget_update_keys(TERMINAL_WIDGET(widget), keys, key_labels);
 
@@ -606,8 +601,6 @@ terminal_widget_finalize (GObject *object)
   g_strfreev (widget->custom_command);
   g_free (widget->custom_title);
 
-  gconf_client_notify_remove(widget->gconf_client,
-                             widget->scrollbar_conid);
   gconf_client_notify_remove(widget->gconf_client,
                              widget->toolbar_conid);
   gconf_client_notify_remove(widget->gconf_client,
@@ -1124,17 +1117,6 @@ terminal_widget_timer_background (gpointer user_data)
 }
 
 
-static void
-terminal_widget_update_scrolling_bar (TerminalWidget *widget, gboolean show)
-{
-  if (show) {
-    gtk_widget_show (widget->scrollbar);
-  }
-  else {
-    gtk_widget_hide (widget->scrollbar);
-  }
-}
-
 void
 terminal_widget_update_tool_bar (TerminalWidget *widget, gboolean show)
 {
@@ -1201,19 +1183,6 @@ terminal_widget_update_font (TerminalWidget *widget, const gchar *name, gint siz
   g_free(font_name);
 }
 
-
-static void
-terminal_widget_gconf_scrollbar(GConfClient    *client,
-                                guint           conn_id,
-                                GConfEntry     *entry,
-                                TerminalWidget *widget) {
-  GConfValue *value;
-  gboolean scrollbar;
-
-  value = gconf_entry_get_value(entry);
-  scrollbar = gconf_value_get_bool(value);
-  terminal_widget_update_scrolling_bar(widget, scrollbar);
-}
 
 static void
 terminal_widget_gconf_toolbar(GConfClient    *client,
@@ -1786,7 +1755,7 @@ terminal_widget_vte_ctrlify_notify (VteTerminal    *terminal,
 						    widget->cbutton));
   gboolean tval;
 
-  g_object_get(widget->terminal, "ctrlify", &tval, NULL);
+  g_object_get(widget->terminal, "control-mask", &tval, NULL);
 
   if (bval != tval) {
 #ifdef DEBUG
@@ -1804,13 +1773,13 @@ terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
   gboolean bval = gtk_toggle_tool_button_get_active(item);
   gboolean tval;
 
-  g_object_get(widget->terminal, "ctrlify", &tval, NULL);
+  g_object_get(widget->terminal, "control-mask", &tval, NULL);
 
   if (bval != tval) {
 #ifdef DEBUG
     g_debug ("%s - ctrlfy: %s", __FUNCTION__, bval==TRUE?"TRUE":"FALSE");
 #endif
-    g_object_set(widget->terminal, "ctrlify", bval, NULL);
+    g_object_set(widget->terminal, "control-mask", bval, NULL);
   }
   if (bval == TRUE) {
     hildon_gtk_im_context_show(widget->im_context);
