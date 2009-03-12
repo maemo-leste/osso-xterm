@@ -305,17 +305,18 @@ terminal_widget_vte_focus_out_event (VteTerminal    *terminal,
 static void
 maybe_set_pan_mode(GObject *bt_pan, GParamSpec *pspec, GObject *mvte)
 {
-  gboolean active, sensitive;
+  gboolean active;
 
-  g_object_get(bt_pan, "active", &active, "sensitive", &sensitive, NULL);
+  g_object_get(bt_pan, "active", &active, NULL);
   g_object_set(bt_pan, "stock-id", active ? TERMINAL_WIDGET_STOCK_DO_NOT_PAN : TERMINAL_WIDGET_STOCK_PAN, NULL);
-  g_object_set(mvte, "pan-mode", !active && sensitive, NULL);
+  g_object_set(mvte, "pan-mode", !active, NULL);
 }
 
 static void
 vte_adj_changed(GtkAdjustment *adj, GtkWidget *bt_pan)
 {
-  g_object_set(G_OBJECT(bt_pan), "sensitive", adj->upper - adj->page_size > adj->lower, NULL);
+  gboolean can_pan = (adj->upper - adj->page_size > adj->lower);
+  g_object_set(G_OBJECT(bt_pan), "sensitive", can_pan, "active", !can_pan, NULL);
 }
 
 static void
