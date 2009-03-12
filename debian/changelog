@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh14) unstable; urgency=low
+
+  * Switching to HildonPannableArea and adding pan mode (= no hilighting)
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Thu, 12 Mar 2009 15:45:04 +0200
+
 osso-xterm (0.14.mh13) unstable; urgency=low
 
   * Building for Fremantle
