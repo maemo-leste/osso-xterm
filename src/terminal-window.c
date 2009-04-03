@@ -1419,8 +1419,113 @@ terminal_window_select_all (GtkAction    *action,
     /* terminal_widget_select_all (TERMINAL_WIDGET (window->terminal)); */
 }
 
+#if (0)
+typedef struct
+{
+  int x, y;
+  int x_abs_displacement;
+  int y_abs_displacement;
+} FloatingWidgetState;
+
+static gboolean
+btn_press(GtkWidget *btn, GdkEventButton *event, GtkWindow *window)
+{
+  return FALSE;
+  FloatingWidgetState *state = g_object_get_data(G_OBJECT(btn), "state");
+  GtkWidget *floating_widget = gtk_widget_get_toplevel(btn);
+
+  state->x_abs_displacement = 0;
+  state->y_abs_displacement = 0;
+  state->x = event->x;
+  state->y = event->y;
+
+  return TRUE;
+}
+
+static gboolean
+btn_motion_notify(GtkWidget *btn, GdkEventMotion *event, GtkWindow *window)
+{
+  FloatingWidgetState *state = g_object_get_data(G_OBJECT(btn), "state");
+  GtkWidget *floating_widget = gtk_widget_get_toplevel(btn);
+
+  if (event->state & GDK_BUTTON1_MASK) {
+    int x_diff = state->x - event->x;
+    int y_diff = state->y - event->y;
+
+    
+
+    state->x = event->x;
+    state->y = event->y;
+  }
+  return TRUE;
+}
+
+static gboolean
+btn_release(GtkWidget *btn, GdkEventButton *event, GtkWindow *window)
+{
+  FloatingWidgetState *state = g_object_get_data(G_OBJECT(btn), "state");
+  GtkWidget *floating_widget = gtk_widget_get_toplevel(btn);
+
+  state->x_abs_displacement = 0;
+  state->y_abs_displacement = 0;
+  state->x = event->x;
+  state->y = event->y;
+
+  return TRUE;
+}
+#endif /* (0) */
+
+static GtkWidget *
+get_floating_widget(GtkWidget *window)
+{
+  return NULL;
+#if (0)
+  GtkWidget *floating_widget = g_object_get_data(G_OBJECT(window), "floating-widget");
+
+  if (!floating_widget) {
+    
+    GtkWidget *btn = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE,
+        "child", g_object_new(GTK_TYPE_LABEL, "visible", TRUE, "use-markup", TRUE,
+          "label", "<span size='x-large'>Restore</span>",
+          NULL);
+
+    if (btn) {
+      if ((floating_widget = g_object_new(GTK_TYPE_WINDOW,
+  //      "allow-grow", FALSE,
+  //      "allow-shrink", FALSE,
+  //      "decorated", FALSE,
+        "transient-for", window,
+        "type", GTK_WINDOW_POPUP,
+  //      "resizable", FALSE,
+  //      "skip-pager-hint", TRUE,
+  //      "skip-taskbar-hint", TRUE,
+  //      "type-hint", GDK_WINDOW_TYPE_HINT_UTILITY,
+        "destroy-with-parent", TRUE,
+        "child", btn,
+          NULL),
+        NULL)) != NULL) {
+
+        gtk_widget_add_events(btn, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_POINTER_MOTION_MASK);
+        g_signal_connect(G_OBJECT(btn), "clicked", (GCallback)btn_press, window);
+        g_signal_connect(G_OBJECT(btn), "button-press-event", (GCallback)btn_press, window);
+        g_signal_connect(G_OBJECT(btn), "motiont-notify-event", (GCallback)btn_motion_notify, window);
+        g_signal_connect(G_OBJECT(btn), "button-release-event", (GCallback)btn_release, window);
+        g_object_set_data(G_OBJECT(window), "floating-widget", floating_widget);
+        g_object_set_data_full(G_OBJECT(btn), "state", g_new0(FloatingWidgetState), (GDestroyNotify)g_free);
+        gtk_window_move(GTK_WINDOW(floating_widget), 300, 200);
+      }
+      else
+        gtk_widget_destroy(btn);
+    }
+  }
+
+  return floating_widget;
+#endif /* (0) */
+}
+
 void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
 {
+  GtkWidget *floating_widget = NULL;
 #ifdef DEBUG
     g_debug ("%s : tb_normal: %d - tb_fs: %d", 
 	   __FUNCTION__, toolbar_normal, toolbar_fs);
@@ -1430,6 +1535,8 @@ void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
 
     if (!fs) {
       if (window == current) {
+      if ((floating_widget = get_floating_widget(GTK_WIDGET(window))) != NULL)
+        g_object_set(G_OBJECT(floating_widget), "visible", FALSE, NULL);
 	gtk_window_unfullscreen(GTK_WINDOW(window));
 	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
       }
@@ -1437,6 +1544,10 @@ void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
       terminal_widget_update_tool_bar(window->terminal, toolbar_normal);
     } else {
       if (window == current) {
+      if ((floating_widget = get_floating_widget(GTK_WIDGET(window))) != NULL) {
+        g_object_set(G_OBJECT(floating_widget), "visible", TRUE, NULL);
+        gtk_widget_grab_focus(gtk_bin_get_child(GTK_BIN(floating_widget)));
+      }
 	gtk_window_fullscreen(GTK_WINDOW(window));
 	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
       }
