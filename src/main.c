@@ -75,8 +75,8 @@ main (int argc, char **argv)
   DBusConnection  *system_bus = NULL;
 
   setlocale (LC_ALL, "");
-  bindtextdomain (PACKAGE, LOCALEDIR);
-  textdomain (PACKAGE);
+  bindtextdomain ("osso-browser-ui", LOCALEDIR);
+  textdomain ("osso-browser-ui");
 
 #ifdef DEBUG
   g_log_set_always_fatal (G_LOG_LEVEL_CRITICAL);
@@ -139,8 +139,9 @@ main (int argc, char **argv)
   g_object_set_data(G_OBJECT(manager), "osso", osso_context);
   if (!terminal_manager_new_window(manager, command, &error))
     {
-      g_printerr (_("Unable to launch terminal: %s\n"), error->message);
-      g_error_free(error);
+      g_printerr (_("Unable to launch terminal: %s\n"), error ? error->message : "Unknown error");
+      if (error)
+        g_error_free(error);
       exit(EXIT_FAILURE);
     }
 

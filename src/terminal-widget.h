@@ -86,7 +86,7 @@ GType        terminal_widget_get_type                     (void) G_GNUC_CONST;
 
 GtkWidget   *terminal_widget_new                          (void);
 
-void         terminal_widget_launch_child                 (TerminalWidget *widget);
+gboolean     terminal_widget_launch_child                 (TerminalWidget *widget);
 
 void         terminal_widget_set_custom_command           (TerminalWidget *widget,
                                                            gchar         **command);

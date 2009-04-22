@@ -1340,7 +1340,7 @@ terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window)
  *
  * Starts the terminal child process.
  **/
-void
+gboolean
 terminal_widget_launch_child (TerminalWidget *widget)
 {
   GError  *error = NULL;
@@ -1348,12 +1348,12 @@ terminal_widget_launch_child (TerminalWidget *widget)
   gchar  **argv;
   gchar  **env;
 
-  g_return_if_fail (TERMINAL_IS_WIDGET (widget));
+  g_return_val_if_fail (TERMINAL_IS_WIDGET (widget), FALSE);
 
   if (!terminal_widget_get_child_command (widget, &command, &argv, &error))
     {
       g_error_free (error);
-      return;
+      return FALSE;
     }
 
   env = terminal_widget_get_child_environment (widget);
@@ -1366,6 +1366,8 @@ terminal_widget_launch_child (TerminalWidget *widget)
   g_strfreev (argv);
   g_strfreev (env);
   g_free (command);
+
+  return (widget->pid > 0);
 }
 
 

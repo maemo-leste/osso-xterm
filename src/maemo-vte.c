@@ -16,7 +16,7 @@ enum
 
 struct _MaemoVtePrivate
 {
-  
+  GtkIMContext *imc;
   GtkAdjustment *foreign_vadj;
   gboolean pan_mode;
 };
@@ -153,7 +153,14 @@ maybe_ignore_mouse_event(GtkWidget *widget, GdkEvent *event, gboolean (*mouse_ev
 static gboolean
 button_press_event(GtkWidget *widget, GdkEventButton *event)
 {
+  MaemoVte *mvte = MAEMO_VTE(widget);
+
   gtk_widget_grab_focus(widget);
+
+  if (mvte->priv->imc)
+    if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
+      return TRUE;
+
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
       (GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->button_press_event));
@@ -170,6 +177,12 @@ motion_notify_event(GtkWidget *widget, GdkEventMotion *event)
 static gboolean
 button_release_event(GtkWidget *widget, GdkEventButton *event)
 {
+  MaemoVte *mvte = MAEMO_VTE(widget);
+
+  if (mvte->priv->imc)
+    if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
+      return TRUE;
+
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
       (GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->button_release_event));
@@ -196,9 +209,45 @@ key_press_event(GtkWidget *widget, GdkEventKey *event)
     : FALSE;
 }
 
+static void (*orig_set_client_window)(GtkIMContext *imc, GdkWindow *window) = NULL;
+
+static void
+my_set_client_window(GtkIMContext *imc, GdkWindow *window)
+{
+  if (window)
+    g_object_set_data(G_OBJECT(window), "im-context", imc);
+
+  if (orig_set_client_window)
+    orig_set_client_window(imc, window);
+}
+
+static void
+realize(GtkWidget *widget)
+{
+  GtkIMContext *imc = NULL;
+  void (*parent_realize)(GtkWidget *widget) = GTK_WIDGET_CLASS(g_type_class_peek(g_type_parent(MAEMO_VTE_TYPE)))->realize;
+
+  if (parent_realize)
+    parent_realize(widget);
+
+  if (widget->window) {
+    imc = g_object_get_data(G_OBJECT(widget->window), "im-context");
+    if (imc) {
+      int input_mode = 0;
+
+      g_object_get(G_OBJECT(imc), "hildon-input-mode", &input_mode, NULL);
+      input_mode = input_mode & (~HILDON_GTK_INPUT_MODE_AUTOCAP);
+      g_object_set(G_OBJECT(imc), "hildon-input-mode", input_mode, NULL);
+
+      MAEMO_VTE(widget)->priv->imc = imc;
+    }
+  }
+}
+
 static void
 class_init(gpointer g_class, gpointer null)
 {
+  GtkIMContextClass *gtk_imc_class = GTK_IM_CONTEXT_CLASS(g_type_class_peek(GTK_TYPE_IM_MULTICONTEXT));
   GObjectClass *gobject_class = G_OBJECT_CLASS(g_class);
   MaemoVteClass *mvte_class = MAEMO_VTE_CLASS(g_class);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(g_class);
@@ -206,6 +255,13 @@ class_init(gpointer g_class, gpointer null)
   gobject_class->finalize = finalize;
   gobject_class->set_property = set_property;
   gobject_class->get_property = get_property;
+
+  /* Replace the set_client_window function for the GtkIMMultiContext class so we can trap when
+     VteTerminal creates its im_context and make it available to MaemoVte through g_object_set_data */
+  if (gtk_imc_class) {
+    orig_set_client_window = gtk_imc_class->set_client_window;
+    gtk_imc_class->set_client_window = my_set_client_window;
+  }
 
   g_object_class_install_property(gobject_class, PAN_MODE_PROPERTY,
     g_param_spec_boolean("pan-mode", "Pan mode", "Toggle panning mode during which mouse events are ignored.",
@@ -215,6 +271,7 @@ class_init(gpointer g_class, gpointer null)
   widget_class->motion_notify_event = motion_notify_event;
   widget_class->button_release_event = button_release_event;
   widget_class->key_press_event = key_press_event;
+  widget_class->realize = realize;
 
   widget_class->set_scroll_adjustments_signal =
     g_signal_new(

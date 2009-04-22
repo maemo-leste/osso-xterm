@@ -154,8 +154,9 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
   if (!terminal_manager_new_window(manager, command, &error)) {
     hildon_banner_show_information(GTK_WIDGET(window),
 				   _("Unable to launch terminal: %s\n"),
-				   error->message);
-    g_error_free(error);
+				   error ? error->message : "Unknown error");
+    if (error)
+      g_error_free(error);
   }
 }
 

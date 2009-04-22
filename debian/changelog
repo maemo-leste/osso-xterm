@@ -1,3 +1,19 @@
+osso-xterm (0.14.mh16) unstable; urgency=low
+
+  * Turn off autocap for VteTerminal's im context
+  * Fixes: NB#99657 (FKB does not come up when first tapped on xterm after FKB is ON in TIS CPA)
+  * Fixes: NB#99718 (FKB does not come up after entering text with HKB)
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed, 22 Apr 2009 14:10:29 +0300
+
+osso-xterm (0.14.mh15) unstable; urgency=low
+
+  * Don't show new window if there's no child process
+  * Fixes NB#99726 (Opening 5th x-terminal displays it but without prompt.)
+  * FIxes NB#103182 (osso_xterm string isn't localizable)
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 16 Mar 2009 09:53:20 +0200
+
 osso-xterm (0.14.mh14) unstable; urgency=low
 
   * Switching to HildonPannableArea and adding pan mode (= no hilighting)
