@@ -27,6 +27,9 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+#define MIN_FONT_SIZE  8
+#define MAX_FONT_SIZE 48
+
 #define GETTEXT_PACKAGE "osso-browser-ui"
 #include <glib/gi18n-lib.h>
 /*
@@ -315,8 +318,12 @@ maybe_set_pan_mode(GObject *bt_pan, GParamSpec *pspec, GObject *mvte)
 static void
 vte_adj_changed(GtkAdjustment *adj, GtkWidget *bt_pan)
 {
+  gboolean current_sensitive, current_active;
   gboolean can_pan = (adj->upper - adj->page_size > adj->lower);
-  g_object_set(G_OBJECT(bt_pan), "sensitive", can_pan, "active", !can_pan, NULL);
+  g_object_get(G_OBJECT(bt_pan), "sensitive", &current_sensitive, "active", &current_active, NULL);
+
+  if (current_sensitive != can_pan || current_active == can_pan)
+    g_object_set(G_OBJECT(bt_pan), "sensitive", can_pan, "active", !can_pan, NULL);
 }
 
 static void
@@ -452,6 +459,7 @@ terminal_widget_init (TerminalWidget *widget)
                     G_CALLBACK (terminal_widget_vte_window_title_changed), widget);
 
   hbox = g_object_new(HILDON_TYPE_PANNABLE_AREA,
+    "drag-inertia", 0.1,
     "hovershoot-max", 0,
     "vovershoot-max", 0,
     "child", widget->terminal,
@@ -1953,3 +1961,59 @@ void terminal_widget_send_keys(TerminalWidget *widget,
         }
 }
 #endif
+
+void
+terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item)
+{
+  gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), item, -1);
+}
+
+static guint
+get_font_size(VteTerminal *vte)
+{
+  int size = 0;
+  const PangoFontDescription *pfd = vte_terminal_get_font(vte);
+
+  if (pfd) {
+    gboolean is_abs = pango_font_description_get_size_is_absolute(pfd);
+
+    size = pango_font_description_get_size(pfd);
+
+    if (!is_abs)
+      size = ((int)(((double)size)/((double)PANGO_SCALE)));
+
+    return size;
+  }
+
+  return (guint)size;
+}
+
+gboolean
+terminal_widget_modify_font_size(TerminalWidget *widget, int increment)
+{
+  guint font_size = 0;
+  VteTerminal *vte = NULL;
+
+  g_return_val_if_fail(widget != NULL, FALSE);
+  g_return_val_if_fail(TERMINAL_IS_WIDGET(widget), FALSE);
+
+  vte = VTE_TERMINAL(widget->terminal);
+
+  font_size = get_font_size(vte);
+  font_size = CLAMP(font_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
+
+  if (font_size + increment <= MAX_FONT_SIZE && 
+      font_size + increment >= MIN_FONT_SIZE) {
+    PangoFontDescription *pfd = (PangoFontDescription *)vte_terminal_get_font(vte);
+
+    if (pfd) {
+      pfd = pango_font_description_copy(pfd);
+      pango_font_description_set_size(pfd, (font_size + increment) * PANGO_SCALE);
+      vte_terminal_set_font(vte, pfd);
+      pango_font_description_free(pfd);
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}

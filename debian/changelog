@@ -1,8 +1,10 @@
 osso-xterm (0.14.mh16) unstable; urgency=low
 
   * Turn off autocap for VteTerminal's im context
+  * Replace GtkMenu with HildonAppMenu and severely reduced menu options.
   * Fixes: NB#99657 (FKB does not come up when first tapped on xterm after FKB is ON in TIS CPA)
   * Fixes: NB#99718 (FKB does not come up after entering text with HKB)
+  * Fixes: NB#111975 (All the characters entered from HKB osso-xterm are shown in uppercase.)
 
  -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed, 22 Apr 2009 14:10:29 +0300
 

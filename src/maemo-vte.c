@@ -193,17 +193,19 @@ key_press_event(GtkWidget *widget, GdkEventKey *event)
 {
   gboolean (*parent_key_press_event)(GtkWidget *, GdkEventKey *) =
     GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->key_press_event;
-
+#if (0)
   if (HILDON_HARDKEY_INCREASE == event->keyval) {
+    g_print("MaemoVte::key_press_event: Turning HILDON_HARDKEY_INCREASE into Ctrl+Shift+KP_Add\n");
     event->keyval = GDK_KP_Add;
     event->state |= GDK_CONTROL_MASK | GDK_SHIFT_MASK;
   }
   else
   if (HILDON_HARDKEY_DECREASE == event->keyval) {
+    g_print("MaemoVte::key_press_event: Turning HILDON_HARDKEY_DECREASE into Ctrl+Shift+KP_Subtract\n");
     event->keyval = GDK_KP_Subtract;
     event->state |= GDK_CONTROL_MASK | GDK_SHIFT_MASK;
   }
-
+#endif /* (0) */
   return parent_key_press_event
     ? parent_key_press_event(widget, event)
     : FALSE;
@@ -236,7 +238,7 @@ realize(GtkWidget *widget)
       int input_mode = 0;
 
       g_object_get(G_OBJECT(imc), "hildon-input-mode", &input_mode, NULL);
-      input_mode = input_mode & (~HILDON_GTK_INPUT_MODE_AUTOCAP);
+      input_mode = (input_mode & (~HILDON_GTK_INPUT_MODE_AUTOCAP)) | HILDON_GTK_INPUT_MODE_MULTILINE;
       g_object_set(G_OBJECT(imc), "hildon-input-mode", input_mode, NULL);
 
       MAEMO_VTE(widget)->priv->imc = imc;

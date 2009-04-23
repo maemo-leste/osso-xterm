@@ -138,6 +138,10 @@ void terminal_widget_send_keys(TerminalWidget *widget,
                                const gchar *key_string);
 #endif
 
+void terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item);
+
+gboolean terminal_widget_modify_font_size(TerminalWidget *widget, int increment);
+
 G_END_DECLS;
 
 #endif /* !__TERMINAL_WIDGET_H__ */

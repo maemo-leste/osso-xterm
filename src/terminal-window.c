@@ -69,6 +69,8 @@
 
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 
+#define FONT_SIZE_INC  2
+
 /* signals */
 enum
 {
@@ -88,23 +90,24 @@ static void            terminal_window_context_menu            (TerminalWidget  
 static void            terminal_window_notify_title            (TerminalWidget  *terminal,
                                                              GParamSpec      *pspec,
                                                                TerminalWindow     *window);
+static void            terminal_window_action_new_window          (GtkWidget    *new_window_button,
+                                                             TerminalWindow     *window);
+static void            terminal_window_paste_show            (GtkWidget         *hildon_app_menu,
+                                                             TerminalWindow     *window);
+static void            terminal_window_action_copy             (GtkButton       *copy_button,
+                                                             TerminalWindow     *window);
+static void            terminal_window_action_paste            (GtkButton       *paste_button,
+		                                                         TerminalWindow     *window);
+static void            terminal_window_action_fullscreen       (GtkWidget       * fs_button,
+                                                             TerminalWindow     *window);
+#if (0)
 static void            terminal_window_open_url                (GtkAction       *action,
 		                                             TerminalWindow     *window);
-static void            terminal_window_action_new_window          (GtkAction       *action,
-                                                             TerminalWindow     *window);
 static void            terminal_window_action_close_tab        (GtkAction       *action,
-                                                             TerminalWindow     *window);
-static void            terminal_window_action_edit             (GtkAction       *action,
-                                                             TerminalWindow     *window);
-static void            terminal_window_action_copy             (GtkAction       *action,
-                                                             TerminalWindow     *window);
-static void            terminal_window_action_paste            (GtkAction       *action,
                                                              TerminalWindow     *window);
 static void            terminal_window_action_edit_shortcuts   (GtkAction       *action,
                                                              TerminalWindow     *window);
 static void            terminal_window_action_reverse          (GtkToggleAction *action,
-                                                             TerminalWindow     *window);
-static void            terminal_window_action_fullscreen       (GtkToggleAction *action,
                                                              TerminalWindow     *window);
 static void            terminal_window_action_scrollbar       (GtkToggleAction *action,
                                                              TerminalWindow     *window);
@@ -137,6 +140,7 @@ static void            terminal_window_set_toolbar (gboolean show);
 static void            terminal_window_set_toolbar_fullscreen (gboolean show);
 static void            terminal_window_select_all (GtkAction       *action,
                                                 TerminalWindow     *window);
+#endif /* (0) */
 static void            terminal_widget_destroyed (GObject *obj, gpointer data);
 
 /* Show toolbar */
@@ -148,12 +152,16 @@ struct _TerminalWindow
 {
   HildonWindow __parent__;
 
-  GtkActionGroup *action_group;
-  GtkUIManager *ui_manager;
+//  GtkActionGroup *action_group;
+//  GtkUIManager *ui_manager;
 
-  GtkWidget *menubar; /* menubar */
-  GtkWidget *windows_menu; /* Where window menuitems are*/
-  GtkAction *menuaction; /* Window menuitem */
+//  GtkWidget *menubar; /* menubar */
+//  GtkWidget *windows_menu; /* Where window menuitems are*/
+//  GtkAction *menuaction; /* Window menuitem */
+
+  GtkWidget *copy_button;
+  GtkWidget *paste_button;
+  GtkWidget *unfs_button;
 
   GConfClient *gconf_client;
   GSList              *keys;
@@ -164,6 +172,7 @@ struct _TerminalWindow
 
 static GObjectClass *parent_class;
 
+#if (0)
 static GtkActionEntry action_entries[] =
 {
 
@@ -182,11 +191,11 @@ static GtkActionEntry action_entries[] =
 
   { "view-menu", NULL, ("webb_me_view"), },
 
-  { "edit-menu", NULL, N_("weba_me_edit"), NULL, NULL, G_CALLBACK (terminal_window_action_edit), },
+  { "edit-menu", NULL, N_("webb_me_file_edit"), NULL, NULL, G_CALLBACK (terminal_window_action_edit), },
   { "copy", NULL, N_("weba_me_copy"), NULL, NULL, G_CALLBACK (terminal_window_action_copy), },
   { "paste", NULL, N_("weba_me_paste"), NULL, NULL, G_CALLBACK (terminal_window_action_paste), },
   { "tools-menu", NULL, N_("weba_me_tools"), },
-  { "close-menu", NULL, N_("weba_me_close"), },
+  { "close-menu", NULL, N_("weba_bd_close"), },
 
   { "windows-menu", NULL, ("weba_me_windows"), },
   { "new-window", NULL, N_("weba_me_new_window"), NULL, NULL, G_CALLBACK (terminal_window_action_new_window), }, 
@@ -242,6 +251,7 @@ static const gchar ui_description[] =
  "    <separator/>"
  "    <menuitem action='settings'/>"
 */
+#endif /* (0) */
 
 G_DEFINE_TYPE (TerminalWindow, terminal_window, HILDON_TYPE_WINDOW);
 
@@ -251,10 +261,37 @@ typedef struct {
 } ctrl_dialog_data;
 
 
+static TerminalWidget*
+terminal_window_get_active (TerminalWindow *window)
+{
+  return TERMINAL_WIDGET (window->terminal);    
+}
+
+static void
+realize(GtkWidget *widget)
+{
+  void (*parent_realize)(GtkWidget *) =
+    GTK_WIDGET_CLASS(g_type_class_peek(g_type_parent(TERMINAL_TYPE_WINDOW)))->realize;
+
+  if (parent_realize)
+    parent_realize(widget);
+
+  if (widget->window) {
+    unsigned char value = 1;
+    Atom hildon_zoom_key_atom = gdk_x11_get_xatom_by_name("_HILDON_ZOOM_KEY_ATOM"),
+         integer_atom = gdk_x11_get_xatom_by_name("INTEGER");
+    Display *dpy = GDK_DISPLAY_XDISPLAY(gdk_drawable_get_display(widget->window));
+    Window w = GDK_WINDOW_XID(widget->window);
+
+    XChangeProperty(dpy, w, hildon_zoom_key_atom, integer_atom, 8, PropModeReplace, &value, 1);
+  }
+}
+
 static void
 terminal_window_class_init (TerminalWindowClass *klass)
 {
   GObjectClass *gobject_class;
+  GtkWidgetClass *gtkwidget_class;
   GType param_types;
 
   parent_class = g_type_class_peek_parent (klass);
@@ -262,6 +299,9 @@ terminal_window_class_init (TerminalWindowClass *klass)
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->dispose = terminal_window_dispose;
   gobject_class->finalize = terminal_window_finalize;
+
+  gtkwidget_class = GTK_WIDGET_CLASS(klass);
+  gtkwidget_class->realize = realize;
 
   param_types = G_TYPE_POINTER;
   /* New window */
@@ -293,7 +333,7 @@ terminal_window_class_init (TerminalWindowClass *klass)
 
 
 }
-
+#if (0)
 static GtkWidget *
 attach_menu(GtkWidget *parent, GtkActionGroup *actiongroup,
             GtkAccelGroup *accelgroup, const gchar *name) 
@@ -367,42 +407,6 @@ populate_menubar (TerminalWindow *window, GtkAccelGroup *accelgroup)
   gtk_widget_show_all(window->menubar);
 }
 
-static int
-terminal_window_get_font_size(TerminalWindow *window) 
-{
-    GtkAction *action;
-
-    action = gtk_action_group_get_action(window->action_group, "-8pt");
-    if (!action) {
-        return 0xf00b4; /* ?????? fooba(r) ????? */
-    }
-
-    return gtk_radio_action_get_current_value(GTK_RADIO_ACTION(action));
-}
-
-static gboolean 
-terminal_window_set_font_size(TerminalWindow *window, int new_size) 
-{
-    GtkAction *action;
-    char new_name[5];
-
-    if (new_size < -8 || new_size > 8) {
-        return FALSE;
-    }
-
-    snprintf(new_name, sizeof(new_name), "%+dpt", new_size);
-
-    action = gtk_action_group_get_action(window->action_group, new_name);
-    if (!action) {
-        return FALSE;
-    }
-
-    gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), TRUE);
-    gtk_toggle_action_toggled(GTK_TOGGLE_ACTION(action));
-
-    return TRUE;
-}
-
 static void
 terminal_window_set_menu_normal (TerminalWindow *window, 
 			      gboolean item_enabled)
@@ -446,62 +450,41 @@ terminal_window_set_menu_fs_idle (TerminalWindow *window)
 
   return FALSE;
 }
-
+#endif /* (0) */
 static gboolean
 terminal_window_key_press_event (TerminalWindow *window,
                               GdkEventKey *event,
                               gpointer user_data) 
 {
-    int font_size;
-    GtkAction *action;
-
     switch (event->keyval) 
     {
         case HILDON_HARDKEY_FULLSCREEN: /* Full screen */
-            action = gtk_action_group_get_action(window->action_group,
-                                                 "fullscreen");
-            fs = gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(action));
-
-            gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action),
-                                         !fs);
+      fs = !fs;
 	    g_signal_emit (G_OBJECT (window), 
 			   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
-
             return TRUE;
 
         case HILDON_HARDKEY_INCREASE: /* Zoom in */
-            font_size = terminal_window_get_font_size(window);
-            if (font_size == 0xf00b4) {
-		hildon_banner_show_information(GTK_WIDGET(window), NULL,
-			"Getting font size failed!");
-                return TRUE;
+          {
+            TerminalWidget *tw = terminal_window_get_active(window);
+            g_print("terminal_window_key_press_event: HILDON_HARDKEY_INCREASE: tw = 0x%x\n", (int)tw);
+            if (tw) {
+              if (!terminal_widget_modify_font_size(tw, FONT_SIZE_INC))
+                hildon_banner_show_information(GTK_WIDGET(window), "NULL", _("Already at maximum font size."));
             }
-
-            if (font_size >= 8) {
-		hildon_banner_show_information(GTK_WIDGET(window), NULL,
-			"Already at maximum font size.");
-                return TRUE;
-            }
-            terminal_window_set_font_size(window, font_size + 2);
-            return TRUE;
+          }
+          return TRUE;
 
         case HILDON_HARDKEY_DECREASE: /* Zoom out */
-            font_size = terminal_window_get_font_size(window);
-            if (font_size == 0xf00b4) {
-		hildon_banner_show_information(GTK_WIDGET(window), NULL,
-			"Getting font size failed!");
-                return TRUE;
+          {
+            TerminalWidget *tw = terminal_window_get_active(window);
+            g_print("terminal_window_key_press_event: HILDON_HARDKEY_DECREASE: tw = 0x%x\n", (int)tw);
+            if (tw) {
+              if (!terminal_widget_modify_font_size(tw, -FONT_SIZE_INC))
+                hildon_banner_show_information(GTK_WIDGET(window), "NULL", _("Already at minimum font size."));
             }
-            
-            if (font_size <= -8) {
-		hildon_banner_show_information(GTK_WIDGET(window), NULL,
-			"Already at minimum font size.");
-                return TRUE;
-            }
-            terminal_window_set_font_size(window, font_size - 2);
-            return TRUE;
-	case HILDON_HARDKEY_HOME: /* Ignoring... */
-	    return TRUE;
+          }
+          return TRUE;
     }
 
     return FALSE;
@@ -510,8 +493,10 @@ terminal_window_key_press_event (TerminalWindow *window,
 static void
 terminal_window_init (TerminalWindow *window)
 {
+#if (0)
   GtkAction           *action;
   GtkAccelGroup       *accel_group;
+#endif /* (0) */
   //  GtkWidget           *popup;
   GError              *error = NULL;
   gchar               *role;
@@ -520,11 +505,39 @@ terminal_window_init (TerminalWindow *window)
   GConfValue          *gconf_value;
   GSList              *keys;
   GSList              *key_labels;
+  GtkWidget *hildon_app_menu;
+  GtkWidget *button;
 
   window->terminal = NULL;
   window->encoding = NULL;
+  window->unfs_button = NULL;
 
   gtk_window_set_title(GTK_WINDOW(window), "osso_xterm");
+
+  hildon_app_menu = hildon_app_menu_new();
+
+  /* New window */
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_NEW, "use-stock", TRUE, NULL);
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_new_window, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+#if (0)
+  /* Fullscreen */
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_FULLSCREEN, "use-stock", TRUE, NULL);
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_fullscreen, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+#endif /* (0) */
+  /* Copy */
+  window->copy_button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_COPY, "use-stock", TRUE, NULL);
+  g_signal_connect(G_OBJECT(window->copy_button), "clicked", (GCallback)terminal_window_action_copy, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(window->copy_button));
+
+  /* Paste */
+  window->paste_button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_PASTE, "use-stock", TRUE, NULL);
+  g_signal_connect(G_OBJECT(window->paste_button), "clicked", (GCallback)terminal_window_action_paste, window);
+  g_signal_connect(G_OBJECT(hildon_app_menu), "show", (GCallback)terminal_window_paste_show, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(window->paste_button));
+
+  hildon_window_set_app_menu(HILDON_WINDOW(window), HILDON_APP_MENU(hildon_app_menu));
 
   g_signal_connect( G_OBJECT(window), "key-press-event",
                     G_CALLBACK(terminal_window_key_press_event), NULL);
@@ -620,7 +633,7 @@ terminal_window_init (TerminalWindow *window)
       g_error_free(error);
       error = NULL;
   }
-
+#if (0)
   window->action_group = gtk_action_group_new ("terminal-window");
   gtk_action_group_set_translation_domain (window->action_group,
                                            GETTEXT_PACKAGE);
@@ -668,7 +681,7 @@ terminal_window_init (TerminalWindow *window)
   gtk_window_add_accel_group (GTK_WINDOW (window), accel_group);
 
   populate_menubar(window, accel_group);
-
+#endif /* (0) */
   /*
   popup = gtk_ui_manager_get_widget (window->ui_manager, "/popup-menu");
   gtk_widget_tap_and_hold_setup(GTK_WIDGET(window), popup, NULL,
@@ -679,8 +692,10 @@ terminal_window_init (TerminalWindow *window)
   /* setup fullscreen mode */
   if (!gdk_net_wm_supports (gdk_atom_intern ("_NET_WM_STATE_FULLSCREEN", FALSE)))
     {
+#if (0)
       action = gtk_action_group_get_action (window->action_group, "fullscreen");
       g_object_set (G_OBJECT (action), "sensitive", FALSE, NULL);
+#endif /* (0) */
     }
 
   keys = gconf_client_get_list(window->gconf_client,
@@ -722,35 +737,27 @@ terminal_window_finalize (GObject *object)
 #endif
   if (window->terminal != NULL)
     g_object_unref (window->terminal);
+#if (0)
   if (window->action_group != NULL)
     g_object_unref (G_OBJECT (window->action_group));
   if (window->ui_manager != NULL)
     g_object_unref (G_OBJECT (window->ui_manager));
-
-
+#endif /* (0) */
   g_object_unref(G_OBJECT(window->gconf_client));
 
   parent_class->finalize (object);
 }
 
 
-static TerminalWidget*
-terminal_window_get_active (TerminalWindow *window)
-{
-  return TERMINAL_WIDGET (window->terminal);    
-}
-
 static void
 terminal_window_update_actions (TerminalWindow *window)
 {
   TerminalWidget *terminal;
-  GtkAction      *action;
 
   terminal = terminal_window_get_active (window);
   if (G_LIKELY (terminal != NULL))
     {
-      action = gtk_action_group_get_action (window->action_group, "copy");
-      g_object_set (G_OBJECT (action),
+      g_object_set (G_OBJECT (window->copy_button),
                     "sensitive", terminal_widget_has_selection (terminal),
                     NULL);
     }
@@ -779,7 +786,7 @@ terminal_window_context_menu (TerminalWidget  *widget,
 /* Copy & paste didn't work quite well from popup menu and there was only one 
  * item left in the menu so it was removed
  */
-#if 0
+#if (0)
   TerminalWidget *terminal;
   //  GtkWidget      *popup;
   gint            button = 0;
@@ -831,9 +838,9 @@ terminal_window_context_menu (TerminalWidget  *widget,
       gtk_menu_popup (GTK_MENU (popup), NULL, NULL,
                       NULL, NULL, button, time);
     }
-#endif
+#endif /* (0) */
 }
-
+#if (0)
 static void
 terminal_window_open_url (GtkAction	*action,
 		       TerminalWindow	*window)
@@ -853,10 +860,9 @@ terminal_window_open_url (GtkAction	*action,
   }
   g_object_set_data(G_OBJECT(window), "url", NULL);
 }
-
-
+#endif /* (0) */
 static void
-terminal_window_action_new_window (GtkAction    *action,
+terminal_window_action_new_window (GtkWidget *new_window_button,
                              TerminalWindow  *window)
 {
 
@@ -865,7 +871,7 @@ terminal_window_action_new_window (GtkAction    *action,
                  terminal_window_signals[SIGNAL_NEW_WINDOW], 0, NULL); 
 
 }
-
+#if (0)
 static void
 terminal_window_action_close_tab (GtkAction    *action,
                                TerminalWindow  *window)
@@ -874,25 +880,22 @@ terminal_window_action_close_tab (GtkAction    *action,
   gtk_widget_destroy (GTK_WIDGET (window));
 
 }
-
+#endif /* (0) */
 /* Check is paste enabled */
 static void
-terminal_window_action_edit (GtkAction *action,
+terminal_window_paste_show (GtkWidget *hildon_app_menu,
                              TerminalWindow *window)
 {
-  GtkAction *pasteaction;
   gboolean paste_enabled = 
     gtk_clipboard_wait_is_text_available (gtk_clipboard_get (GDK_NONE));
 
-  pasteaction = gtk_action_group_get_action (window->action_group, "paste");
-  if (pasteaction != NULL) {
-    g_object_set (G_OBJECT (pasteaction), "sensitive", paste_enabled, NULL);
-  }
+  g_print("paste_show\n");
+
+  g_object_set (G_OBJECT (window->paste_button), "sensitive", paste_enabled, NULL);
 }
 
-
 static void
-terminal_window_action_copy (GtkAction    *action,
+terminal_window_action_copy (GtkButton    *copy_button,
                           TerminalWindow  *window)
 {
   TerminalWidget *terminal;
@@ -905,7 +908,7 @@ terminal_window_action_copy (GtkAction    *action,
 
 
 static void
-terminal_window_action_paste (GtkAction    *action,
+terminal_window_action_paste (GtkButton    *paste_button,
                            TerminalWindow  *window)
 {
   TerminalWidget *terminal;
@@ -914,7 +917,7 @@ terminal_window_action_paste (GtkAction    *action,
   if (G_LIKELY (terminal != NULL))
     terminal_widget_paste_clipboard (terminal);
 }
-
+#if (0)
 static void
 terminal_window_action_edit_shortcuts (GtkAction    *action,
                            TerminalWindow  *window)
@@ -943,14 +946,12 @@ terminal_window_action_reverse (GtkToggleAction *action,
 
     g_object_unref(G_OBJECT(client));
 }
-
-
+#endif /* (0) */
 static void
-terminal_window_action_fullscreen (GtkToggleAction *action,
+terminal_window_action_fullscreen (GtkWidget *fs_button,
                                 TerminalWindow     *window)
 {
-  fs = gtk_toggle_action_get_active (action);
-
+  fs = !fs;
   g_signal_emit (G_OBJECT (window), 
 		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
 
@@ -987,7 +988,7 @@ terminal_window_set_toolbar_fullscreen (gboolean show)
 
     g_object_unref(G_OBJECT(client));
 }
-
+#if (0)
 static void
 terminal_window_action_toolbar (GtkToggleAction *action,
                                TerminalWindow     *window)
@@ -1017,7 +1018,6 @@ terminal_window_action_scrollbar (GtkToggleAction *action,
     g_object_unref(G_OBJECT(client));
 }
 
-
 static void
 terminal_window_action_font_size (GtkRadioAction *action,
                                GtkRadioAction *current,
@@ -1036,7 +1036,6 @@ terminal_window_action_font_size (GtkRadioAction *action,
 
     g_object_unref(G_OBJECT(client));
 }
-
 
 static void
 terminal_window_action_reset (GtkAction   *action,
@@ -1212,7 +1211,7 @@ terminal_window_action_quit (GtkAction    *action,
   //  gtk_widget_destroy(GTK_WIDGET(window));
   gtk_main_quit ();
 }
-
+#endif /* (0) */
 
 /**
  * terminal_window_new:
@@ -1260,6 +1259,13 @@ terminal_window_real_add (TerminalWindow    *window,
     g_signal_connect_swapped (G_OBJECT (widget), "selection-changed",
                               G_CALLBACK (terminal_window_update_actions), window);
     terminal_window_update_actions (window);
+
+    g_print("terminal_window_real_add: Creating unfs_button\n");
+    window->unfs_button = GTK_WIDGET(gtk_tool_button_new_from_stock(GTK_STOCK_LEAVE_FULLSCREEN));
+    g_signal_connect(G_OBJECT(window->unfs_button), "clicked", (GCallback)terminal_window_action_fullscreen, window);
+    terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(window->unfs_button));
+    if (window->unfs_button)
+      gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(window->unfs_button), fs ? GTK_STOCK_LEAVE_FULLSCREEN : GTK_STOCK_FULLSCREEN);
     /*   window_list = g_slist_append(window_list, window);
      */
 }
@@ -1280,15 +1286,19 @@ terminal_window_add (TerminalWindow    *window,
   gtk_widget_show (GTK_WIDGET (widget));
 
   terminal_window_real_add (window, widget);
-
+#if (0)
   if (GTK_IS_WINDOW (newwindow) == TRUE) {
     if (!fs) {
       gtk_window_unfullscreen(GTK_WINDOW(newwindow));
+      if (newwindow->unfs_button)
+        g_object_set(G_OBJECT(newwindow->unfs_button), "visible", FALSE, NULL);
     } else {
       gtk_window_fullscreen(GTK_WINDOW(newwindow));
+      if (newwindow->unfs_button)
+        g_object_set(G_OBJECT(newwindow->unfs_button), "visible", TRUE, NULL);
     }
   }
-
+#endif /* (0) */
   return newwindow;
 }
 
@@ -1375,181 +1385,35 @@ terminal_window_launch (TerminalWindow     *window,
   return TRUE;
 }
 
-static void
-terminal_window_close_window(GtkAction *action, TerminalWindow *window)
-{
-  g_assert (window);
-  g_assert (TERMINAL_IS_WINDOW (window));
-
-  gtk_widget_destroy (GTK_WIDGET (window));
-}
-
-static void            
-terminal_window_action_show_full_screen (GtkToggleAction *action,
-                                      TerminalWindow     *window)
-{
-    toolbar_fs = gtk_toggle_action_get_active (action);
-    terminal_window_set_toolbar_fullscreen (toolbar_fs);  
-
-    g_signal_emit (G_OBJECT (window), 
-		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
-
-}
-
-static void
-terminal_window_action_show_normal_screen(GtkToggleAction *action,
-                                       TerminalWindow     *window)
-{
-    toolbar_normal = gtk_toggle_action_get_active (action);
-    terminal_window_set_toolbar (toolbar_normal);
-
-    g_signal_emit (G_OBJECT (window), 
-		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
-}
-
-static void
-terminal_window_select_all (GtkAction    *action,
-                              TerminalWindow  *window)
-{
-#ifdef DEBUG
-    g_debug(__FUNCTION__);
-#endif
-    g_assert (window != NULL);
-    g_assert (TERMINAL_IS_WINDOW (window));
-    /* terminal_widget_select_all (TERMINAL_WIDGET (window->terminal)); */
-}
-
-#if (0)
-typedef struct
-{
-  int x, y;
-  int x_abs_displacement;
-  int y_abs_displacement;
-} FloatingWidgetState;
-
-static gboolean
-btn_press(GtkWidget *btn, GdkEventButton *event, GtkWindow *window)
-{
-  return FALSE;
-  FloatingWidgetState *state = g_object_get_data(G_OBJECT(btn), "state");
-  GtkWidget *floating_widget = gtk_widget_get_toplevel(btn);
-
-  state->x_abs_displacement = 0;
-  state->y_abs_displacement = 0;
-  state->x = event->x;
-  state->y = event->y;
-
-  return TRUE;
-}
-
-static gboolean
-btn_motion_notify(GtkWidget *btn, GdkEventMotion *event, GtkWindow *window)
-{
-  FloatingWidgetState *state = g_object_get_data(G_OBJECT(btn), "state");
-  GtkWidget *floating_widget = gtk_widget_get_toplevel(btn);
-
-  if (event->state & GDK_BUTTON1_MASK) {
-    int x_diff = state->x - event->x;
-    int y_diff = state->y - event->y;
-
-    
-
-    state->x = event->x;
-    state->y = event->y;
-  }
-  return TRUE;
-}
-
-static gboolean
-btn_release(GtkWidget *btn, GdkEventButton *event, GtkWindow *window)
-{
-  FloatingWidgetState *state = g_object_get_data(G_OBJECT(btn), "state");
-  GtkWidget *floating_widget = gtk_widget_get_toplevel(btn);
-
-  state->x_abs_displacement = 0;
-  state->y_abs_displacement = 0;
-  state->x = event->x;
-  state->y = event->y;
-
-  return TRUE;
-}
-#endif /* (0) */
-
-static GtkWidget *
-get_floating_widget(GtkWidget *window)
-{
-  return NULL;
-#if (0)
-  GtkWidget *floating_widget = g_object_get_data(G_OBJECT(window), "floating-widget");
-
-  if (!floating_widget) {
-    
-    GtkWidget *btn = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE,
-        "child", g_object_new(GTK_TYPE_LABEL, "visible", TRUE, "use-markup", TRUE,
-          "label", "<span size='x-large'>Restore</span>",
-          NULL);
-
-    if (btn) {
-      if ((floating_widget = g_object_new(GTK_TYPE_WINDOW,
-  //      "allow-grow", FALSE,
-  //      "allow-shrink", FALSE,
-  //      "decorated", FALSE,
-        "transient-for", window,
-        "type", GTK_WINDOW_POPUP,
-  //      "resizable", FALSE,
-  //      "skip-pager-hint", TRUE,
-  //      "skip-taskbar-hint", TRUE,
-  //      "type-hint", GDK_WINDOW_TYPE_HINT_UTILITY,
-        "destroy-with-parent", TRUE,
-        "child", btn,
-          NULL),
-        NULL)) != NULL) {
-
-        gtk_widget_add_events(btn, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_POINTER_MOTION_MASK);
-        g_signal_connect(G_OBJECT(btn), "clicked", (GCallback)btn_press, window);
-        g_signal_connect(G_OBJECT(btn), "button-press-event", (GCallback)btn_press, window);
-        g_signal_connect(G_OBJECT(btn), "motiont-notify-event", (GCallback)btn_motion_notify, window);
-        g_signal_connect(G_OBJECT(btn), "button-release-event", (GCallback)btn_release, window);
-        g_object_set_data(G_OBJECT(window), "floating-widget", floating_widget);
-        g_object_set_data_full(G_OBJECT(btn), "state", g_new0(FloatingWidgetState), (GDestroyNotify)g_free);
-        gtk_window_move(GTK_WINDOW(floating_widget), 300, 200);
-      }
-      else
-        gtk_widget_destroy(btn);
-    }
-  }
-
-  return floating_widget;
-#endif /* (0) */
-}
-
 void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
 {
-  GtkWidget *floating_widget = NULL;
 #ifdef DEBUG
     g_debug ("%s : tb_normal: %d - tb_fs: %d", 
 	   __FUNCTION__, toolbar_normal, toolbar_fs);
 #endif
+#if (0)
     terminal_window_set_menu_normal (window, toolbar_normal);
     terminal_window_set_menu_fs (window, toolbar_fs);
-
+#endif /* (0) */
     if (!fs) {
       if (window == current) {
-      if ((floating_widget = get_floating_widget(GTK_WIDGET(window))) != NULL)
-        g_object_set(G_OBJECT(floating_widget), "visible", FALSE, NULL);
 	gtk_window_unfullscreen(GTK_WINDOW(window));
+  if (window->unfs_button)
+    gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(window->unfs_button), GTK_STOCK_FULLSCREEN);
+#if (0)
 	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
+#endif /* (0) */
       }
       terminal_window_set_toolbar (toolbar_normal);
       terminal_widget_update_tool_bar(window->terminal, toolbar_normal);
     } else {
       if (window == current) {
-      if ((floating_widget = get_floating_widget(GTK_WIDGET(window))) != NULL) {
-        g_object_set(G_OBJECT(floating_widget), "visible", TRUE, NULL);
-        gtk_widget_grab_focus(gtk_bin_get_child(GTK_BIN(floating_widget)));
-      }
 	gtk_window_fullscreen(GTK_WINDOW(window));
+  if (window->unfs_button)
+    gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(window->unfs_button), GTK_STOCK_LEAVE_FULLSCREEN);
+#if (0)
 	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
+#endif /* (0) */
       }
       terminal_window_set_toolbar_fullscreen (toolbar_fs);
       terminal_widget_update_tool_bar(window->terminal, toolbar_fs);
