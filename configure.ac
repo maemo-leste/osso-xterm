@@ -12,7 +12,7 @@ AC_PROG_LIBTOOL
 
 AX_CFLAGS_GCC_OPTION(-std=c99)
 AX_CFLAGS_GCC_OPTION(-Wall)
-AX_CFLAGS_GCC_OPTION(-Werror)
+dnl AX_CFLAGS_GCC_OPTION(-Werror)
 AX_CFLAGS_GCC_OPTION(-Wmissing-prototypes)
 AX_CFLAGS_GCC_OPTION(-Wmissing-declarations)
 AX_CFLAGS_GCC_OPTION(-Wunreachable-code)
