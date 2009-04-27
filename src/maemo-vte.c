@@ -193,19 +193,7 @@ key_press_event(GtkWidget *widget, GdkEventKey *event)
 {
   gboolean (*parent_key_press_event)(GtkWidget *, GdkEventKey *) =
     GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->key_press_event;
-#if (0)
-  if (HILDON_HARDKEY_INCREASE == event->keyval) {
-    g_print("MaemoVte::key_press_event: Turning HILDON_HARDKEY_INCREASE into Ctrl+Shift+KP_Add\n");
-    event->keyval = GDK_KP_Add;
-    event->state |= GDK_CONTROL_MASK | GDK_SHIFT_MASK;
-  }
-  else
-  if (HILDON_HARDKEY_DECREASE == event->keyval) {
-    g_print("MaemoVte::key_press_event: Turning HILDON_HARDKEY_DECREASE into Ctrl+Shift+KP_Subtract\n");
-    event->keyval = GDK_KP_Subtract;
-    event->state |= GDK_CONTROL_MASK | GDK_SHIFT_MASK;
-  }
-#endif /* (0) */
+
   return parent_key_press_event
     ? parent_key_press_event(widget, event)
     : FALSE;
@@ -249,7 +237,7 @@ realize(GtkWidget *widget)
 static void
 class_init(gpointer g_class, gpointer null)
 {
-  GtkIMContextClass *gtk_imc_class = GTK_IM_CONTEXT_CLASS(g_type_class_peek(GTK_TYPE_IM_MULTICONTEXT));
+  GtkIMContextClass *gtk_imc_class = GTK_IM_CONTEXT_CLASS(g_type_class_ref(GTK_TYPE_IM_MULTICONTEXT));
   GObjectClass *gobject_class = G_OBJECT_CLASS(g_class);
   MaemoVteClass *mvte_class = MAEMO_VTE_CLASS(g_class);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(g_class);

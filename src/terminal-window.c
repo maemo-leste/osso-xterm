@@ -58,6 +58,7 @@
 #include <gconf/gconf-client.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdk/gdkx.h>
+#include <vte/vte.h>
 
 #include "terminal-gconf.h"
 #include "terminal-settings.h"
@@ -162,6 +163,7 @@ struct _TerminalWindow
   GtkWidget *copy_button;
   GtkWidget *paste_button;
   GtkWidget *unfs_button;
+  GtkWidget *font_button;
 
   GConfClient *gconf_client;
   GSList              *keys;
@@ -490,6 +492,104 @@ terminal_window_key_press_event (TerminalWindow *window,
     return FALSE;
 }
 
+static gboolean
+filter_monospace(GtkTreeModel *tm, GtkTreeIter *itr, gpointer null)
+{
+  gboolean ret = TRUE;
+  PangoFontFamily *pff = NULL;
+
+  gtk_tree_model_get(tm, itr, 0, &pff, -1);
+
+  if (pff) {
+    if (PANGO_IS_FONT_FAMILY(pff))
+      ret = pango_font_family_is_monospace(pff);
+    g_object_unref(pff);
+  }
+
+  return ret;
+}
+
+static char *
+remove_underscores(char *str_input)
+{
+  char *ret = NULL;
+  int Nix;
+  GString *str = g_string_new(str_input);
+
+  for (Nix = 0 ; Nix < str->len ; Nix++)
+    if (str->str[Nix])
+      if (str->str[Nix] == '_') {
+        g_string_erase(str, Nix, 1);
+        Nix--;
+      }
+
+  ret = str->str;
+  g_string_free(str, FALSE);
+
+  return ret;
+}
+
+static void
+font_button_clicked(GtkWidget *font_button, TerminalWindow *terminal_window)
+{
+  GtkStockItem stock_item;
+  char *font_name = gconf_client_get_string(terminal_window->gconf_client, OSSO_XTERM_GCONF_FONT_NAME, NULL);
+  int font_size = gconf_client_get_int(terminal_window->gconf_client, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
+  char *str = g_strdup_printf("%s %d", font_name, font_size);
+  GtkWidget *dlg = g_object_new(GTK_TYPE_FONT_SELECTION_DIALOG, NULL);
+  GtkTreeView *tv = GTK_TREE_VIEW(GTK_FONT_SELECTION(GTK_FONT_SELECTION_DIALOG(dlg)->fontsel)->family_list);
+  GtkTreeModel *tm = gtk_tree_model_filter_new(gtk_tree_view_get_model(tv), NULL);
+
+  gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(tm), filter_monospace, NULL, NULL);
+  gtk_tree_view_set_model(tv, tm);
+  gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(dlg), str);
+  gtk_window_set_transient_for(GTK_WINDOW(dlg), GTK_WINDOW(terminal_window));
+
+  if (gtk_stock_lookup(GTK_STOCK_SELECT_FONT, &stock_item))
+    if (stock_item.label) {
+      char *title = remove_underscores((char *)g_dgettext(stock_item.translation_domain, stock_item.label));
+
+      gtk_window_set_title(GTK_WINDOW(dlg), title);
+      g_free(title);
+    }
+
+  g_free(str); str = NULL;
+  g_free(font_name); font_name = NULL;
+  font_size = 0;
+
+  if (GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dlg))) {
+    const PangoFontDescription *old_pfd = vte_terminal_get_font(VTE_TERMINAL(terminal_window_get_active(terminal_window)->terminal));
+    PangoFontDescription *new_pfd = NULL;
+
+    /* This font_name includes the size, which is cleaned out below */
+    font_name = gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(dlg));
+    new_pfd = pango_font_description_from_string(font_name);
+    if (!pango_font_description_equal(old_pfd, (const PangoFontDescription *)new_pfd)) {
+      int Nix, len = strlen(font_name);
+
+      font_size = pango_font_description_get_size(new_pfd);
+      if (!pango_font_description_get_size_is_absolute(new_pfd))
+        font_size = ((int)(((double)font_size)/((double)PANGO_SCALE)));
+
+      for (Nix = 0 ; Nix < len ; Nix++)
+        /* Assumes the size is at the end of the string */
+        if (font_name[Nix] >= '0' && font_name[Nix] <= '9') {
+          if (Nix - 1 >= 0) 
+            font_name[Nix - 1] = 0;
+          else
+            font_name[Nix] = 0;
+          break;
+        }
+      g_print("font_button_clicked: Setting new font: %s %d\n", font_name, font_size);
+      gconf_client_set_string(terminal_window->gconf_client, OSSO_XTERM_GCONF_FONT_NAME, font_name, NULL);
+      gconf_client_set_int(terminal_window->gconf_client, OSSO_XTERM_GCONF_FONT_BASE_SIZE, font_size, NULL);
+    }
+    g_free(font_name); font_name = NULL;
+    pango_font_description_free(new_pfd);
+  }
+  gtk_widget_destroy(dlg);
+}
+
 static void
 terminal_window_init (TerminalWindow *window)
 {
@@ -520,12 +620,11 @@ terminal_window_init (TerminalWindow *window)
   button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_NEW, "use-stock", TRUE, NULL);
   g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_new_window, window);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
-#if (0)
-  /* Fullscreen */
-  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_FULLSCREEN, "use-stock", TRUE, NULL);
-  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_fullscreen, window);
+
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_SELECT_FONT, "use-stock", TRUE, NULL);
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)font_button_clicked, window);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
-#endif /* (0) */
+
   /* Copy */
   window->copy_button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_COPY, "use-stock", TRUE, NULL);
   g_signal_connect(G_OBJECT(window->copy_button), "clicked", (GCallback)terminal_window_action_copy, window);
@@ -688,15 +787,15 @@ terminal_window_init (TerminalWindow *window)
                                 GTK_TAP_AND_HOLD_NONE);
   */
   
+#if (0)
   /* FIXME: is this really nessary fullscreen is available in matchbox+hildon */
   /* setup fullscreen mode */
   if (!gdk_net_wm_supports (gdk_atom_intern ("_NET_WM_STATE_FULLSCREEN", FALSE)))
     {
-#if (0)
       action = gtk_action_group_get_action (window->action_group, "fullscreen");
       g_object_set (G_OBJECT (action), "sensitive", FALSE, NULL);
-#endif /* (0) */
     }
+#endif /* (0) */
 
   keys = gconf_client_get_list(window->gconf_client,
                                  OSSO_XTERM_GCONF_KEYS,
@@ -1320,7 +1419,7 @@ terminal_window_remove (TerminalWindow    *window,
 
   gtk_widget_destroy (GTK_WIDGET (widget));
 }
-
+#if (0)
 static gboolean 
 _im_context_focus (TerminalWidget *terminal)
 {
@@ -1330,7 +1429,7 @@ _im_context_focus (TerminalWidget *terminal)
   
   return FALSE;
 }
-
+#endif /* (0) */
 /**
  * terminal_window_launch
  * @window         : A #TerminalWindow.
@@ -1343,6 +1442,7 @@ terminal_window_launch (TerminalWindow     *window,
 		     const gchar     *command,
                      GError          **error)
 {
+  gboolean child_launched = FALSE;
   GtkWidget *terminal;
 
   g_return_val_if_fail (TERMINAL_IS_WINDOW (window), FALSE);
@@ -1367,22 +1467,24 @@ terminal_window_launch (TerminalWindow     *window,
       g_strfreev(argv);
     }
   }
-  terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
 
-  gtk_widget_show_all(GTK_WIDGET(window));
+  child_launched = terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
 
-  if (window->encoding == NULL) {
-    gconf_client_set_string(window->gconf_client, OSSO_XTERM_GCONF_ENCODING, 
-			    OSSO_XTERM_DEFAULT_ENCODING, NULL);
-    g_object_set (window->terminal, "encoding", 
-		  OSSO_XTERM_DEFAULT_ENCODING, NULL);
-  } else {
-    g_object_set (window->terminal, "encoding", window->encoding, NULL);
+  if (child_launched) {
+    gtk_widget_show_all(GTK_WIDGET(window));
+
+    if (window->encoding == NULL) {
+      gconf_client_set_string(window->gconf_client, OSSO_XTERM_GCONF_ENCODING, 
+			      OSSO_XTERM_DEFAULT_ENCODING, NULL);
+      g_object_set (window->terminal, "encoding", 
+		    OSSO_XTERM_DEFAULT_ENCODING, NULL);
+    } else {
+      g_object_set (window->terminal, "encoding", window->encoding, NULL);
+    }
+
+  /*  g_idle_add ((GSourceFunc)_im_context_focus, window->terminal); */
   }
-
-  g_idle_add ((GSourceFunc)_im_context_focus, window->terminal);
-
-  return TRUE;
+  return child_launched;
 }
 
 void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)

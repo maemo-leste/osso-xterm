@@ -27,8 +27,7 @@
 #include <sys/types.h>
 #include <pwd.h>
 
-#define MIN_FONT_SIZE  8
-#define MAX_FONT_SIZE 48
+#define FONT_SIZE_MAX_ABS_DELTA 8
 
 #define GETTEXT_PACKAGE "osso-browser-ui"
 #include <glib/gi18n-lib.h>
@@ -113,9 +112,11 @@ static void     terminal_widget_vte_eof                       (VteTerminal    *t
 static gboolean terminal_widget_vte_button_press_event        (VteTerminal    *terminal,
                                                                GdkEventButton *event,
                                                                TerminalWidget *widget);
+#if (0)
 static gboolean terminal_widget_vte_button_release_event        (VteTerminal    *terminal,
 								 GdkEventButton *event,
 								 TerminalWidget *widget);
+#endif /* (0) */
 static gboolean terminal_widget_vte_key_press_event           (VteTerminal    *terminal,
                                                                GdkEventKey    *event,
                                                                TerminalWidget *widget);
@@ -277,7 +278,7 @@ terminal_widget_class_init (TerminalWidgetClass *klass)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 }
-
+#if (0)
 static gboolean
 terminal_widget_vte_focus_in_event (VteTerminal    *terminal,
                                     GdkEventFocus *event,
@@ -304,7 +305,7 @@ terminal_widget_vte_focus_out_event (VteTerminal    *terminal,
 
   return FALSE;
 }
-
+#endif /* (0) */
 static void
 maybe_set_pan_mode(GObject *bt_pan, GParamSpec *pspec, GObject *mvte)
 {
@@ -432,13 +433,17 @@ terminal_widget_init (TerminalWidget *widget)
     g_clear_error(&err);
   }
 
-  widget->im_context = gtk_im_multicontext_new ();
   widget->terminal = g_object_new(MAEMO_VTE_TYPE, "pan-mode", TRUE, NULL);
 
+#if (0)
+  widget->im_context = gtk_im_multicontext_new ();
   g_signal_connect (G_OBJECT (widget->terminal), "focus-in-event",
                     G_CALLBACK (terminal_widget_vte_focus_in_event), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "focus-out-event",
                     G_CALLBACK (terminal_widget_vte_focus_out_event), widget);
+  g_signal_connect (G_OBJECT (widget->terminal), "button-release-event",
+                    G_CALLBACK (terminal_widget_vte_button_release_event), widget);
+#endif /* (0) */
   g_signal_connect (G_OBJECT (widget->terminal), "child-exited",
                     G_CALLBACK (terminal_widget_vte_child_exited), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "encoding-changed",
@@ -447,8 +452,6 @@ terminal_widget_init (TerminalWidget *widget)
                     G_CALLBACK (terminal_widget_vte_eof), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "button-press-event",
                     G_CALLBACK (terminal_widget_vte_button_press_event), widget);
-  g_signal_connect (G_OBJECT (widget->terminal), "button-release-event",
-                    G_CALLBACK (terminal_widget_vte_button_release_event), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "key-press-event",
                     G_CALLBACK (terminal_widget_vte_key_press_event), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "selection-changed",
@@ -1030,24 +1033,26 @@ terminal_widget_vte_button_press_event (VteTerminal    *terminal,
                                         GdkEventButton *event,
                                         TerminalWidget *widget)
 {
+#if (0)
   if (hildon_gtk_im_context_filter_event (widget->im_context, (GdkEvent*)event))
     {
       return TRUE;
     }
-
+#endif /* (0) */
   if (event->button == 3)
     {
       g_signal_emit (G_OBJECT (widget), widget_signals[CONTEXT_MENU], 0, event);
       return TRUE;
     }
+#if (0)
   else
     {
       widget->im_pending = TRUE;
     }
-
+#endif /* (0) */
   return FALSE;
 }
-
+#if (0)
 static gboolean
 terminal_widget_vte_button_release_event (VteTerminal    *terminal,
                                           GdkEventButton *event,
@@ -1067,7 +1072,7 @@ terminal_widget_vte_button_release_event (VteTerminal    *terminal,
 
   return FALSE;
 }
-
+#endif /* (0) */
 /* Only from N810-keyboard, propably also from bt/usb keyboards */
 static gboolean
 terminal_widget_vte_key_press_event (VteTerminal    *terminal,
@@ -1090,8 +1095,9 @@ terminal_widget_vte_realize (VteTerminal    *terminal,
 {
   vte_terminal_set_allow_bold (terminal, TRUE);
   terminal_widget_timer_background (TERMINAL_WIDGET (widget));
-
+#if (0)
   gtk_im_context_set_client_window (widget->im_context, GTK_WIDGET (terminal)->window);
+#endif /* (0) */
   g_object_ref (terminal); /* Why ?? */
 }
 
@@ -1790,10 +1796,12 @@ terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
 #endif
     g_object_set(widget->terminal, "control-mask", bval, NULL);
   }
+#if (0)
   if (bval == TRUE) {
     hildon_gtk_im_context_show(widget->im_context);
     gtk_im_context_focus_in (widget->im_context);
   }
+#endif /* (0) */
 }
 
 static void
@@ -1967,7 +1975,7 @@ terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item)
 {
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), item, -1);
 }
-
+#if (0)
 static guint
 get_font_size(VteTerminal *vte)
 {
@@ -1987,33 +1995,16 @@ get_font_size(VteTerminal *vte)
 
   return (guint)size;
 }
-
+#endif /* (0) */
 gboolean
 terminal_widget_modify_font_size(TerminalWidget *widget, int increment)
 {
-  guint font_size = 0;
-  VteTerminal *vte = NULL;
+  int font_size_delta = gconf_client_get_int(widget->gconf_client, OSSO_XTERM_GCONF_FONT_SIZE, NULL);
+  font_size_delta += increment;
 
-  g_return_val_if_fail(widget != NULL, FALSE);
-  g_return_val_if_fail(TERMINAL_IS_WIDGET(widget), FALSE);
-
-  vte = VTE_TERMINAL(widget->terminal);
-
-  font_size = get_font_size(vte);
-  font_size = CLAMP(font_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
-
-  if (font_size + increment <= MAX_FONT_SIZE && 
-      font_size + increment >= MIN_FONT_SIZE) {
-    PangoFontDescription *pfd = (PangoFontDescription *)vte_terminal_get_font(vte);
-
-    if (pfd) {
-      pfd = pango_font_description_copy(pfd);
-      pango_font_description_set_size(pfd, (font_size + increment) * PANGO_SCALE);
-      vte_terminal_set_font(vte, pfd);
-      pango_font_description_free(pfd);
-      return TRUE;
-    }
-  }
+  if (ABS(font_size_delta) <= FONT_SIZE_MAX_ABS_DELTA)
+    return gconf_client_set_int(widget->gconf_client, OSSO_XTERM_GCONF_FONT_SIZE, font_size_delta, NULL);
 
   return FALSE;
 }
+

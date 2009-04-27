@@ -76,8 +76,8 @@ struct _TerminalWidget
   guint                fg_conid;
   guint                bg_conid;
 
-  GtkIMContext        *im_context;
-  gboolean	       im_pending;
+//  GtkIMContext        *im_context;
+//  gboolean	       im_pending;
 
   GtkWindow			*app;
 };

@@ -1,3 +1,16 @@
+osso-xterm (0.14.mh17) unstable; urgency=low
+
+  * Add font selection capability
+  * Use GConf for increment/decrement font size capability
+  * Fixes: NB#99664 (Focus is lost after opening a new xterm, opening and closing the menu)
+  * Fixes: NB#99723 (Changes made in xterm settings are not getting saved when the device is booted)
+  * Fixes: NB#99725 (Focus stays on the paste menu item when some text is pasted.)
+  * Fixes: NB#99772 (Unable to switch full screen to normal view)
+  * Fixes: NB#99658 (FKB pops up immediately when new osso-xterm window is launched with HKB slided in.)
+  * Fixes: NB#108878 (cleanup xterm menus)
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Fri, 24 Apr 2009 16:01:54 +0300
+
 osso-xterm (0.14.mh16) unstable; urgency=low
 
   * Turn off autocap for VteTerminal's im context
