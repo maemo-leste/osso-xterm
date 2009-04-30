@@ -162,11 +162,7 @@ static void     terminal_widget_timer_background_destroy      (gpointer        u
 #endif
 static void     terminal_widget_emit_context_menu            (TerminalWidget *widget,
 		                                              gpointer user_data);
-static void	terminal_widget_vte_ctrlify_notify	     (VteTerminal *terminal,
-							      GParamSpec  *pspec,
-							      TerminalWidget *widget);
-static void	terminal_widget_ctrlify_notify	     	     (GtkToggleToolButton *item,
-							      TerminalWidget *widget);
+static void	terminal_widget_ctrlify_notify	     	     (GObject *src, GParamSpec *pspec, GObject *dst);
 static void	terminal_widget_do_keys			     (TerminalWidget *widget,
 							      const gchar *key_string);
 static void	terminal_widget_do_key_button		     (GObject *button,
@@ -508,13 +504,13 @@ terminal_widget_init (TerminalWidget *widget)
   g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
 #endif
 
+  /* Link these two properties */
   g_signal_connect (G_OBJECT(widget->terminal), "notify::control-mask",
-		    G_CALLBACK(terminal_widget_vte_ctrlify_notify),
-		    widget);
-
-  g_signal_connect (G_OBJECT(widget->cbutton), "toggled",
+		    G_CALLBACK(terminal_widget_ctrlify_notify),
+		    widget->cbutton);
+  g_signal_connect (G_OBJECT(widget->cbutton), "notify::active",
     G_CALLBACK(terminal_widget_ctrlify_notify),
-    widget);
+    widget->terminal);
 
  
   /*  g_signal_connect (G_OBJECT(widget->cbutton), "clicked",
@@ -1762,46 +1758,17 @@ terminal_widget_get_tag (TerminalWidget *widget,
 }
 
 static void
-terminal_widget_vte_ctrlify_notify (VteTerminal    *terminal,
+terminal_widget_ctrlify_notify (GObject *src,
 				    GParamSpec     *pspec,
-				    TerminalWidget *widget)
+				    GObject *dst)
 {
-  gboolean bval = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(
-						    widget->cbutton));
-  gboolean tval;
+  const char *dst_pspec_name = strcmp(pspec->name, "active") ? "active" : "control-mask";
+  gboolean src_val, dst_val;
 
-  g_object_get(widget->terminal, "control-mask", &tval, NULL);
-
-  if (bval != tval) {
-#ifdef DEBUG
-    g_debug ("%s - ctrlfy: %s", __FUNCTION__, bval==TRUE?"TRUE":"FALSE");
-#endif
-    gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(widget->cbutton),
-				      tval);
-  }
-}
-
-static void
-terminal_widget_ctrlify_notify (GtkToggleToolButton    *item,
-                                TerminalWidget *widget)
-{
-  gboolean bval = gtk_toggle_tool_button_get_active(item);
-  gboolean tval;
-
-  g_object_get(widget->terminal, "control-mask", &tval, NULL);
-
-  if (bval != tval) {
-#ifdef DEBUG
-    g_debug ("%s - ctrlfy: %s", __FUNCTION__, bval==TRUE?"TRUE":"FALSE");
-#endif
-    g_object_set(widget->terminal, "control-mask", bval, NULL);
-  }
-#if (0)
-  if (bval == TRUE) {
-    hildon_gtk_im_context_show(widget->im_context);
-    gtk_im_context_focus_in (widget->im_context);
-  }
-#endif /* (0) */
+  g_object_get(src, pspec->name, &src_val, NULL);
+  g_object_get(dst, dst_pspec_name, &dst_val, NULL);
+  if (src_val != dst_val)
+    g_object_set(dst, dst_pspec_name, src_val, NULL);
 }
 
 static void

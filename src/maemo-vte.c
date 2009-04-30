@@ -11,7 +11,8 @@ typedef struct
 
 enum
 {
-  PAN_MODE_PROPERTY = 1
+  PAN_MODE_PROPERTY = 1,
+  CONTROL_MASK_PROPERTY,
 };
 
 struct _MaemoVtePrivate
@@ -19,12 +20,15 @@ struct _MaemoVtePrivate
   GtkIMContext *imc;
   GtkAdjustment *foreign_vadj;
   gboolean pan_mode;
+  gboolean control_mask;
 };
 
 #define PERFORM_SYNC(mvte,src) \
   ((mvte)->priv->foreign_vadj && \
    (((mvte)->priv->pan_mode) || \
     ((src) != (mvte)->priv->foreign_vadj)))
+
+static void set_control_mask(MaemoVte *mvte, gboolean on);
 
 static void
 set_up_sync(MaemoVte *mvte, GtkAdjustment **p_src, GtkAdjustment **p_dst, double *p_factor)
@@ -115,6 +119,118 @@ set_pan_mode(MaemoVte *mvte, gboolean pan_mode)
     g_object_notify(G_OBJECT(mvte), "pan-mode");
   }
 }
+#if (0)
+static void
+dump_key_event(GdkEventKey *event)
+{
+  g_print(".type = %s\n.send_event = %s\n.time = %d\n.state = ", 
+    event->type == GDK_KEY_PRESS   ? "GDK_KEY_PRESS"   : 
+    event->type == GDK_KEY_RELEASE ? "GDK_KEY_RELEASE" : "Other",
+    event->send_event ? "TRUE" : "FALSE", 
+    event->time);
+
+  if (event->state & GDK_SHIFT_MASK) g_print("GDK_SHIFT_MASK ");
+  if (event->state & GDK_LOCK_MASK) g_print("GDK_LOCK_MASK ");
+  if (event->state & GDK_CONTROL_MASK) g_print("GDK_CONTROL_MASK ");
+  if (event->state & GDK_MOD1_MASK) g_print("GDK_MOD1_MASK ");
+  if (event->state & GDK_MOD2_MASK) g_print("GDK_MOD2_MASK ");
+  if (event->state & GDK_MOD3_MASK) g_print("GDK_MOD3_MASK ");
+  if (event->state & GDK_MOD4_MASK) g_print("GDK_MOD4_MASK ");
+  if (event->state & GDK_MOD5_MASK) g_print("GDK_MOD5_MASK ");
+  if (event->state & GDK_BUTTON1_MASK) g_print("GDK_BUTTON1_MASK ");
+  if (event->state & GDK_BUTTON2_MASK) g_print("GDK_BUTTON2_MASK ");
+  if (event->state & GDK_BUTTON3_MASK) g_print("GDK_BUTTON3_MASK ");
+  if (event->state & GDK_BUTTON4_MASK) g_print("GDK_BUTTON4_MASK ");
+  if (event->state & GDK_BUTTON5_MASK) g_print("GDK_BUTTON5_MASK ");
+
+  /* The next few modifiers are used by XKB, so we skip to the end.
+   * Bits 15 - 25 are currently unused. Bit 29 is used internally.
+   */
+  
+  if (event->state & GDK_SUPER_MASK) g_print("GDK_SUPER_MASK ");
+  if (event->state & GDK_HYPER_MASK) g_print("GDK_HYPER_MASK ");
+  if (event->state & GDK_META_MASK) g_print("GDK_META_MASK ");
+  if (event->state & GDK_RELEASE_MASK) g_print("GDK_RELEASE_MASK ");
+  if (event->state & GDK_MODIFIER_MASK) g_print("GDK_MODIFIER_MASK ");
+
+  g_print("\n.keyval = %s\n.length = %d\n.string = %s\n.hardware_keycode = %d\n.group = %d\n.is_modifier = %s\n\n", 
+    gdk_keyval_name(event->keyval), 
+    event->length, 
+    event->string,
+    event->hardware_keycode,
+    event->group,
+    event->is_modifier ? "TRUE" : "FALSE");
+}
+#endif /* (0) */
+static void
+control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
+{
+  /* This function is soooo not Unicode safe ! */
+  g_print("control_mode_commit: Entering\n");
+
+  MaemoVte *mvte = g_object_get_data(G_OBJECT(wnd), "mvte");
+
+  if (mvte)
+    if (mvte->priv->control_mask) {
+      int Nix;
+
+      if (text)
+        if (text[0] != 0) {
+    //      char str[2] = {0, 0};
+          GdkModifierType mod = 0;
+          GdkEventKey *key_event = (GdkEventKey *)gdk_event_new(GDK_KEY_PRESS);
+
+          if (key_event) {
+            gdk_window_get_pointer(GTK_WIDGET(mvte)->window, NULL, NULL, &mod);
+
+            /* Things that need to be unset after use and before freeing */
+            key_event->window = GTK_WIDGET(mvte)->window;
+    //        key_event->string = str;
+    //        key_event->length = 1;
+            /* The rest are shallow things */
+    //        key_event->send_event = TRUE;
+            key_event->time = GDK_CURRENT_TIME;
+            key_event->state = (mod | GDK_CONTROL_MASK) & (~GDK_RELEASE_MASK);
+    //        key_event->hardware_keycode = 0;
+    //        key_event->group = 0;
+    //        key_event->is_modifier = FALSE;
+
+            for (Nix = 0 ; text[Nix] != 0 ; Nix++) {
+    //          str[0] = text[Nix];
+              key_event->keyval = text[Nix];
+
+              key_event->type = GDK_KEY_PRESS;
+              key_event->state &= (~GDK_RELEASE_MASK);
+
+              gdk_event_put(((GdkEvent *)key_event));
+
+              key_event->type = GDK_KEY_RELEASE;
+              key_event->state |= GDK_RELEASE_MASK;
+
+              gdk_event_put(((GdkEvent *)key_event));
+            }
+
+            /* Unset things that need to be unset after use and before freeing */
+            key_event->window = NULL;
+            key_event->string = NULL;
+            key_event->length = 0;
+            gdk_event_free((GdkEvent *)key_event);
+
+            g_signal_stop_emission_by_name((gpointer)imc, "commit");
+            set_control_mask(mvte, FALSE);
+          }
+        }
+    }
+}
+
+static void
+set_control_mask(MaemoVte *mvte, gboolean new_value)
+{
+  if (mvte->priv->control_mask != new_value) {
+    mvte->priv->control_mask = new_value;
+    g_object_notify(G_OBJECT(mvte), "control-mask");
+  }
+}
 
 static void
 set_property(GObject *obj, guint property_id, const GValue *value, GParamSpec *pspec)
@@ -123,6 +239,11 @@ set_property(GObject *obj, guint property_id, const GValue *value, GParamSpec *p
     case PAN_MODE_PROPERTY:
       set_pan_mode(MAEMO_VTE(obj), g_value_get_boolean(value));
       break;
+
+    case CONTROL_MASK_PROPERTY:
+      set_control_mask(MAEMO_VTE(obj), g_value_get_boolean(value));
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, property_id, pspec);
   }
@@ -135,6 +256,11 @@ get_property(GObject *obj, guint property_id, GValue *value, GParamSpec *pspec)
     case PAN_MODE_PROPERTY:
       g_value_set_boolean(value, MAEMO_VTE(obj)->priv->pan_mode);
       break;
+
+    case CONTROL_MASK_PROPERTY:
+      g_value_set_boolean(value, MAEMO_VTE(obj)->priv->control_mask);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, property_id, pspec);
   }
@@ -189,13 +315,21 @@ button_release_event(GtkWidget *widget, GdkEventButton *event)
 }
 
 static gboolean
-key_press_event(GtkWidget *widget, GdkEventKey *event)
+key_press_release_event(GtkWidget *widget, GdkEventKey *event)
 {
-  gboolean (*parent_key_press_event)(GtkWidget *, GdkEventKey *) =
-    GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->key_press_event;
+  MaemoVte *mvte = MAEMO_VTE(widget);
+  gboolean (*parent_key_press_release_event)(GtkWidget *, GdkEventKey *) =
+    (event->type == GDK_KEY_PRESS)
+      ? GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->key_press_event
+      : GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->key_release_event;
 
-  return parent_key_press_event
-    ? parent_key_press_event(widget, event)
+  if (mvte->priv->control_mask)
+    event->state |= GDK_CONTROL_MASK;
+
+//  dump_key_event(event);
+
+  return parent_key_press_release_event
+    ? parent_key_press_release_event(widget, event)
     : FALSE;
 }
 
@@ -204,11 +338,19 @@ static void (*orig_set_client_window)(GtkIMContext *imc, GdkWindow *window) = NU
 static void
 my_set_client_window(GtkIMContext *imc, GdkWindow *window)
 {
-  if (window)
+  if (window) {
     g_object_set_data(G_OBJECT(window), "im-context", imc);
+    g_signal_connect(G_OBJECT(imc), "commit", (GCallback)control_mode_commit, window);
+  }
 
   if (orig_set_client_window)
     orig_set_client_window(imc, window);
+}
+
+static void
+imc_retrieve_surrounding(GtkIMContext *imc, MaemoVte *mvte)
+{
+  gtk_im_context_set_surrounding(imc, "", -1, 0);
 }
 
 static void
@@ -221,7 +363,9 @@ realize(GtkWidget *widget)
     parent_realize(widget);
 
   if (widget->window) {
+    g_object_set_data(G_OBJECT(widget->window), "mvte", widget);
     imc = g_object_get_data(G_OBJECT(widget->window), "im-context");
+    g_signal_connect(G_OBJECT(imc), "retrieve-surrounding", (GCallback)imc_retrieve_surrounding, widget);
     if (imc) {
       int input_mode = 0;
 
@@ -257,10 +401,15 @@ class_init(gpointer g_class, gpointer null)
     g_param_spec_boolean("pan-mode", "Pan mode", "Toggle panning mode during which mouse events are ignored.",
       FALSE, G_PARAM_READWRITE));
 
+  g_object_class_install_property(gobject_class, CONTROL_MASK_PROPERTY,
+    g_param_spec_boolean("control-mask", "Control Mask", "Controls whether text typed is treated as though each character were CTRL-modified",
+      FALSE, G_PARAM_READWRITE));
+
   widget_class->button_press_event = button_press_event;
   widget_class->motion_notify_event = motion_notify_event;
   widget_class->button_release_event = button_release_event;
-  widget_class->key_press_event = key_press_event;
+  widget_class->key_press_event = key_press_release_event;
+  widget_class->key_release_event = key_press_release_event;
   widget_class->realize = realize;
 
   widget_class->set_scroll_adjustments_signal =
@@ -289,6 +438,7 @@ instance_init(GTypeInstance *instance, gpointer g_class)
   mvte->priv = G_TYPE_INSTANCE_GET_PRIVATE(instance, MAEMO_VTE_TYPE, MaemoVtePrivate);
   mvte->priv->foreign_vadj = NULL;
   mvte->priv->pan_mode = FALSE;
+  mvte->priv->control_mask = FALSE;
   if ((adj = vte_terminal_get_adjustment(VTE_TERMINAL(instance))) != NULL) {
     g_signal_connect(G_OBJECT(adj), "changed", (GCallback)sync_vadj, instance);
     g_signal_connect(G_OBJECT(adj), "value-changed", (GCallback)sync_vadj_value, instance);
