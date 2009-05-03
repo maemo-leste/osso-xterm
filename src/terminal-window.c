@@ -30,6 +30,8 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <libosso.h>
+#include "font-dialog.h"
+#include "terminal-gconf.h"
 
 #ifdef HAVE_OSSO_BROWSER
 #include <osso-browser-interface.h>
@@ -469,7 +471,6 @@ terminal_window_key_press_event (TerminalWindow *window,
         case HILDON_HARDKEY_INCREASE: /* Zoom in */
           {
             TerminalWidget *tw = terminal_window_get_active(window);
-            g_print("terminal_window_key_press_event: HILDON_HARDKEY_INCREASE: tw = 0x%x\n", (int)tw);
             if (tw) {
               if (!terminal_widget_modify_font_size(tw, FONT_SIZE_INC))
                 hildon_banner_show_information(GTK_WIDGET(window), "NULL", _("Already at maximum font size."));
@@ -520,95 +521,6 @@ font_size_in_points(PangoFontDescription *pfd)
   return font_size;
 }
 #endif /* (0) */
-
-static const guint8 font_sizes[] = {6, 8, 10, 12, 16, 24, 32};
-
-static gboolean
-get_font_from_user(const PangoFontDescription *pfd, GtkWindow *parent, char **new_name, int *new_size)
-{
-  GtkWidget
-    *dlg = gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Pick a Font"), parent, GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
-      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OK, GTK_RESPONSE_OK, NULL),
-    *preview = g_object_new(VTE_TYPE_TERMINAL, "visible", TRUE, NULL),
-    *hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, NULL),
-    *tv_name = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, NULL),
-    *pan,
-    *tv_size = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, NULL);
-  GtkListStore
-    *ls_family = gtk_list_store_new(1, G_TYPE_STRING),
-    *ls_size = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
-  PangoContext *pctx = gdk_pango_context_get();
-  PangoFontFamily **families = NULL;
-  PangoFontFace **faces = NULL;
-  int n_families = 0, Nix, n_faces = 0, Nix1;
-  GtkTreeIter itr_family, itr_size;
-  char *str = NULL;
-
-  gtk_tree_view_append_column(GTK_TREE_VIEW(tv_name),
-    gtk_tree_view_column_new_with_attributes("", gtk_cell_renderer_text_new(), "text", 0, "font", 0, NULL));
-  gtk_container_add(GTK_CONTAINER(hbox), g_object_new(HILDON_TYPE_PANNABLE_AREA, "visible", TRUE, "child", tv_name, NULL));
-
-  gtk_tree_view_append_column(GTK_TREE_VIEW(tv_size),
-    gtk_tree_view_column_new_with_attributes("", gtk_cell_renderer_text_new(), "text", 0,  NULL));
-  gtk_container_add_with_properties(GTK_CONTAINER(hbox), pan = g_object_new(HILDON_TYPE_PANNABLE_AREA, "visible", TRUE, "child", tv_size, NULL), "expand", FALSE, NULL);
-  gtk_widget_set_size_request(pan, 80, -1);
-
-  gtk_widget_set_size_request(hbox, -1, 200);
-  gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dlg)->vbox), hbox);
-
-  gtk_container_add_with_properties(GTK_CONTAINER(GTK_DIALOG(dlg)->vbox),
-    g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 0.0, "yscale", 0.0, "child",
-      g_object_new(GTK_TYPE_LABEL,
-        "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", preview, "label", g_dgettext("gtk20", "_Preview:"), "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
-    "expand", FALSE, NULL);
-
-  gtk_widget_set_size_request(preview, -1, 92);
-  gtk_container_add_with_properties(GTK_CONTAINER(GTK_DIALOG(dlg)->vbox), preview, "expand", FALSE, NULL);
-
-  g_object_set_data(G_OBJECT(ls_family), "expand", GINT_TO_POINTER(1));
-  pango_context_list_families(pctx, &families, &n_families);
-  for (Nix = 0 ; Nix < n_families ; Nix++)
-    if (pango_font_family_is_monospace(families[Nix])) {
-      pango_font_family_list_faces(families[Nix], &faces, &n_faces);
-      for (Nix1 = 0 ; Nix1 < n_faces ; Nix1++) {
-        str = g_strdup_printf("%s %s", pango_font_family_get_name(families[Nix]), pango_font_face_get_face_name(faces[Nix1]));
-        gtk_list_store_append(ls_family, &itr_family);
-        gtk_list_store_set(ls_family, &itr_family, 0, str, -1);
-        g_free(str);
-      }
-      g_free(faces); faces = NULL;
-      n_faces = 0;
-    }
-  g_free(families);
-  gtk_tree_view_set_model(GTK_TREE_VIEW(tv_name), GTK_TREE_MODEL(ls_family));
-
-  for (Nix = 0 ; Nix < G_N_ELEMENTS(font_sizes) ; Nix++) {
-    str = g_strdup_printf("%d", font_sizes[Nix]);
-    gtk_list_store_append(ls_size, &itr_size);
-    gtk_list_store_set(ls_size, &itr_size, 0, str, 1, font_sizes[Nix], -1);
-    g_free(str);
-  }
-  gtk_tree_view_set_model(GTK_TREE_VIEW(tv_size), GTK_TREE_MODEL(ls_size));
-
-  if (GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dlg))) {
-  }
-  gtk_widget_destroy(dlg);
-
-  return FALSE;
-}
-
-static void
-font_button_clicked(GtkWidget *font_button, TerminalWindow *terminal_window)
-{
-  char *new_name = NULL;
-  int new_size = 0;
-
-  if (get_font_from_user(vte_terminal_get_font(VTE_TERMINAL(terminal_window_get_active(terminal_window)->terminal)), GTK_WINDOW(terminal_window), &new_name, &new_size)) {
-    gconf_client_set_string(terminal_window->gconf_client, OSSO_XTERM_GCONF_FONT_NAME, new_name, NULL);
-    gconf_client_set_int(terminal_window->gconf_client, OSSO_XTERM_GCONF_FONT_BASE_SIZE, new_size, NULL);
-  }
-}
-
 static void
 terminal_window_init (TerminalWindow *window)
 {
@@ -641,7 +553,7 @@ terminal_window_init (TerminalWindow *window)
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
   button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_SELECT_FONT, "use-stock", TRUE, NULL);
-  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)font_button_clicked, window);
+  g_signal_connect_swapped(G_OBJECT(button), "clicked", (GCallback)show_font_dialog, window);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
   /* Copy */

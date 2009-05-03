@@ -45,6 +45,7 @@ osso_xterm_LDFLAGS =  \
   $(NULL)
 
 osso_xterm_headers =    \
+	font-dialog.h         \
 	terminal-gconf.h      \
 	terminal-settings.h   \
 	terminal-tab-header.h \
@@ -58,6 +59,7 @@ osso_xterm_headers =    \
 
 osso_xterm_SOURCES =    \
 	$(osso_xterm_headers) \
+	font-dialog.c         \
 	main.c                \
 	maemo-vte.c           \
 	terminal-tab-header.c \

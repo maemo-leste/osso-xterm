@@ -2,6 +2,11 @@ osso-xterm (0.14.mh18) unstable; urgency=low
 
   * Fixes: NB#99720 (Toolbar Ctrl not working and focus stays always on it)
   * Fixes: NB#107698 (Place holder text of some other application is still visible after relaunching the FKB in the osso-xterm.)
+  * Fixes: NB#113559 (Double tapping in the font Dialog closes it)
+  * Fixes: NB#113589 (Text in preview in xterm should not be editable.)
+  * Fixes: NB#113574 (Unable to select Italic, Bold or Bold Italic with MheiGB18030C-Medium font family.)
+  * Fixes: NB#113573 (Label "Preview" is going on the scroll bar when text size is 72)
+  * Fixes: NB#113571 (User should not be able to type characters in the size entry box in the font dialog.)
 
  -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed, 29 Apr 2009 17:54:01 +0300
 
