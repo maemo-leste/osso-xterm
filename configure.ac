@@ -1,4 +1,4 @@
-AC_INIT([osso-xterm],[0.13.mh24])
+AC_INIT([osso-xterm],[0.14.mh18])
 
 dnl Initialize automake
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
