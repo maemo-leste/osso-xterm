@@ -370,7 +370,7 @@ realize(GtkWidget *widget)
       int input_mode = 0;
 
       g_object_get(G_OBJECT(imc), "hildon-input-mode", &input_mode, NULL);
-      input_mode = (input_mode & (~HILDON_GTK_INPUT_MODE_AUTOCAP)) | HILDON_GTK_INPUT_MODE_MULTILINE;
+      input_mode = (input_mode & (~(HILDON_GTK_INPUT_MODE_AUTOCAP | HILDON_GTK_INPUT_MODE_MULTILINE | HILDON_GTK_INPUT_MODE_DICTIONARY)));
       g_object_set(G_OBJECT(imc), "hildon-input-mode", input_mode, NULL);
 
       MAEMO_VTE(widget)->priv->imc = imc;

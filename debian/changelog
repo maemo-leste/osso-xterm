@@ -1,3 +1,10 @@
+osso-xterm (0.14.mh19) unstable; urgency=low
+
+  * Turn off FKB dictionary
+  * Fixes: NB#114258 (Word completion is displayed only if characters are entered with FKB)
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  5 May 2009 13:25:11 +0300
+
 osso-xterm (0.14.mh18) unstable; urgency=low
 
   * Fixes: NB#99720 (Toolbar Ctrl not working and focus stays always on it)
