@@ -367,12 +367,7 @@ realize(GtkWidget *widget)
     imc = g_object_get_data(G_OBJECT(widget->window), "im-context");
     g_signal_connect(G_OBJECT(imc), "retrieve-surrounding", (GCallback)imc_retrieve_surrounding, widget);
     if (imc) {
-      int input_mode = 0;
-
-      g_object_get(G_OBJECT(imc), "hildon-input-mode", &input_mode, NULL);
-      input_mode = (input_mode & (~(HILDON_GTK_INPUT_MODE_AUTOCAP | HILDON_GTK_INPUT_MODE_MULTILINE | HILDON_GTK_INPUT_MODE_DICTIONARY)));
-      g_object_set(G_OBJECT(imc), "hildon-input-mode", input_mode, NULL);
-
+      g_object_set(G_OBJECT(imc), "hildon-input-mode", HILDON_GTK_INPUT_MODE_FULL, NULL);
       MAEMO_VTE(widget)->priv->imc = imc;
     }
   }
