@@ -229,13 +229,11 @@ create_font_dialog(FontDialog *fd)
   gtk_container_add(GTK_CONTAINER(fd->dlg->vbox), hbox);
 
   hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, "border-width", 8, NULL);
-  str = g_strdup_printf("%s:", g_dgettext("gtk20", "Color"));
   gtk_container_add_with_properties(GTK_CONTAINER(hbox),
     g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 0.0, "yscale", 0.0, "child",
       g_object_new(GTK_TYPE_LABEL,
-        "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", fd->preview, "label", str, "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
+        "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", fd->preview, "label", g_dgettext("gtk20", "Color"), "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
     "expand", FALSE, NULL);
-  g_free(str);
   fd->fg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox), font_dialog.fg_clr, "expand", FALSE, NULL);
   g_signal_connect(G_OBJECT(fd->fg_clr), "notify::color", (GCallback)clr_changed, fd);
