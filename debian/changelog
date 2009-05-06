@@ -2,6 +2,7 @@ osso-xterm (0.14.mh19) unstable; urgency=low
 
   * Turn off FKB dictionary
   * Fixes: NB#114258 (Word completion is displayed only if characters are entered with FKB)
+  * Fixes: NB#114680 (FKB is not getting closed on giving a cmd and pressing enter .)
 
  -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  5 May 2009 13:25:11 +0300
 
