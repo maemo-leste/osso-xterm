@@ -5,7 +5,7 @@
 #include "font-dialog.h"
 #include "terminal-gconf.h"
 
-#define PREVIEW_TEXT "drwxr-xr-x 2 user users\r\n-rwxr-xr-x 1 user users"
+#define PREVIEW_TEXT "drwxr-xr-x 2 user users"
 
 enum {
   FONT_NAME_STRING_COLUMN,
@@ -22,7 +22,8 @@ enum {
 typedef struct
 {
   GtkDialog *dlg;
-  VteTerminal *preview;
+  GtkWidget *preview;
+  GtkWidget *preview_bg;
 
   GtkTreeView *tv_size;
   GtkTreeModel *tm_size;
@@ -71,6 +72,42 @@ select_iter(GtkTreeView *tv, GtkTreeModel *tm, GtkTreeIter *itr)
 
   gtk_tree_selection_select_iter(gtk_tree_view_get_selection(tv), itr);
   gtk_tree_path_free(tp);
+}
+
+static int
+compare_faces(PangoFontFace **p_face1, PangoFontFace **p_face2, gpointer null)
+{
+  /* most sig. ... weight ... style ... stretch ... variant ... least sig. */
+
+  PangoFontDescription *pfd1 = pango_font_face_describe((*p_face1)), *pfd2 = pango_font_face_describe((*p_face2));
+
+  int weight1, style1, stretch1, variant1,
+      weight2, style2, stretch2, variant2;
+
+  weight1  = pango_font_description_get_weight(pfd1);
+  style1   = pango_font_description_get_style(pfd1);
+  stretch1 = pango_font_description_get_stretch(pfd1);
+  variant1 = pango_font_description_get_variant(pfd1);
+
+  pango_font_description_free(pfd1);
+
+  weight2  = pango_font_description_get_weight(pfd2);
+  style2   = pango_font_description_get_style(pfd2);
+  stretch2 = pango_font_description_get_stretch(pfd2);
+  variant2 = pango_font_description_get_variant(pfd2);
+
+  pango_font_description_free(pfd2);
+
+  return
+    (weight1 != weight2)
+      ? ((weight1 < weight2) ? -1 : 1)
+      : (style1 != style2)
+        ? ((style1 < style2) ? -1 : 1)
+        : (stretch1 != stretch2)
+          ? ((stretch1 < stretch2) ? -1 : 1)
+          : (variant1 != variant2)
+            ? ((variant1 < variant2) ? -1 : 1)
+            : 0;
 }
 
 static void
@@ -137,9 +174,7 @@ sel_changed(GtkTreeSelection *sel, FontDialog *fd)
   if (pfd != NULL) {
     if (size > 0) {
       pango_font_description_set_size(pfd, size * PANGO_SCALE);
-      vte_terminal_reset(fd->preview, TRUE, TRUE);
-      vte_terminal_feed(fd->preview, PREVIEW_TEXT, strlen(PREVIEW_TEXT));
-      vte_terminal_set_font(fd->preview, pfd);
+      gtk_widget_modify_font(fd->preview, pfd);
     }
     pango_font_description_free(pfd);
   }
@@ -152,13 +187,9 @@ clr_changed(GObject *btn, GParamSpec *pspec, FontDialog *fd)
 
   g_object_get(G_OBJECT(fd->fg_clr), "color", &clr_fg, NULL);
   g_object_get(G_OBJECT(fd->bg_clr), "color", &clr_bg, NULL);
-
-  g_print("clr_changed: fg = (%04x, %04x, %04x), bg = (%04x, %04x, %04x)\n",
-    clr_fg->red, clr_fg->green, clr_fg->blue,
-    clr_bg->red, clr_bg->green, clr_bg->blue);
-
-  vte_terminal_set_color_foreground(fd->preview, clr_fg);
-  vte_terminal_set_color_background(fd->preview, clr_bg);
+  gtk_widget_modify_bg(GTK_WIDGET(fd->preview_bg), GTK_STATE_NORMAL, clr_bg);
+  gtk_widget_modify_base(GTK_WIDGET(fd->preview_bg), GTK_STATE_NORMAL, clr_bg);
+  gtk_widget_modify_fg(GTK_WIDGET(fd->preview), GTK_STATE_NORMAL, clr_fg);
   gdk_color_free(clr_fg);
   gdk_color_free(clr_bg);
 }
@@ -176,21 +207,20 @@ create_font_dialog(FontDialog *fd)
   char *str;
   GtkTreeIter itr_size;
   GtkWidget
-    *hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, "border-width", 8, NULL),
+    *hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, NULL),
+    *align,
     *pan;
   GtkListStore
     *ls_name = gtk_list_store_new(4, G_TYPE_STRING, G_TYPE_OBJECT, G_TYPE_OBJECT, PANGO_TYPE_FONT_DESCRIPTION),
     *ls_size = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
   GtkCellLayout *cl;
   GtkCellRenderer *cr;
-
   fd->dlg = GTK_DIALOG(gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Pick a Font"), NULL, GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OK, GTK_RESPONSE_OK, NULL));
-  g_object_set(G_OBJECT(fd->dlg->vbox), "spacing", 0, NULL);
-
-  fd->preview = g_object_new(VTE_TYPE_TERMINAL,  "visible", TRUE, "sensitive", FALSE, NULL);
-  vte_terminal_set_scrollback_lines(fd->preview, 0);
-  vte_terminal_feed(fd->preview, PREVIEW_TEXT, strlen(PREVIEW_TEXT));
+  fd->preview = g_object_new(GTK_TYPE_LABEL, "visible", TRUE, "label", PREVIEW_TEXT, "justify", GTK_JUSTIFY_LEFT, "use-underline", FALSE, NULL);
+  fd->preview_bg = g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, NULL);
+  gtk_container_add(GTK_CONTAINER(fd->preview_bg),
+    g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", (double)0.0, "yalign", (double)0.0, "xscale", (double)0.0, "yscale", (double)0.0, "child", fd->preview, NULL));
   g_signal_connect(G_OBJECT(fd->preview), "realize", (GCallback)preview_realize, fd);
 
   fd->tm_name = GTK_TREE_MODEL(ls_name);
@@ -225,14 +255,16 @@ create_font_dialog(FontDialog *fd)
     g_free(str);
   }
 
-  gtk_widget_set_size_request(hbox, -1, 200);
+  gtk_widget_set_size_request(hbox, -1, 280);
   gtk_container_add(GTK_CONTAINER(fd->dlg->vbox), hbox);
 
-  hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, "border-width", 8, NULL);
+  hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, NULL);
+  align = g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 1.0, "yscale", 0.0, "child", hbox, NULL);
+  gtk_widget_set_size_request(align, -1, 70);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox),
     g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 0.0, "yscale", 0.0, "child",
       g_object_new(GTK_TYPE_LABEL,
-        "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", fd->preview, "label", g_dgettext("gtk20", "Color"), "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
+        "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", fd->fg_clr, "label", g_dgettext("gtk20", "Color"), "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
     "expand", FALSE, NULL);
   fd->fg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox), font_dialog.fg_clr, "expand", FALSE, NULL);
@@ -240,17 +272,9 @@ create_font_dialog(FontDialog *fd)
   fd->bg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
   g_signal_connect(G_OBJECT(fd->bg_clr), "notify::color", (GCallback)clr_changed, fd);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->bg_clr, "expand", FALSE, NULL);
-  gtk_container_add_with_properties(GTK_CONTAINER(font_dialog.dlg->vbox), hbox, "expand", FALSE, NULL);
+  gtk_container_add_with_properties(GTK_CONTAINER(font_dialog.dlg->vbox), align, "expand", FALSE, NULL);
 
-  gtk_container_add_with_properties(GTK_CONTAINER(fd->dlg->vbox),
-    g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 0.0, "yscale", 0.0, "border-width", 8, "child",
-      g_object_new(GTK_TYPE_LABEL,
-        "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", fd->preview, "label", g_dgettext("gtk20", "_Preview:"), "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
-    "expand", FALSE, NULL);
-
-  gtk_widget_set_size_request(GTK_WIDGET(fd->preview), -1, 92);
-  gtk_container_add_with_properties(GTK_CONTAINER(fd->dlg->vbox), 
-    g_object_new(GTK_TYPE_FRAME, "visible", TRUE, "shadow-type", GTK_SHADOW_NONE, "border-width", 8, "child", GTK_WIDGET(fd->preview), NULL), "expand", FALSE, NULL);
+  gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->preview_bg, "expand", TRUE, NULL);
 }
 
 void
@@ -283,6 +307,7 @@ show_font_dialog(GtkWindow *parent)
   for (Nix = 0 ; Nix < n_families ; Nix++)
     if (pango_font_family_is_monospace(families[Nix])) {
       pango_font_family_list_faces(families[Nix], &faces, &n_faces);
+      g_qsort_with_data(faces, n_faces, sizeof(PangoFontFace *), (GCompareDataFunc)compare_faces, NULL);
       for (Nix1 = 0 ; Nix1 < n_faces ; Nix1++) {
         pfd_face = pango_font_face_describe(faces[Nix1]);
         str = pango_font_description_to_string(pfd_face);
