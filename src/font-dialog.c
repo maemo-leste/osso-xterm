@@ -224,7 +224,7 @@ create_font_dialog(FontDialog *fd)
   g_signal_connect(G_OBJECT(fd->preview), "realize", (GCallback)preview_realize, fd);
 
   fd->tm_name = GTK_TREE_MODEL(ls_name);
-  fd->tv_name = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, "hildon-ui-mode", HILDON_UI_MODE_EDIT, "model", ls_name, NULL);
+  fd->tv_name = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, "hildon-ui-mode", HILDON_UI_MODE_EDIT, "model", ls_name, "enable-search", FALSE, NULL);
   fd->sel_name = gtk_tree_view_get_selection(fd->tv_name);
   g_signal_connect(G_OBJECT(gtk_tree_view_get_selection(fd->tv_name)), "changed", (GCallback)sel_changed, fd);
   cr = gtk_cell_renderer_text_new();
@@ -235,7 +235,7 @@ create_font_dialog(FontDialog *fd)
   g_signal_connect(G_OBJECT(fd->tv_name), "realize", (GCallback)tv_realize, fd->dlg);
 
   fd->tm_size = GTK_TREE_MODEL(ls_size);
-  fd->tv_size = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, "hildon-ui-mode", HILDON_UI_MODE_EDIT, "model", ls_size, NULL);
+  fd->tv_size = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, "hildon-ui-mode", HILDON_UI_MODE_EDIT, "model", ls_size, "enable-search", FALSE, NULL);
   fd->sel_size = gtk_tree_view_get_selection(fd->tv_size);
   g_signal_connect(G_OBJECT(gtk_tree_view_get_selection(fd->tv_size)), "changed", (GCallback)sel_changed, fd);
   pan = g_object_new(HILDON_TYPE_PANNABLE_AREA, "visible", TRUE, "child", fd->tv_size, NULL);
