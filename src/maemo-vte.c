@@ -13,6 +13,7 @@ enum
 {
   PAN_MODE_PROPERTY = 1,
   CONTROL_MASK_PROPERTY,
+  MATCH_PROPERTY,
 };
 
 struct _MaemoVtePrivate
@@ -21,6 +22,8 @@ struct _MaemoVtePrivate
   GtkAdjustment *foreign_vadj;
   gboolean pan_mode;
   gboolean control_mask;
+  gboolean been_panning;
+  char *match;
 };
 
 #define PERFORM_SYNC(mvte,src) \
@@ -66,6 +69,7 @@ sync_vadj(GtkAdjustment *src, MaemoVte *mvte)
     dst->step_increment = src->step_increment * factor;
     dst->page_increment = src->page_increment * factor;
     dst->page_size      = src->page_size * factor;
+    mvte->priv->been_panning = TRUE;
     gtk_adjustment_changed(dst);
   }
 }
@@ -82,6 +86,7 @@ sync_vadj_value(GtkAdjustment *src, MaemoVte *mvte)
 
   if (dst->value != src->value * factor) {
     dst->value = src->value * factor;
+    mvte->priv->been_panning = TRUE;
     gtk_adjustment_value_changed(dst);
   }
 }
@@ -177,7 +182,6 @@ control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
 
       if (text)
         if (text[0] != 0) {
-    //      char str[2] = {0, 0};
           GdkModifierType mod = 0;
           GdkEventKey *key_event = (GdkEventKey *)gdk_event_new(GDK_KEY_PRESS);
 
@@ -186,18 +190,11 @@ control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
 
             /* Things that need to be unset after use and before freeing */
             key_event->window = GTK_WIDGET(mvte)->window;
-    //        key_event->string = str;
-    //        key_event->length = 1;
             /* The rest are shallow things */
-    //        key_event->send_event = TRUE;
             key_event->time = GDK_CURRENT_TIME;
             key_event->state = (mod | GDK_CONTROL_MASK) & (~GDK_RELEASE_MASK);
-    //        key_event->hardware_keycode = 0;
-    //        key_event->group = 0;
-    //        key_event->is_modifier = FALSE;
 
             for (Nix = 0 ; text[Nix] != 0 ; Nix++) {
-    //          str[0] = text[Nix];
               key_event->keyval = text[Nix];
 
               key_event->type = GDK_KEY_PRESS;
@@ -262,6 +259,10 @@ get_property(GObject *obj, guint property_id, GValue *value, GParamSpec *pspec)
       g_value_set_boolean(value, MAEMO_VTE(obj)->priv->control_mask);
       break;
 
+    case MATCH_PROPERTY:
+      g_value_set_string(value, MAEMO_VTE(obj)->priv->match);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, property_id, pspec);
   }
@@ -277,12 +278,34 @@ maybe_ignore_mouse_event(GtkWidget *widget, GdkEvent *event, gboolean (*mouse_ev
       : FALSE;
 }
 
+static void
+check_match(MaemoVte *mvte, int x, int y)
+{
+  VteTerminal *vte = VTE_TERMINAL(mvte);
+  char *possible_match = NULL;
+  int x_pad, y_pad;
+  int tag = 0;
+
+  vte_terminal_get_padding(vte, &x_pad, &y_pad);
+
+  possible_match = vte_terminal_match_check(vte, (x - x_pad) / vte->char_width, (y - y_pad) / vte->char_height, &tag);
+
+  if (g_strcmp0(possible_match, mvte->priv->match)) {
+    g_free(mvte->priv->match);
+    mvte->priv->match = possible_match;
+    g_print("check_match: Found new match \"%s\"\n", possible_match);
+    g_object_notify(G_OBJECT(mvte), "match");
+  }
+}
+
 static gboolean
 button_press_event(GtkWidget *widget, GdkEventButton *event)
 {
   MaemoVte *mvte = MAEMO_VTE(widget);
 
   gtk_widget_grab_focus(widget);
+
+  mvte->priv->been_panning = FALSE;
 
   if (mvte->priv->imc)
     if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
@@ -309,6 +332,9 @@ button_release_event(GtkWidget *widget, GdkEventButton *event)
   if (mvte->priv->imc)
     if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
       return TRUE;
+
+  if (!(mvte->priv->been_panning))
+    check_match(mvte, event->x, event->y);
 
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
@@ -375,6 +401,17 @@ realize(GtkWidget *widget)
 }
 
 static void
+finalize(GObject *obj)
+{
+  void (*parent_finalize)(GObject *) = G_OBJECT_CLASS(g_type_class_peek(g_type_parent(MAEMO_VTE_TYPE)))->finalize;
+  MaemoVte *mvte = MAEMO_VTE(obj);
+
+  g_free(mvte->priv->match);
+  if (parent_finalize)
+    parent_finalize(obj);
+}
+
+static void
 class_init(gpointer g_class, gpointer null)
 {
   GtkIMContextClass *gtk_imc_class = GTK_IM_CONTEXT_CLASS(g_type_class_ref(GTK_TYPE_IM_MULTICONTEXT));
@@ -382,6 +419,7 @@ class_init(gpointer g_class, gpointer null)
   MaemoVteClass *mvte_class = MAEMO_VTE_CLASS(g_class);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(g_class);
 
+  gobject_class->finalize = finalize;
   gobject_class->set_property = set_property;
   gobject_class->get_property = get_property;
 
@@ -399,6 +437,10 @@ class_init(gpointer g_class, gpointer null)
   g_object_class_install_property(gobject_class, CONTROL_MASK_PROPERTY,
     g_param_spec_boolean("control-mask", "Control Mask", "Controls whether text typed is treated as though each character were CTRL-modified",
       FALSE, G_PARAM_READWRITE));
+
+  g_object_class_install_property(gobject_class, MATCH_PROPERTY,
+    g_param_spec_string("match", "Match", "The latest regex match the user has clicked on",
+      NULL, G_PARAM_READABLE));
 
   widget_class->button_press_event = button_press_event;
   widget_class->motion_notify_event = motion_notify_event;
@@ -434,6 +476,7 @@ instance_init(GTypeInstance *instance, gpointer g_class)
   mvte->priv->foreign_vadj = NULL;
   mvte->priv->pan_mode = FALSE;
   mvte->priv->control_mask = FALSE;
+  mvte->priv->match = NULL;
   if ((adj = vte_terminal_get_adjustment(VTE_TERMINAL(instance))) != NULL) {
     g_signal_connect(G_OBJECT(adj), "changed",       (GCallback)sync_vadj,       instance);
     g_signal_connect(G_OBJECT(adj), "value-changed", (GCallback)sync_vadj_value, instance);

@@ -323,6 +323,12 @@ vte_adj_changed(GtkAdjustment *adj, GtkWidget *bt_pan)
 }
 
 static void
+notify_match(GObject *vte, GParamSpec *pspec, gpointer null)
+{
+*
+}
+
+static void
 terminal_widget_init (TerminalWidget *widget)
 {
   GError *err = NULL;
@@ -429,6 +435,7 @@ terminal_widget_init (TerminalWidget *widget)
   }
 
   widget->terminal = g_object_new(MAEMO_VTE_TYPE, "pan-mode", TRUE, NULL);
+  g_signal_connect(G_OBJECT(widget->terminal), "notify::match", (GCallback)notify_match, NULL);
 
 #if (0)
   widget->im_context = gtk_im_multicontext_new ();
