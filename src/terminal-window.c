@@ -481,7 +481,6 @@ terminal_window_key_press_event (TerminalWindow *window,
         case HILDON_HARDKEY_DECREASE: /* Zoom out */
           {
             TerminalWidget *tw = terminal_window_get_active(window);
-            g_print("terminal_window_key_press_event: HILDON_HARDKEY_DECREASE: tw = 0x%x\n", (int)tw);
             if (tw) {
               if (!terminal_widget_modify_font_size(tw, -FONT_SIZE_INC))
                 hildon_banner_show_information(GTK_WIDGET(window), "NULL", _("Already at minimum font size."));
@@ -919,8 +918,6 @@ terminal_window_paste_show (GtkWidget *hildon_app_menu,
   gboolean paste_enabled = 
     gtk_clipboard_wait_is_text_available (gtk_clipboard_get (GDK_NONE));
 
-  g_print("paste_show\n");
-
   g_object_set (G_OBJECT (window->paste_button), "sensitive", paste_enabled, NULL);
 }
 
@@ -1290,7 +1287,6 @@ terminal_window_real_add (TerminalWindow    *window,
                               G_CALLBACK (terminal_window_update_actions), window);
     terminal_window_update_actions (window);
 
-    g_print("terminal_window_real_add: Creating unfs_button\n");
     window->unfs_button = GTK_WIDGET(gtk_tool_button_new_from_stock(GTK_STOCK_LEAVE_FULLSCREEN));
     g_signal_connect(G_OBJECT(window->unfs_button), "clicked", (GCallback)terminal_window_action_fullscreen, window);
     terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(window->unfs_button));

@@ -53,6 +53,9 @@ sync_vadj(GtkAdjustment *src, MaemoVte *mvte)
   double factor;
 
   set_up_sync(mvte, &src, &dst, &factor);
+
+  if (!(src && dst)) return;
+
   if (!(dst->upper          == src->upper * factor && 
         dst->lower          == src->lower * factor && 
         dst->step_increment == src->step_increment * factor && 
@@ -74,6 +77,9 @@ sync_vadj_value(GtkAdjustment *src, MaemoVte *mvte)
   double factor;
 
   set_up_sync(mvte, &src, &dst, &factor);
+
+  if (!(src && dst)) return;
+
   if (dst->value != src->value * factor) {
     dst->value = src->value * factor;
     gtk_adjustment_value_changed(dst);
@@ -81,13 +87,16 @@ sync_vadj_value(GtkAdjustment *src, MaemoVte *mvte)
 }
 
 static void
-set_scroll_adjustments (MaemoVte *mvte, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment)
+set_scroll_adjustments(MaemoVte *mvte, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment)
 {
+  GtkAdjustment *my_vadj = vte_terminal_get_adjustment(VTE_TERMINAL(mvte));
   /* This function ignores hadjustment */
 
   if (mvte->priv->foreign_vadj) {
     g_signal_handlers_disconnect_by_func(G_OBJECT(mvte->priv->foreign_vadj), sync_vadj,       mvte);
     g_signal_handlers_disconnect_by_func(G_OBJECT(mvte->priv->foreign_vadj), sync_vadj_value, mvte);
+    g_signal_handlers_disconnect_by_func(G_OBJECT(my_vadj),                  sync_vadj,       mvte);
+    g_signal_handlers_disconnect_by_func(G_OBJECT(my_vadj),                  sync_vadj_value, mvte);
     g_object_unref(mvte->priv->foreign_vadj);
     mvte->priv->foreign_vadj = NULL;
   }
@@ -96,15 +105,9 @@ set_scroll_adjustments (MaemoVte *mvte, GtkAdjustment *hadjustment, GtkAdjustmen
     mvte->priv->foreign_vadj = g_object_ref(vadjustment);
     g_signal_connect(G_OBJECT(vadjustment), "changed",       (GCallback)sync_vadj,       mvte);
     g_signal_connect(G_OBJECT(vadjustment), "value-changed", (GCallback)sync_vadj_value, mvte);
+    g_signal_connect(G_OBJECT(my_vadj),     "changed",       (GCallback)sync_vadj,       mvte);
+    g_signal_connect(G_OBJECT(my_vadj),     "value-changed", (GCallback)sync_vadj_value, mvte);
   }
-}
-
-static void
-finalize(GObject *obj)
-{
-  MaemoVte *mvte = MAEMO_VTE(obj);
-
-  set_scroll_adjustments(mvte, NULL, NULL);
 }
 
 static void
@@ -166,8 +169,6 @@ static void
 control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
 {
   /* This function is soooo not Unicode safe ! */
-  g_print("control_mode_commit: Entering\n");
-
   MaemoVte *mvte = g_object_get_data(G_OBJECT(wnd), "mvte");
 
   if (mvte)
@@ -381,7 +382,6 @@ class_init(gpointer g_class, gpointer null)
   MaemoVteClass *mvte_class = MAEMO_VTE_CLASS(g_class);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(g_class);
 
-  gobject_class->finalize = finalize;
   gobject_class->set_property = set_property;
   gobject_class->get_property = get_property;
 
@@ -435,7 +435,7 @@ instance_init(GTypeInstance *instance, gpointer g_class)
   mvte->priv->pan_mode = FALSE;
   mvte->priv->control_mask = FALSE;
   if ((adj = vte_terminal_get_adjustment(VTE_TERMINAL(instance))) != NULL) {
-    g_signal_connect(G_OBJECT(adj), "changed", (GCallback)sync_vadj, instance);
+    g_signal_connect(G_OBJECT(adj), "changed",       (GCallback)sync_vadj,       instance);
     g_signal_connect(G_OBJECT(adj), "value-changed", (GCallback)sync_vadj_value, instance);
   }
 }

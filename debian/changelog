@@ -1,7 +1,9 @@
 osso-xterm (0.14.mh20) unstable; urgency=low
 
+  * Change preview widget to GtkEventBox + GtkLabel
   * Fixes: NB#114697 (Font styles are not in particular order)
   * Fixes: NB#114784 (Preview is not proper after changing the font from 32 to 12 and extra cursor is shown in preview.)
+  * Fixes: NB#114084 (Xterm crashes on on opening fourth new window)
 
  -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Thu,  7 May 2009 14:15:37 +0300
 

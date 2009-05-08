@@ -90,41 +90,42 @@ gboolean terminal_manager_new_window (TerminalManager *manager,
 {
   TerminalWindow *window = TERMINAL_WINDOW(terminal_window_new());
 
-  g_signal_connect(window,
-		   "destroy",
-		   G_CALLBACK(terminal_manager_window_destroy),
-		   manager);
-  g_signal_connect(window,
-		   "new_window",
-		   G_CALLBACK(terminal_manager_window_new_window),
-		   manager);
-  g_signal_connect (window, 
-                    "global_state_changed", 
-                    G_CALLBACK (terminal_manager_global_state_changed), 
-                    manager);
+  if (terminal_window_launch(window, command, error)) {
 
-  /* when focused */
-  g_signal_connect (window, 
-                    "focus-in-event", 
-                    G_CALLBACK (terminal_manager_focus_in_actions), 
-                    manager);
+    g_signal_connect(window,
+		     "destroy",
+		     G_CALLBACK(terminal_manager_window_destroy),
+		     manager);
+    g_signal_connect(window,
+		     "new_window",
+		     G_CALLBACK(terminal_manager_window_new_window),
+		     manager);
+    g_signal_connect (window, 
+                      "global_state_changed", 
+                      G_CALLBACK (terminal_manager_global_state_changed), 
+                      manager);
 
-  manager->windows = g_slist_append(manager->windows, window);
-  g_object_set_data(G_OBJECT(window), "osso", g_object_get_data(G_OBJECT(manager), "osso"));
+    /* when focused */
+    g_signal_connect (window, 
+                      "focus-in-event", 
+                      G_CALLBACK (terminal_manager_focus_in_actions), 
+                      manager);
 
-  hildon_program_add_window(HILDON_PROGRAM(manager), HILDON_WINDOW(window));
+    manager->windows = g_slist_append(manager->windows, window);
+    g_object_set_data(G_OBJECT(window), "osso", g_object_get_data(G_OBJECT(manager), "osso"));
 
-  if (!terminal_window_launch(window, command, error)) {
-    manager->windows = g_slist_remove(manager->windows, window);
+    hildon_program_add_window(HILDON_PROGRAM(manager), HILDON_WINDOW(window));
+
+    terminal_window_set_state (window, window);
+
+    manager->current = window;
+
+    return TRUE;
+  }
+  else {
     gtk_widget_destroy(GTK_WIDGET(window));
     return FALSE;
   }
-
-  terminal_window_set_state (window, window);
-
-  manager->current = window;
-
-  return TRUE;
 }
 
 static void terminal_manager_window_destroy (TerminalWindow *window,
@@ -152,9 +153,7 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
 {
   GError *error = NULL;
   if (!terminal_manager_new_window(manager, command, &error)) {
-    hildon_banner_show_information(GTK_WIDGET(window),
-				   _("Unable to launch terminal: %s\n"),
-				   error ? error->message : "Unknown error");
+    hildon_banner_show_information(GTK_WIDGET(window), GTK_STOCK_DIALOG_ERROR, g_dgettext("gtk20", "Unspecified error"));
     if (error)
       g_error_free(error);
   }

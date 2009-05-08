@@ -199,7 +199,6 @@ static GtkTargetEntry target_table[] =
 
 G_DEFINE_TYPE (TerminalWidget, terminal_widget, GTK_TYPE_VBOX);
 
-
 static void
 terminal_widget_class_init (TerminalWidgetClass *klass)
 {
