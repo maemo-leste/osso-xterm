@@ -166,6 +166,7 @@ struct _TerminalWindow
   GtkWidget *paste_button;
   GtkWidget *unfs_button;
   GtkWidget *font_button;
+  HildonAppMenu *match_menu;
 
   GConfClient *gconf_client;
   GSList              *keys;
@@ -520,6 +521,57 @@ font_size_in_points(PangoFontDescription *pfd)
   return font_size;
 }
 #endif /* (0) */
+
+static void
+open_match(GtkWidget *btn, TerminalWindow *wnd)
+{
+  char *match = g_object_get_data(G_OBJECT(wnd->match_menu), "match");
+
+  if (match) {
+    DBusConnection *conn = dbus_bus_get(DBUS_BUS_SESSION, NULL);
+    if (conn) {
+      DBusMessage *msg = dbus_message_new_method_call(OSSO_BROWSER_SERVICE, "/", OSSO_BROWSER_SERVICE, OSSO_BROWSER_OPEN_NEW_WINDOW_REQ);
+      if (msg) {
+        if (dbus_message_append_args(msg, DBUS_TYPE_STRING, &match, DBUS_TYPE_INVALID)) {
+          DBusMessage *reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, NULL);
+          if (reply)
+            dbus_message_unref(reply);
+        }
+      }
+    }
+  }
+}
+
+static void
+copy_match(GtkWidget *btn, TerminalWindow *wnd)
+{
+  char *match = g_object_get_data(G_OBJECT(wnd->match_menu), "match");
+
+  if (match) {
+    GtkClipboard *clipboard = gtk_clipboard_get_for_display(gtk_widget_get_display(btn), GDK_SELECTION_CLIPBOARD);
+    if (clipboard)
+      gtk_clipboard_set_text(clipboard, match, -1);
+    hildon_banner_show_information(GTK_WIDGET(wnd), "NULL", g_dgettext("hildon-common-strings", "Copied"));
+  }
+}
+
+static HildonAppMenu *
+make_match_menu(TerminalWindow *wnd)
+{
+  HildonAppMenu *menu = HILDON_APP_MENU(hildon_app_menu_new());
+  GtkButton *btn;
+
+  btn = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_COPY, "use-stock", TRUE, NULL);
+  g_signal_connect(G_OBJECT(btn), "clicked", (GCallback)copy_match, wnd);
+  hildon_app_menu_append(menu, btn);
+
+  btn = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_OPEN, "use-stock", TRUE, NULL);
+  g_signal_connect(G_OBJECT(btn), "clicked", (GCallback)open_match, wnd);
+  hildon_app_menu_append(menu, btn);
+
+  return menu;
+}
+
 static void
 terminal_window_init (TerminalWindow *window)
 {
@@ -545,6 +597,8 @@ terminal_window_init (TerminalWindow *window)
   gtk_window_set_title(GTK_WINDOW(window), "osso_xterm");
 
   hildon_app_menu = hildon_app_menu_new();
+
+  window->match_menu = make_match_menu(window);
 
   /* New window */
   button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_NEW, "use-stock", TRUE, NULL);
@@ -978,7 +1032,7 @@ static void
 terminal_window_action_fullscreen (GtkWidget *fs_button,
                                 TerminalWindow     *window)
 {
-  fs = !fs;
+  g_object_get(G_OBJECT(fs_button), "active", &fs, NULL);
   g_signal_emit (G_OBJECT (window), 
 		   terminal_window_signals[SIGNAL_WINDOW_STATE_CHANGED], 0);
 
@@ -1264,6 +1318,18 @@ terminal_widget_destroyed (GObject *obj, gpointer data)
 }
 
 static void
+notify_match(GtkWidget *widget, GParamSpec *pspec, TerminalWindow *wnd)
+{
+  char *match = NULL;
+
+  g_object_get(G_OBJECT(widget), "match", &match, NULL);
+  if (match) {
+    g_object_set_data_full(G_OBJECT(wnd->match_menu), "match", match, (GDestroyNotify)g_free);
+    hildon_app_menu_popup(wnd->match_menu, GTK_WINDOW(wnd));
+  }
+}
+
+static void
 terminal_window_real_add (TerminalWindow    *window,
 		       TerminalWidget *widget)
 {
@@ -1286,12 +1352,12 @@ terminal_window_real_add (TerminalWindow    *window,
     g_signal_connect_swapped (G_OBJECT (widget), "selection-changed",
                               G_CALLBACK (terminal_window_update_actions), window);
     terminal_window_update_actions (window);
+    g_signal_connect(G_OBJECT(widget->terminal), "notify::match", (GCallback)notify_match, window);
 
-    window->unfs_button = GTK_WIDGET(gtk_tool_button_new_from_stock(GTK_STOCK_LEAVE_FULLSCREEN));
-    g_signal_connect(G_OBJECT(window->unfs_button), "clicked", (GCallback)terminal_window_action_fullscreen, window);
+    window->unfs_button = GTK_WIDGET(g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "visible", TRUE, "active", fs, "icon-widget",
+      g_object_new(GTK_TYPE_IMAGE, "visible", TRUE, "icon-name", "general_fullsize", "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL));
+    g_signal_connect(G_OBJECT(window->unfs_button), "toggled", (GCallback)terminal_window_action_fullscreen, window);
     terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(window->unfs_button));
-    if (window->unfs_button)
-      gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(window->unfs_button), fs ? GTK_STOCK_LEAVE_FULLSCREEN : GTK_STOCK_FULLSCREEN);
     /*   window_list = g_slist_append(window_list, window);
      */
 }
@@ -1427,8 +1493,6 @@ void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
     if (!fs) {
       if (window == current) {
 	gtk_window_unfullscreen(GTK_WINDOW(window));
-  if (window->unfs_button)
-    gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(window->unfs_button), GTK_STOCK_FULLSCREEN);
 #if (0)
 	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
 #endif /* (0) */
@@ -1438,8 +1502,6 @@ void terminal_window_set_state (TerminalWindow *window, TerminalWindow *current)
     } else {
       if (window == current) {
 	gtk_window_fullscreen(GTK_WINDOW(window));
-  if (window->unfs_button)
-    gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(window->unfs_button), GTK_STOCK_LEAVE_FULLSCREEN);
 #if (0)
 	g_idle_add ((GSourceFunc)terminal_window_set_menu_fs_idle, window);
 #endif /* (0) */

@@ -2,6 +2,7 @@ osso-xterm (0.14.mh21) unstable; urgency=low
 
   * Turn off "enable-search" for the font dialog GtkTreeView widgets
   * Fixes: NB#115454 (Text is pasted in Font dialog in the mentioned scenario)
+  * Fixes: MB#3049 (osso-xterm contextual menu for copying/opening URLs)
 
  -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Fri,  8 May 2009 11:29:28 +0300
 

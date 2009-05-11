@@ -293,7 +293,6 @@ check_match(MaemoVte *mvte, int x, int y)
   if (g_strcmp0(possible_match, mvte->priv->match)) {
     g_free(mvte->priv->match);
     mvte->priv->match = possible_match;
-    g_print("check_match: Found new match \"%s\"\n", possible_match);
     g_object_notify(G_OBJECT(mvte), "match");
   }
 }

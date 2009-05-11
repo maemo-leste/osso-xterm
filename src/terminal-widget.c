@@ -307,7 +307,11 @@ maybe_set_pan_mode(GObject *bt_pan, GParamSpec *pspec, GObject *mvte)
   gboolean active;
 
   g_object_get(bt_pan, "active", &active, NULL);
-  g_object_set(bt_pan, "stock-id", active ? TERMINAL_WIDGET_STOCK_DO_NOT_PAN : TERMINAL_WIDGET_STOCK_PAN, NULL);
+  g_object_set(bt_pan, "icon-widget", g_object_new(GTK_TYPE_IMAGE, "visible", TRUE,
+      "icon-name", active 
+        ? "browser_panning_mode_on"
+        : "browser_panning_mode_off",
+      "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
   g_object_set(mvte, "pan-mode", !active, NULL);
 }
 
@@ -323,9 +327,16 @@ vte_adj_changed(GtkAdjustment *adj, GtkWidget *bt_pan)
 }
 
 static void
-notify_match(GObject *vte, GParamSpec *pspec, gpointer null)
+notify_active(GObject *btn, GParamSpec *pspec, gpointer null)
 {
-*
+  gboolean active;
+  GtkWidget *new_icon;
+
+  g_object_get(G_OBJECT(btn), "active", &active, NULL);
+
+  new_icon = g_object_new(GTK_TYPE_IMAGE, "visible", TRUE, "icon-name", 
+    active ? "browser_panning_mode_off" : "browser_panning_mode_on", "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL);
+  g_object_set(G_OBJECT(btn), "icon-widget", new_icon, NULL);
 }
 
 static void
@@ -435,7 +446,6 @@ terminal_widget_init (TerminalWidget *widget)
   }
 
   widget->terminal = g_object_new(MAEMO_VTE_TYPE, "pan-mode", TRUE, NULL);
-  g_signal_connect(G_OBJECT(widget->terminal), "notify::match", (GCallback)notify_match, NULL);
 
 #if (0)
   widget->im_context = gtk_im_multicontext_new ();
@@ -497,7 +507,10 @@ terminal_widget_init (TerminalWidget *widget)
   gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
-  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "stock-id", TERMINAL_WIDGET_STOCK_PAN, NULL);
+  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "visible", TRUE, "icon-widget",
+      g_object_new(GTK_TYPE_IMAGE, "visible", TRUE, "icon-name", "browser_panning_mode_on", "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
+  g_signal_connect(G_OBJECT(widget->pan_button), "notify::active", (GCallback)notify_active, NULL);
+
   gtk_tool_item_set_expand(widget->pan_button, FALSE);
   gtk_widget_show(GTK_WIDGET(widget->pan_button));
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), widget->pan_button, -1);
