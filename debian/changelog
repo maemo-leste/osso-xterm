@@ -1,6 +1,7 @@
 osso-xterm (0.14.mh21) unstable; urgency=low
 
   * Turn off "enable-search" for the font dialog GtkTreeView widgets
+  * Replace fullscreen and pan-enable icons with ones stolen from browser
   * Fixes: NB#115454 (Text is pasted in Font dialog in the mentioned scenario)
   * Fixes: MB#3049 (osso-xterm contextual menu for copying/opening URLs)
 
