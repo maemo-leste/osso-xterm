@@ -290,7 +290,7 @@ check_match(MaemoVte *mvte, int x, int y)
 
   possible_match = vte_terminal_match_check(vte, (x - x_pad) / vte->char_width, (y - y_pad) / vte->char_height, &tag);
 
-  if (g_strcmp0(possible_match, mvte->priv->match)) {
+  if (possible_match || g_strcmp0(possible_match, mvte->priv->match)) {
     g_free(mvte->priv->match);
     mvte->priv->match = possible_match;
     g_object_notify(G_OBJECT(mvte), "match");
