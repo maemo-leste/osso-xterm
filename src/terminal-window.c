@@ -841,7 +841,7 @@ terminal_window_update_actions (TerminalWindow *window)
   if (G_LIKELY (terminal != NULL))
     {
       g_object_set (G_OBJECT (window->copy_button),
-                    "sensitive", terminal_widget_has_selection (terminal),
+                    "visible", terminal_widget_has_selection (terminal),
                     NULL);
     }
 }
@@ -972,7 +972,7 @@ terminal_window_paste_show (GtkWidget *hildon_app_menu,
   gboolean paste_enabled = 
     gtk_clipboard_wait_is_text_available (gtk_clipboard_get (GDK_NONE));
 
-  g_object_set (G_OBJECT (window->paste_button), "sensitive", paste_enabled, NULL);
+  g_object_set (G_OBJECT (window->paste_button), "visible", paste_enabled, NULL);
 }
 
 static void

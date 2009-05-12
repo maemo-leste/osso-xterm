@@ -216,7 +216,7 @@ create_font_dialog(FontDialog *fd)
   GtkCellLayout *cl;
   GtkCellRenderer *cr;
   fd->dlg = GTK_DIALOG(gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Pick a Font"), NULL, GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
-      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OK, GTK_RESPONSE_OK, NULL));
+      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE, GTK_RESPONSE_OK, NULL));
   fd->preview = g_object_new(GTK_TYPE_LABEL, "visible", TRUE, "label", PREVIEW_TEXT, "justify", GTK_JUSTIFY_LEFT, "use-underline", FALSE, NULL);
   fd->preview_bg = g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, NULL);
   gtk_container_add(GTK_CONTAINER(fd->preview_bg),

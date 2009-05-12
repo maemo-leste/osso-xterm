@@ -320,10 +320,10 @@ vte_adj_changed(GtkAdjustment *adj, GtkWidget *bt_pan)
 {
   gboolean current_sensitive, current_active;
   gboolean can_pan = (adj->upper - adj->page_size > adj->lower);
-  g_object_get(G_OBJECT(bt_pan), "sensitive", &current_sensitive, "active", &current_active, NULL);
+  g_object_get(G_OBJECT(bt_pan), "visible", &current_sensitive, "active", &current_active, NULL);
 
   if (current_sensitive != can_pan || current_active == can_pan)
-    g_object_set(G_OBJECT(bt_pan), "sensitive", can_pan, "active", !can_pan, NULL);
+    g_object_set(G_OBJECT(bt_pan), "visible", can_pan, "active", !can_pan, NULL);
 }
 
 static void
