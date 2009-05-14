@@ -551,7 +551,7 @@ copy_match(GtkWidget *btn, TerminalWindow *wnd)
     GtkClipboard *clipboard = gtk_clipboard_get_for_display(gtk_widget_get_display(btn), GDK_SELECTION_CLIPBOARD);
     if (clipboard)
       gtk_clipboard_set_text(clipboard, match, -1);
-    hildon_banner_show_information(GTK_WIDGET(wnd), "NULL", g_dgettext("hildon-common-strings", "Copied"));
+    hildon_banner_show_information(GTK_WIDGET(wnd), "NULL", g_dgettext("hildon-common-strings", "ecoc_ib_edwin_copied"));
   }
 }
 
@@ -984,7 +984,7 @@ terminal_window_action_copy (GtkButton    *copy_button,
   terminal = terminal_window_get_active (window);
   if (G_LIKELY (terminal != NULL)) {
     terminal_widget_copy_clipboard (terminal);
-    hildon_banner_show_information(GTK_WIDGET(wnd), "NULL", g_dgettext("hildon-common-strings", "Copied"));
+    hildon_banner_show_information(GTK_WIDGET(window), "NULL", g_dgettext("hildon-common-strings", "ecoc_ib_edwin_copied"));
   }
 }
 
