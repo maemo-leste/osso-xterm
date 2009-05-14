@@ -984,6 +984,7 @@ terminal_window_action_copy (GtkButton    *copy_button,
   terminal = terminal_window_get_active (window);
   if (G_LIKELY (terminal != NULL)) {
     terminal_widget_copy_clipboard (terminal);
+    hildon_banner_show_information(GTK_WIDGET(wnd), "NULL", g_dgettext("hildon-common-strings", "Copied"));
   }
 }
 

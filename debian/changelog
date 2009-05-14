@@ -2,7 +2,9 @@ osso-xterm (0.14.mh22) unstable; urgency=low
 
   * Font dialog gets GTK_STOCK_SAVE instead of GTK_STOCK_OK
   * Don't desensitize menu items. Hide them instead.
+  * Show "Copied" information banner when copying text (not just URLs)
   * Fixes: NB#116227 (osso-xterm using insensitive menu items)
+  * Fixes: NB#116501 (Inconsistency in showing copied banner)
 
  -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 11 May 2009 17:36:56 +0300
 
