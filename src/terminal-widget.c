@@ -112,11 +112,6 @@ static void     terminal_widget_vte_eof                       (VteTerminal    *t
 static gboolean terminal_widget_vte_button_press_event        (VteTerminal    *terminal,
                                                                GdkEventButton *event,
                                                                TerminalWidget *widget);
-#if (0)
-static gboolean terminal_widget_vte_button_release_event        (VteTerminal    *terminal,
-								 GdkEventButton *event,
-								 TerminalWidget *widget);
-#endif /* (0) */
 static gboolean terminal_widget_vte_key_press_event           (VteTerminal    *terminal,
                                                                GdkEventKey    *event,
                                                                TerminalWidget *widget);
@@ -273,70 +268,41 @@ terminal_widget_class_init (TerminalWidgetClass *klass)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 }
-#if (0)
-static gboolean
-terminal_widget_vte_focus_in_event (VteTerminal    *terminal,
-                                    GdkEventFocus *event,
-                                    TerminalWidget *widget)
-{
-  g_return_val_if_fail (VTE_IS_TERMINAL (terminal), FALSE);
-  g_return_val_if_fail (TERMINAL_IS_WIDGET (widget), FALSE);
-
-  gtk_im_context_focus_in (widget->im_context);
-
-  return FALSE;
-}
-
-
-static gboolean
-terminal_widget_vte_focus_out_event (VteTerminal    *terminal,
-				     GdkEventFocus *event,
-				     TerminalWidget *widget)
-{
-  g_return_val_if_fail (VTE_IS_TERMINAL (terminal), FALSE);
-  g_return_val_if_fail (TERMINAL_IS_WIDGET (widget), FALSE);
-
-  gtk_im_context_focus_out (widget->im_context);
-
-  return FALSE;
-}
-#endif /* (0) */
-static void
-maybe_set_pan_mode(GObject *bt_pan, GParamSpec *pspec, GObject *mvte)
-{
-  gboolean active;
-
-  g_object_get(bt_pan, "active", &active, NULL);
-  g_object_set(bt_pan, "icon-widget", g_object_new(GTK_TYPE_IMAGE, "visible", TRUE,
-      "icon-name", active 
-        ? "browser_panning_mode_on"
-        : "browser_panning_mode_off",
-      "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
-  g_object_set(mvte, "pan-mode", !active, NULL);
-}
 
 static void
-vte_adj_changed(GtkAdjustment *adj, GtkWidget *bt_pan)
+maybe_set_pan_mode(TerminalWidget *terminal_widget, GParamSpec *pspec, GObject *src)
 {
-  gboolean current_sensitive, current_active;
-  gboolean can_pan = (adj->upper - adj->page_size > adj->lower);
-  g_object_get(G_OBJECT(bt_pan), "visible", &current_sensitive, "active", &current_active, NULL);
+  GObject *pan_btn_obj = G_OBJECT(terminal_widget->pan_button);
+  GObject *mvte_obj = G_OBJECT(terminal_widget->terminal);
+  GtkAdjustment *adj = vte_terminal_get_adjustment(VTE_TERMINAL(terminal_widget->terminal));
+  gboolean is_active, bt_pan_visible, is_pan_mode,
+           can_pan = (adj->upper - adj->page_size > adj->lower);
 
-  if (current_sensitive != can_pan || current_active == can_pan)
-    g_object_set(G_OBJECT(bt_pan), "visible", can_pan, "active", !can_pan, NULL);
-}
+  g_object_freeze_notify(pan_btn_obj);
 
-static void
-notify_active(GObject *btn, GParamSpec *pspec, gpointer null)
-{
-  gboolean active;
-  GtkWidget *new_icon;
+  g_object_get(pan_btn_obj, "visible", &bt_pan_visible, "active", &is_active, NULL);
+  g_object_get(mvte_obj, "pan-mode", &is_pan_mode, NULL);
 
-  g_object_get(G_OBJECT(btn), "active", &active, NULL);
+  if (bt_pan_visible != can_pan)
+    g_object_set(pan_btn_obj, "visible", can_pan, NULL);
 
-  new_icon = g_object_new(GTK_TYPE_IMAGE, "visible", TRUE, "icon-name", 
-    active ? "browser_panning_mode_off" : "browser_panning_mode_on", "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL);
-  g_object_set(G_OBJECT(btn), "icon-widget", new_icon, NULL);
+  if (can_pan) {
+    if (is_pan_mode != !is_active) {
+      g_object_set(mvte_obj, "pan-mode", !is_active, NULL);
+
+      g_object_set(pan_btn_obj, "icon-widget", 
+        g_object_new(GTK_TYPE_IMAGE, "visible", TRUE,
+          "icon-name", !is_active
+                         ? "browser_panning_mode_off" 
+                         : "browser_panning_mode_on",
+          "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
+    }
+  }
+  else
+  if (is_pan_mode)
+    g_object_set(mvte_obj, "pan-mode", FALSE, NULL);
+
+  g_object_thaw_notify(pan_btn_obj);
 }
 
 static void
@@ -447,15 +413,6 @@ terminal_widget_init (TerminalWidget *widget)
 
   widget->terminal = g_object_new(MAEMO_VTE_TYPE, "pan-mode", TRUE, NULL);
 
-#if (0)
-  widget->im_context = gtk_im_multicontext_new ();
-  g_signal_connect (G_OBJECT (widget->terminal), "focus-in-event",
-                    G_CALLBACK (terminal_widget_vte_focus_in_event), widget);
-  g_signal_connect (G_OBJECT (widget->terminal), "focus-out-event",
-                    G_CALLBACK (terminal_widget_vte_focus_out_event), widget);
-  g_signal_connect (G_OBJECT (widget->terminal), "button-release-event",
-                    G_CALLBACK (terminal_widget_vte_button_release_event), widget);
-#endif /* (0) */
   g_signal_connect (G_OBJECT (widget->terminal), "child-exited",
                     G_CALLBACK (terminal_widget_vte_child_exited), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "encoding-changed",
@@ -507,17 +464,17 @@ terminal_widget_init (TerminalWidget *widget)
   gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
-  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "visible", TRUE, "icon-widget",
-      g_object_new(GTK_TYPE_IMAGE, "visible", TRUE, "icon-name", "browser_panning_mode_on", "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
-  g_signal_connect(G_OBJECT(widget->pan_button), "notify::active", (GCallback)notify_active, NULL);
+  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "icon-widget",
+    g_object_new(GTK_TYPE_IMAGE, "visible", TRUE, "icon-name", "browser_panning_mode_on", "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
+  g_print("terminal_widget_init: Created pan button %p\n", widget->pan_button);
 
   gtk_tool_item_set_expand(widget->pan_button, FALSE);
   gtk_widget_show(GTK_WIDGET(widget->pan_button));
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), widget->pan_button, -1);
 
-  g_signal_connect(G_OBJECT(vte_terminal_get_adjustment(VTE_TERMINAL(widget->terminal))), "changed", (GCallback)vte_adj_changed, widget->pan_button);
-  g_signal_connect(G_OBJECT(widget->pan_button), "notify::active", (GCallback)maybe_set_pan_mode, widget->terminal);
-  g_signal_connect(G_OBJECT(widget->pan_button), "notify::sensitive", (GCallback)maybe_set_pan_mode, widget->terminal);
+  g_signal_connect_swapped(G_OBJECT(vte_terminal_get_adjustment(VTE_TERMINAL(widget->terminal))), "changed", (GCallback)maybe_set_pan_mode, widget);
+  g_signal_connect_swapped(G_OBJECT(widget->pan_button), "notify::active", (GCallback)maybe_set_pan_mode, widget);
+  g_signal_connect_swapped(G_OBJECT(widget->pan_button), "notify::visible", (GCallback)maybe_set_pan_mode, widget);
 
 #ifdef DEBUG
   g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
@@ -1048,46 +1005,14 @@ terminal_widget_vte_button_press_event (VteTerminal    *terminal,
                                         GdkEventButton *event,
                                         TerminalWidget *widget)
 {
-#if (0)
-  if (hildon_gtk_im_context_filter_event (widget->im_context, (GdkEvent*)event))
-    {
-      return TRUE;
-    }
-#endif /* (0) */
   if (event->button == 3)
     {
       g_signal_emit (G_OBJECT (widget), widget_signals[CONTEXT_MENU], 0, event);
       return TRUE;
     }
-#if (0)
-  else
-    {
-      widget->im_pending = TRUE;
-    }
-#endif /* (0) */
   return FALSE;
 }
-#if (0)
-static gboolean
-terminal_widget_vte_button_release_event (VteTerminal    *terminal,
-                                          GdkEventButton *event,
-                                          TerminalWidget *widget)
-{
-  if (hildon_gtk_im_context_filter_event (widget->im_context, (GdkEvent*)event))
-    {
-      return TRUE;
-    }
 
-  if (event->button != 3 && widget->im_pending)
-    {
-      widget->im_pending = FALSE;
-      hildon_gtk_im_context_show(widget->im_context);
-      gtk_im_context_focus_in (widget->im_context);
-    }
-
-  return FALSE;
-}
-#endif /* (0) */
 /* Only from N810-keyboard, propably also from bt/usb keyboards */
 static gboolean
 terminal_widget_vte_key_press_event (VteTerminal    *terminal,
@@ -1110,9 +1035,6 @@ terminal_widget_vte_realize (VteTerminal    *terminal,
 {
   vte_terminal_set_allow_bold (terminal, TRUE);
   terminal_widget_timer_background (TERMINAL_WIDGET (widget));
-#if (0)
-  gtk_im_context_set_client_window (widget->im_context, GTK_WIDGET (terminal)->window);
-#endif /* (0) */
   g_object_ref (terminal); /* Why ?? */
 }
 
@@ -1961,27 +1883,7 @@ terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item)
 {
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), item, -1);
 }
-#if (0)
-static guint
-get_font_size(VteTerminal *vte)
-{
-  int size = 0;
-  const PangoFontDescription *pfd = vte_terminal_get_font(vte);
 
-  if (pfd) {
-    gboolean is_abs = pango_font_description_get_size_is_absolute(pfd);
-
-    size = pango_font_description_get_size(pfd);
-
-    if (!is_abs)
-      size = ((int)(((double)size)/((double)PANGO_SCALE)));
-
-    return size;
-  }
-
-  return (guint)size;
-}
-#endif /* (0) */
 gboolean
 terminal_widget_modify_font_size(TerminalWidget *widget, int increment)
 {
@@ -1993,4 +1895,3 @@ terminal_widget_modify_font_size(TerminalWidget *widget, int increment)
 
   return FALSE;
 }
-
