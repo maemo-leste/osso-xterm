@@ -296,8 +296,8 @@ maybe_set_pan_mode(TerminalWidget *terminal_widget, GParamSpec *pspec, GObject *
     g_object_set(pan_btn_obj, "visible", can_pan, NULL);
 
   if (can_pan) {
-    if (is_pan_mode != is_active) {
-      g_object_set(mvte_obj, "pan-mode", is_active, NULL);
+    if (is_pan_mode != !is_active) {
+      g_object_set(mvte_obj, "pan-mode", !is_active, NULL);
       gtk_widget_show(GTK_WIDGET(pan_btn_obj));
 
       g_object_set(pan_btn_obj,
@@ -308,7 +308,8 @@ maybe_set_pan_mode(TerminalWidget *terminal_widget, GParamSpec *pspec, GObject *
                                       NULL),
           NULL);
     }
-  } else {
+  }
+  else {
     if (is_pan_mode)
       g_object_set(mvte_obj, "pan-mode", FALSE, NULL);
     gtk_widget_hide(GTK_WIDGET(pan_btn_obj));

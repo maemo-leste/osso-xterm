@@ -1,8 +1,8 @@
 osso-xterm (0.14.mh24) unstable; urgency=low
 
-  * bump
+  * When the terminal becomes vscrollable, it should pan by default.
 
- -- Peter Csaszar <csjpeter@gmail.com>  Wed, 17 Jun 2009 12:49:29 +0200
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed, 17 Jun 2009 12:49:29 +0200
 
 osso-xterm (0.14.mh23) unstable; urgency=low
 
