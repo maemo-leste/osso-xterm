@@ -18,6 +18,27 @@ AX_CFLAGS_GCC_OPTION(-Wmissing-declarations)
 AX_CFLAGS_GCC_OPTION(-Wunreachable-code)
 AX_CFLAGS_GCC_OPTION(-Wwrite-strings)
 
+AC_MSG_CHECKING([whether to use maemo launcher])
+AC_ARG_ENABLE([maemo-launcher],
+	      [AS_HELP_STRING([--enable-maemo-launcher],
+	      [default=yes])],
+	      [
+	       case "${enableval}" in
+	       yes) maemo_launcher=true
+	            AC_MSG_RESULT([yes])
+		    PKG_CHECK_MODULES(MAEMO_LAUNCHER, [maemo-launcher-app])
+		    AC_SUBST(MAEMO_LAUNCHER_CFLAGS)
+		    AC_SUBST(MAEMO_LAUNCHER_LIBS)
+		    ;;
+	       no)  maemo_launcher=false
+                    AC_MSG_RESULT([no])
+		    ;;
+	       *) AC_MSG_ERROR([
+			"Bad value ${enableval} for --enable-maemo-launcher,\n"
+			"give exactly 'yes' or 'no' value."]) ;;
+              esac
+	     ], [maemo_launcher=false])
+
 AC_ARG_WITH(
   svgpix, 
   [  --with-svgpix[[=ARG]]     use SVG icons ARG=[[detect]]|yes|no ], 

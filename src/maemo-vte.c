@@ -84,11 +84,26 @@ sync_vadj_value(GtkAdjustment *src, MaemoVte *mvte)
 
   if (!(src && dst)) return;
 
+/*  g_printerr("%s : before : src : "
+                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
+                  __FUNCTION__, src->upper, src->lower, src->page_size, src->value, src->step_increment, src->page_increment);
+  g_printerr("%s : before : dst : "
+                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
+                  __FUNCTION__, dst->upper, dst->lower, dst->page_size, dst->value, dst->step_increment, dst->page_increment);
+*/
   if (dst->value != src->value * factor) {
     dst->value = src->value * factor;
     mvte->priv->been_panning = TRUE;
     gtk_adjustment_value_changed(dst);
   }
+/*
+  g_printerr("%s : after : src : "
+                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
+                  __FUNCTION__, src->upper, src->lower, src->page_size, src->value, src->step_increment, src->page_increment);
+  g_printerr("%s : after : dst : "
+                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
+                  __FUNCTION__, dst->upper, dst->lower, dst->page_size, dst->value, dst->step_increment, dst->page_increment);
+*/
 }
 
 static void

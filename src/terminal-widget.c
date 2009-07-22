@@ -1,3 +1,5 @@
+/* -*- Mode: C; indent-tabs-mode: s; c-basic-offset: 2; tab-width: 2 -*- */
+/* vim:set et ai sw=2 ts=2 sts=2: tw=80 cino="(0,W2s,i2s,t0,l1,:0" */
 /*-
  * Copyright (c) 2004 os-cillation e.K.
  * maemo specific changes: Copyright (c) 2005 Nokia Corporation
@@ -67,6 +69,7 @@ enum
   };
 
 
+static void     terminal_widget_dispose                       (GObject         *object);
 static void     terminal_widget_finalize                      (GObject          *object);
 static void     terminal_widget_get_property                  (GObject          *object,
                                                                guint             prop_id,
@@ -202,6 +205,7 @@ terminal_widget_class_init (TerminalWidgetClass *klass)
   parent_class = g_type_class_peek_parent (klass);
 
   gobject_class = G_OBJECT_CLASS (klass);
+  gobject_class->dispose = terminal_widget_dispose;
   gobject_class->finalize = terminal_widget_finalize;
   gobject_class->get_property = terminal_widget_get_property;
   gobject_class->set_property = terminal_widget_set_property;
@@ -272,12 +276,17 @@ terminal_widget_class_init (TerminalWidgetClass *klass)
 static void
 maybe_set_pan_mode(TerminalWidget *terminal_widget, GParamSpec *pspec, GObject *src)
 {
+  g_assert(G_OBJECT(terminal_widget));
   GObject *pan_btn_obj = G_OBJECT(terminal_widget->pan_button);
   GObject *mvte_obj = G_OBJECT(terminal_widget->terminal);
   GtkAdjustment *adj = vte_terminal_get_adjustment(VTE_TERMINAL(terminal_widget->terminal));
   gboolean is_active, bt_pan_visible, is_pan_mode,
            can_pan = (adj->upper - adj->page_size > adj->lower);
 
+/*  g_printerr("%s : "
+                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
+                  __FUNCTION__, adj->upper, adj->lower, adj->page_size, adj->value, adj->step_increment, adj->page_increment);
+*/
   g_object_freeze_notify(pan_btn_obj);
 
   g_object_get(pan_btn_obj, "visible", &bt_pan_visible, "active", &is_active, NULL);
@@ -287,22 +296,75 @@ maybe_set_pan_mode(TerminalWidget *terminal_widget, GParamSpec *pspec, GObject *
     g_object_set(pan_btn_obj, "visible", can_pan, NULL);
 
   if (can_pan) {
-    if (is_pan_mode != !is_active) {
-      g_object_set(mvte_obj, "pan-mode", !is_active, NULL);
+    if (is_pan_mode != is_active) {
+      g_object_set(mvte_obj, "pan-mode", is_active, NULL);
+      gtk_widget_show(GTK_WIDGET(pan_btn_obj));
 
-      g_object_set(pan_btn_obj, "icon-widget", 
-        g_object_new(GTK_TYPE_IMAGE, "visible", TRUE,
-          "icon-name", !is_active
-                         ? "browser_panning_mode_off" 
-                         : "browser_panning_mode_on",
-          "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
+      g_object_set(pan_btn_obj,
+          "icon-widget", g_object_new(GTK_TYPE_IMAGE,
+                                      "visible", TRUE,
+                                      "icon-name", is_active ? "browser_panning_mode_on" : "browser_panning_mode_off",
+                                      "icon-size", HILDON_ICON_SIZE_TOOLBAR,
+                                      NULL),
+          NULL);
     }
+  } else {
+    if (is_pan_mode)
+      g_object_set(mvte_obj, "pan-mode", FALSE, NULL);
+    gtk_widget_hide(GTK_WIDGET(pan_btn_obj));
   }
-  else
-  if (is_pan_mode)
-    g_object_set(mvte_obj, "pan-mode", FALSE, NULL);
 
   g_object_thaw_notify(pan_btn_obj);
+}
+
+gboolean
+terminal_widget_need_toolbar(TerminalWidget *widget)
+{
+  gboolean toolbar;
+  GConfValue *gconf_value;
+  GError *err = NULL;
+
+  gconf_value = gconf_client_get(widget->gconf_client,
+                                 OSSO_XTERM_GCONF_TOOLBAR,
+                                 &err);
+  if (err != NULL) {
+    g_printerr("Unable to get toolbar setting for non-fullscreen from gconf: %s\n",
+	       err->message);
+    g_clear_error(&err);
+  }
+  toolbar = OSSO_XTERM_DEFAULT_TOOLBAR;
+  if (gconf_value) {
+    if (gconf_value->type == GCONF_VALUE_BOOL)
+      toolbar = gconf_value_get_bool(gconf_value);
+    gconf_value_free(gconf_value);
+  }
+
+  return toolbar;
+}
+
+gboolean
+terminal_widget_need_fullscreen_toolbar(TerminalWidget *widget)
+{
+  gboolean toolbar;
+  GConfValue *gconf_value;
+  GError *err = NULL;
+
+  gconf_value = gconf_client_get(widget->gconf_client,
+                                 OSSO_XTERM_GCONF_TOOLBAR_FULLSCREEN,
+                                 &err);
+  if (err != NULL) {
+    g_printerr("Unable to get toolbar setting for fullscreen from gconf: %s\n",
+	       err->message);
+    g_clear_error(&err);
+  }
+  toolbar = OSSO_XTERM_DEFAULT_TOOLBAR_FULLSCREEN;
+  if (gconf_value) {
+    if (gconf_value->type == GCONF_VALUE_BOOL)
+      toolbar = gconf_value_get_bool(gconf_value);
+    gconf_value_free(gconf_value);
+  }
+
+  return toolbar;
 }
 
 static void
@@ -314,6 +376,8 @@ terminal_widget_init (TerminalWidget *widget)
   GSList *key_labels;
   GConfValue *gconf_value;
   GtkWidget *hbox;
+
+  widget->dispose_has_run = FALSE;
 
   widget->working_directory = g_get_current_dir ();
   widget->custom_title = g_strdup ("");
@@ -411,7 +475,10 @@ terminal_widget_init (TerminalWidget *widget)
     g_clear_error(&err);
   }
 
+  widget->keys_toolbuttons = NULL;
+
   widget->terminal = g_object_new(MAEMO_VTE_TYPE, "pan-mode", TRUE, NULL);
+  g_object_ref_sink(widget->terminal);
 
   g_signal_connect (G_OBJECT (widget->terminal), "child-exited",
                     G_CALLBACK (terminal_widget_vte_child_exited), widget);
@@ -453,23 +520,27 @@ terminal_widget_init (TerminalWidget *widget)
 
   gtk_widget_grab_focus(widget->terminal);
 
-  widget->tbar = gtk_toolbar_new ();
+  widget->tbar = g_object_ref_sink(gtk_toolbar_new());
   g_object_set(widget->tbar, 
 	       "orientation", GTK_ORIENTATION_HORIZONTAL,
 	       NULL);
   gtk_widget_show (GTK_WIDGET (widget->tbar));
 
-  widget->cbutton = gtk_toggle_tool_button_new (); //NULL, "Ctrl");
+  widget->cbutton = g_object_ref_sink(gtk_toggle_tool_button_new());
   gtk_tool_item_set_expand(widget->cbutton, FALSE);
   gtk_tool_button_set_label(GTK_TOOL_BUTTON(widget->cbutton), "Ctrl");
   gtk_widget_show(GTK_WIDGET(widget->cbutton));
 
-  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON, "icon-widget",
-    g_object_new(GTK_TYPE_IMAGE, "visible", TRUE, "icon-name", "browser_panning_mode_on", "icon-size", HILDON_ICON_SIZE_TOOLBAR, NULL), NULL);
-  g_print("terminal_widget_init: Created pan button %p\n", widget->pan_button);
+  widget->pan_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON,
+      "icon-widget", g_object_new(GTK_TYPE_IMAGE,
+                                  "visible", TRUE,
+                                  "icon-name", "browser_panning_mode_off",
+                                  "icon-size", HILDON_ICON_SIZE_TOOLBAR,
+                                  NULL),
+      NULL);
+  g_object_ref_sink(widget->pan_button);
 
   gtk_tool_item_set_expand(widget->pan_button, FALSE);
-  gtk_widget_show(GTK_WIDGET(widget->pan_button));
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), widget->pan_button, -1);
 
   g_signal_connect_swapped(G_OBJECT(vte_terminal_get_adjustment(VTE_TERMINAL(widget->terminal))), "changed", (GCallback)maybe_set_pan_mode, widget);
@@ -499,20 +570,6 @@ terminal_widget_init (TerminalWidget *widget)
   //  gtk_box_pack_start (GTK_BOX (widget), widget->tbar, FALSE, FALSE, 0);
 
   /* apply current settings */
-  gconf_value = gconf_client_get(widget->gconf_client,
-                                 OSSO_XTERM_GCONF_TOOLBAR,
-                                 &err);
-  if (err != NULL) {
-    g_printerr("Unable to get toolbar setting from gconf: %s\n",
-	       err->message);
-    g_clear_error(&err);
-  }
-  toolbar = OSSO_XTERM_DEFAULT_TOOLBAR;
-  if (gconf_value) {
-    if (gconf_value->type == GCONF_VALUE_BOOL)
-      toolbar = gconf_value_get_bool(gconf_value);
-    gconf_value_free(gconf_value);
-  }
 
   keys = gconf_client_get_list(widget->gconf_client,
 			       OSSO_XTERM_GCONF_KEYS,
@@ -523,7 +580,7 @@ terminal_widget_init (TerminalWidget *widget)
 				     GCONF_VALUE_STRING,
 				     &err);
 
-  terminal_widget_update_tool_bar(TERMINAL_WIDGET(widget), toolbar);
+  terminal_widget_update_tool_bar(widget, terminal_widget_need_toolbar(widget));
   terminal_widget_update_keys(TERMINAL_WIDGET(widget), keys, key_labels);
 
   g_slist_foreach(keys, (GFunc)g_free, NULL);
@@ -574,6 +631,72 @@ terminal_widget_init (TerminalWidget *widget)
 			   widget);
 }
 
+static void
+terminal_widget_dispose (GObject *object)
+{
+  TerminalWidget *widget = TERMINAL_WIDGET (object);
+
+  if(widget->dispose_has_run)
+    return;
+  widget->dispose_has_run = TRUE;
+
+  /* disconnect signals from keys toolbar buttons */
+  for(GSList *iter = widget->keys_toolbuttons;
+      iter != NULL; iter = iter->next){
+    g_signal_handlers_disconnect_by_func(iter->data,
+        terminal_widget_do_key_button, widget);
+    g_object_unref(iter->data);
+    iter->data = NULL;
+  }
+  widget->keys_toolbuttons = g_slist_remove_all(
+      widget->keys_toolbuttons, NULL);
+
+  g_signal_handlers_disconnect_by_func(widget->cbutton,
+      terminal_widget_ctrlify_notify, widget->terminal);
+/*  g_signal_handlers_disconnect_by_func(widget->cbutton,
+		  terminal_widget_ctrlify_notify, widget);*/
+
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_child_exited, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_encoding_changed, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_eof, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_button_press_event, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_key_press_event, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_selection_changed, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_realize, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+    terminal_widget_vte_window_title_changed, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+      terminal_widget_ctrlify_notify, widget->cbutton);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+		  terminal_widget_emit_context_menu, widget);
+  g_signal_handlers_disconnect_by_func(widget->terminal,
+      terminal_widget_vte_drag_data_received, widget);
+  g_signal_handlers_disconnect_by_func(
+      vte_terminal_get_adjustment(VTE_TERMINAL(widget->terminal)),
+      maybe_set_pan_mode, widget);
+
+  g_signal_handlers_disconnect_by_func(widget->pan_button,
+      maybe_set_pan_mode, widget);
+
+  g_object_unref(widget->pan_button);
+  widget->pan_button = NULL;
+  g_object_unref(widget->cbutton);
+  widget->cbutton = NULL;
+  g_object_unref(widget->terminal);
+  widget->terminal = NULL;
+  g_object_unref(widget->tbar);
+  widget->tbar = NULL;
+
+
+  parent_class->dispose (object);
+}
 
 static void
 terminal_widget_finalize (GObject *object)
@@ -609,7 +732,8 @@ terminal_widget_finalize (GObject *object)
 			  NULL);
 
   g_object_unref(G_OBJECT(widget->gconf_client));
-  g_object_unref(G_OBJECT(widget->terminal));
+
+  /**/
 
   parent_class->finalize (object);
 }
@@ -1035,7 +1159,6 @@ terminal_widget_vte_realize (VteTerminal    *terminal,
 {
   vte_terminal_set_allow_bold (terminal, TRUE);
   terminal_widget_timer_background (TERMINAL_WIDGET (widget));
-  g_object_ref (terminal); /* Why ?? */
 }
 
 
@@ -1071,20 +1194,19 @@ terminal_widget_timer_background (gpointer user_data)
 void
 terminal_widget_update_tool_bar (TerminalWidget *widget, gboolean show)
 {
-  if (show) {
-    gtk_widget_show_all (widget->tbar);
-  }
-  else {
-    gtk_widget_hide_all (widget->tbar);
-  }
+  if (show)
+    gtk_widget_show (widget->tbar);
+  else
+    gtk_widget_hide (widget->tbar);
 }
 
 static void
 terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_labels)
 {
-  g_slist_foreach(widget->keys, (GFunc)gtk_widget_destroy, NULL);
-  g_slist_free(widget->keys);
-  widget->keys = NULL;
+  g_slist_foreach(widget->keys_toolbuttons, (GFunc)gtk_widget_destroy, NULL);
+  g_slist_foreach(widget->keys_toolbuttons, (GFunc)g_object_unref, NULL);
+  g_slist_free(widget->keys_toolbuttons);
+  widget->keys_toolbuttons = NULL;
 
   while (keys && key_labels) {
 #ifdef DEBUG
@@ -1101,9 +1223,8 @@ terminal_widget_update_keys (TerminalWidget *widget, GSList *keys, GSList *key_l
 		     "clicked",
 		     G_CALLBACK(terminal_widget_do_key_button),
 		     widget);
-
-    widget->keys = g_slist_append(widget->keys,
-				  button);
+    widget->keys_toolbuttons = g_slist_prepend(
+        widget->keys_toolbuttons, g_object_ref(button));
 
     keys = g_slist_next(keys);
     key_labels = g_slist_next(key_labels);
@@ -1144,7 +1265,7 @@ terminal_widget_gconf_toolbar(GConfClient    *client,
 
   value = gconf_entry_get_value(entry);
   toolbar = gconf_value_get_bool(value);
-  //  terminal_widget_update_tool_bar(widget, toolbar);
+  terminal_widget_update_tool_bar(widget, toolbar);
 }
 
 static void
@@ -1157,7 +1278,7 @@ terminal_widget_gconf_toolbar_fs(GConfClient    *client,
 
   value = gconf_entry_get_value(entry);
   toolbar = gconf_value_get_bool(value);
-  //  terminal_widget_update_tool_bar(widget, toolbar);
+  terminal_widget_update_tool_bar(widget, toolbar);
 }
 
 static void
@@ -1272,17 +1393,31 @@ terminal_widget_new ()
   return g_object_new(TERMINAL_TYPE_WIDGET, NULL);
 }
 
+static gboolean
+terminal_widget_window_delete_event(
+    HildonWindow *window, GdkEvent *event, TerminalWidget *widget)
+{
+  hildon_window_remove_toolbar (HILDON_WINDOW (widget->app),
+      GTK_TOOLBAR (widget->tbar));
+  g_signal_handlers_disconnect_by_func(widget->app,
+        terminal_widget_window_delete_event, widget);
+  g_object_unref(widget->app);
+
+  return FALSE;
+}
 
 void
 terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window)
 {
-  widget->app = GTK_WINDOW (window);
+  widget->app = g_object_ref(window);
+  g_signal_connect (G_OBJECT (widget->app), "delete-event",
+                    G_CALLBACK (terminal_widget_window_delete_event), widget);
+
 #ifdef DEBUG
   g_debug("%s - tbar: %p", __FUNCTION__, widget->tbar);
 #endif
 
   hildon_window_add_toolbar (HILDON_WINDOW (widget->app), GTK_TOOLBAR (widget->tbar));
-  //    terminal_widget_update_tool_bar (widget, FALSE);
 }
 
 /**
@@ -1303,6 +1438,7 @@ terminal_widget_launch_child (TerminalWidget *widget)
 
   if (!terminal_widget_get_child_command (widget, &command, &argv, &error))
     {
+      g_warning("Can create new terminal widget because: %s", error->message);
       g_error_free (error);
       return FALSE;
     }
@@ -1374,18 +1510,6 @@ terminal_widget_get_size (TerminalWidget *widget,
   *width_chars = VTE_TERMINAL (widget->terminal)->column_count;
   *height_chars = VTE_TERMINAL (widget->terminal)->row_count;
 }
-
-
-/**
- **/
-void
-terminal_widget_set_size (TerminalWidget *widget,
-                          gint            width_chars,
-                          gint            height_chars)
-{
-  vte_terminal_set_size (VTE_TERMINAL (widget->terminal), width_chars, height_chars);
-}
-
 
 /**
  * terminal_widget_force_resize_window:

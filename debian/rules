@@ -3,6 +3,7 @@
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
+OPTS = ""
 CFLAGS += -g
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
@@ -13,30 +14,26 @@ endif
 ifneq (,$(findstring thumb,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -mthumb
 endif
-ifneq (,$(findstring maemo-launcher,$(DEB_BUILD_OPTIONS)))
-	LAUNCHER = yes
+
+ifeq (,$(findstring nolauncher,$(DEB_BUILD_OPTIONS)))
+	OPTS += "--enable-maemo-launcher=yes"
+	USE_MAEMO_LAUNCHER = true
 endif
 
-ifeq "$(strip $(LAUNCHER))" "yes"
-	LAUNCHER_DEPENDS = -Vlauncher:Depends="maemo-launcher"
-	LAUNCHER_CFLAGS = -shared
-	LAUNCHER_LDFLAGS = -shared
-endif
+PACKAGENAME=osso-xterm
 
 config.status:
 	dh_testdir
-	-make squeaky
+#	-make squeaky
 	./autogen.sh
 	# Add here commands to configure the package.
-	CFLAGS="$(CFLAGS)" ./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/sbin --enable-final
+	CFLAGS="$(CFLAGS)" ./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/sbin --enable-final $(OPTS)
 build: build-stamp
 
 build-stamp: config.status
 
 	dh_testdir
-	$(MAKE) \
-		LAUNCHER_CFLAGS="$(LAUNCHER_CFLAGS)" \
-		LAUNCHER_LDFLAGS="$(LAUNCHER_LDFLAGS)"
+	$(MAKE)
 	touch build-stamp
 
 clean:
@@ -51,6 +48,8 @@ clean:
 	  cp -f /usr/share/misc/config.sub config.sub
 	-test -r /usr/share/misc/config.guess && \
 	  cp -f /usr/share/misc/config.guess config.guess
+	rm -fr debian/${PACKAGENAME}
+	rm -fr debian/${PACKAGENAME}-dbg
 
 	dh_clean
 
@@ -61,12 +60,6 @@ install: build
 	dh_clean -k
 
 	$(MAKE) install DESTDIR=`pwd`/debian/osso-xterm
-ifeq "$(strip $(LAUNCHER))" "yes"
-	mv $(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm \
-		$(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm.launch
-	ln -s /usr/bin/maemo-invoker \
-		$(CURDIR)/debian/osso-xterm/usr/bin/osso-xterm
-endif
 
 	install -d `pwd`/debian/osso-xterm/usr/share/man/man1
 	install `pwd`/debian/osso-xterm.1 `pwd`/debian/osso-xterm/usr/share/man/man1
@@ -86,7 +79,11 @@ binary-arch: build install
 
 	dh_link -a
 
-	dh_strip -a
+	if test "x$(USE_MAEMO_LAUNCHER)" = "xtrue"; then \
+		dh_maemolauncher /usr/bin/osso-xterm; \
+	fi
+
+	dh_strip --dbg-package=${PACKAGENAME}
 	dh_compress -a
 
 	dh_fixperms -a

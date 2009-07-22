@@ -1,9 +1,31 @@
+osso-xterm (0.14.mh24) unstable; urgency=low
+
+  * bump
+
+ -- Peter Csaszar <csjpeter@gmail.com>  Wed, 17 Jun 2009 12:49:29 +0200
+
 osso-xterm (0.14.mh23) unstable; urgency=low
 
+  [ Gabriel Schulhof ]
   * Re-do logic for showing/hiding the Pan button
   * Fixes: NB#117410 (Select/Panning icon appears even when there is no choice between selection and panning.)
 
- -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 18 May 2009 13:45:52 +0300
+  [ Peter Csaszar ]
+  * Use maemo launcher if DEB_BUILD_OPTIONS is empty
+  * Fixes: NB#117410 - Select/Panning icon appears even when there is no
+    choice between selection and panning.
+  * Fixes: NB#115735 - Desktop hanged while changing xterm application
+    from normal screen to full screen in a scenario
+  * adding debian rules to have dbg package
+  * Fixed: using fullscreen button when more terminal window is opened
+    resulted in random window on (top) fullscreen.
+  * fixing many of object ref/unref and signal connect/disconnect
+    problems
+  * Fixes: NB116810 - Proper error message not displayed when unable to
+    open a new xterm-window
+  * Fixes: NB#116750 - The X terminal window title is osso_xterm
+
+ -- Peter Csaszar <csjpeter@gmail.com>  Wed, 17 Jun 2009 12:49:29 +0200
 
 osso-xterm (0.14.mh22) unstable; urgency=low
 

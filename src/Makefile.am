@@ -17,16 +17,20 @@ osso_xterm_CFLAGS =     \
 	$(OSSO_CFLAGS)        \
 	$(DBUS_CFLAGS)        \
 	$(BROWSER_CFLAGS)     \
-	$(LAUNCHER_CFLAGS)    \
+	$(MAEMO_LAUNCHER_CFLAGS) \
   $(NULL)
 
+UNWANTED = -export-dynamic -Wl,--export-dynamic
 osso_xterm_LDADD =    \
+	$(filter-out $(UNWANTED), \
+	$(MAEMO_LAUNCHER_LIBS) \
 	$(DBUS_LIBS)        \
 	$(GCONF_LIBS)       \
 	$(HILDON_LIBS_LIBS) \
 	$(HILDON_LIBS)      \
 	$(OSSO_LIBS)        \
 	$(VTE_LIBS)         \
+	) \
   $(NULL)
 
 EXTRA_DIST =           \
@@ -40,8 +44,8 @@ BUILT_SOURCES =     \
   $(NULL)
 
 osso_xterm_LDFLAGS =  \
-	-no-undefined       \
-	$(LAUNCHER_LDFLAGS) \
+	-no-undefined \
+	-Wl,--version-script=export.map \
   $(NULL)
 
 osso_xterm_headers =    \

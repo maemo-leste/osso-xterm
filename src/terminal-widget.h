@@ -50,11 +50,12 @@ struct _TerminalWidgetClass
 struct _TerminalWidget
 {
   GtkHBox              __parent__;
+  gboolean             dispose_has_run;
   GtkWidget           *terminal;
   GtkWidget	      *tbar;
-  GtkToolItem *pan_button;
+  GtkToolItem         *pan_button;
   GtkToolItem         *cbutton;
-  GSList	      *keys;
+  GSList              *keys_toolbuttons;
 
   GPid                 pid;
   gchar               *working_directory;
@@ -79,7 +80,7 @@ struct _TerminalWidget
 //  GtkIMContext        *im_context;
 //  gboolean	       im_pending;
 
-  GtkWindow			*app;
+  GtkWindow           *app;
 };
 
 GType        terminal_widget_get_type                     (void) G_GNUC_CONST;
@@ -96,9 +97,6 @@ void         terminal_widget_set_custom_title             (TerminalWidget *widge
 void         terminal_widget_get_size                     (TerminalWidget *widget,
                                                            gint           *width_chars,
                                                            gint           *height_chars);
-void         terminal_widget_set_size                     (TerminalWidget *widget,
-                                                           gint            width_chars,
-                                                           gint            height_chars);
 
 void       terminal_widget_force_resize_window          (TerminalWidget *widget,
                                                          GtkWindow      *window,
@@ -129,7 +127,10 @@ char      *terminal_widget_get_tag		      (TerminalWidget *widget,
 						       gint            y,
 						       gint           *tag);
 void      terminal_widget_update_tool_bar             (TerminalWidget *widget,
-						       gboolean show);
+	  					       gboolean show);
+
+gboolean terminal_widget_need_toolbar(TerminalWidget *widget);
+gboolean terminal_widget_need_fullscreen_toolbar(TerminalWidget *widget);
 
 void terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window);
 

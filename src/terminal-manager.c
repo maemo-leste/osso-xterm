@@ -1,3 +1,5 @@
+/* -*- Mode: C; indent-tabs-mode: s; c-basic-offset: 2; tab-width: 2 -*- */
+/* vim:set et ai sw=2 ts=2 sts=2: tw=80 cino="(0,W2s,i2s,t0,l1,:0" */
 #include <libintl.h>
 #include <locale.h>
 #define _(String) gettext(String)
@@ -20,15 +22,9 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
 						const gchar *command,
     					        TerminalManager *manager);
 static void terminal_manager_last_window_closed (TerminalManager *manager);
-static void terminal_manager_global_state_changed (TerminalWindow *window,
-						   TerminalManager *manager);
 static gboolean terminal_manager_focus_in_actions (TerminalWindow *window,
 						   GdkEventFocus *event,
 						   TerminalManager *manager);
-
-/* Helpers */
-static void _state_change_helper (gpointer window, gpointer data);
-static gboolean _set_window_to_top (GtkWindow *window);
 
 G_DEFINE_TYPE (TerminalManager, terminal_manager, HILDON_TYPE_PROGRAM);
 
@@ -100,10 +96,6 @@ gboolean terminal_manager_new_window (TerminalManager *manager,
 		     "new_window",
 		     G_CALLBACK(terminal_manager_window_new_window),
 		     manager);
-    g_signal_connect (window, 
-                      "global_state_changed", 
-                      G_CALLBACK (terminal_manager_global_state_changed), 
-                      manager);
 
     /* when focused */
     g_signal_connect (window, 
@@ -115,8 +107,6 @@ gboolean terminal_manager_new_window (TerminalManager *manager,
     g_object_set_data(G_OBJECT(window), "osso", g_object_get_data(G_OBJECT(manager), "osso"));
 
     hildon_program_add_window(HILDON_PROGRAM(manager), HILDON_WINDOW(window));
-
-    terminal_window_set_state (window, window);
 
     manager->current = window;
 
@@ -153,7 +143,9 @@ static void terminal_manager_window_new_window (TerminalWindow *window,
 {
   GError *error = NULL;
   if (!terminal_manager_new_window(manager, command, &error)) {
-    hildon_banner_show_information(GTK_WIDGET(window), GTK_STOCK_DIALOG_ERROR, g_dgettext("gtk20", "Unspecified error"));
+    hildon_banner_show_information(GTK_WIDGET(window),
+        GTK_STOCK_DIALOG_ERROR,
+        g_dgettext("gtk20", "Could not open console."));
     if (error)
       g_error_free(error);
   }
@@ -163,32 +155,8 @@ static gboolean terminal_manager_focus_in_actions (TerminalWindow *window,
 						   GdkEventFocus *event,
 						   TerminalManager *manager)
 {
-  if ((event->type == GDK_FOCUS_CHANGE) && (manager->current != window)) {
+  if ((event->type == GDK_FOCUS_CHANGE) && (manager->current != window))
     manager->current = window;
-    terminal_window_set_state (window, window);
-  }
   return FALSE;
 }
 
-static void terminal_manager_global_state_changed (TerminalWindow *window,
-						   TerminalManager *manager)
-{
-  g_slist_foreach (manager->windows, (GFunc)_state_change_helper, manager);
-  if (manager->current != NULL) {
-    g_idle_add ((GSourceFunc)_set_window_to_top, manager->current);
-  }
-}
-
-/* Helpers */
-static void
-_state_change_helper (gpointer window, gpointer data)
-{
-  terminal_window_set_state (window, TERMINAL_MANAGER(data)->current);
-}
-
-static gboolean
-_set_window_to_top (GtkWindow *window)
-{
-  gtk_window_present (window);
-  return FALSE;
-}
