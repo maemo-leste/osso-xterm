@@ -1,3 +1,12 @@
+osso-xterm (0.14.mh25) unstable; urgency=low
+
+  * Use G_CONNECT_AFTER as well as swappage when bringing up the font dialog
+  * Fixes: NB#134325 (Device hangs if font option is selected in X-Terminal menu)
+  * Replace gtk_dialog_show() with gtk_widget_show() + response handler to keep other
+    windows responsive while the font dialog is up
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 24 Aug 2009 16:41:59 +0300
+
 osso-xterm (0.14.mh24) unstable; urgency=low
 
   * When the terminal becomes vscrollable, it should pan by default.

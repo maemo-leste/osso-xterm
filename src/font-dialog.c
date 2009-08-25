@@ -201,6 +201,49 @@ preview_realize(GtkWidget *preview, FontDialog *fd)
 }
 
 static void
+font_dialog_response(GtkWidget *dlg, gint response_id, FontDialog *fd)
+{
+  if (GTK_RESPONSE_OK == response_id) {
+    char *name = NULL, *str = NULL;
+    int size;
+    GtkTreeIter itr_name, itr_size;
+    GConfClient *g_c = gconf_client_get_default();
+    GdkColor *p_clr = NULL;
+
+    /* Set new font name and size */
+    if (gtk_tree_selection_get_selected(fd->sel_name, NULL, &itr_name) &&
+        gtk_tree_selection_get_selected(fd->sel_size, NULL, &itr_size)) {
+
+      gtk_tree_model_get(fd->tm_name, &itr_name, FONT_NAME_STRING_COLUMN, &name, -1);
+      gtk_tree_model_get(fd->tm_size, &itr_size, FONT_SIZE_INT_COLUMN, &size, -1);
+
+      if (name) {
+        gconf_client_set_string(g_c, OSSO_XTERM_GCONF_FONT_NAME, name, NULL);
+        g_free(name); name = NULL;
+      }
+      if (size)
+        gconf_client_set_int(g_c, OSSO_XTERM_GCONF_FONT_BASE_SIZE, size, NULL);
+    }
+
+    /* Set foreground colour */
+    g_object_get(G_OBJECT(fd->fg_clr), "color", &p_clr, NULL);
+    str = g_strdup_printf("#%02x%02x%02x", p_clr->red >> 8, p_clr->green >> 8, p_clr->blue >> 8);
+    gconf_client_set_string(g_c, OSSO_XTERM_GCONF_FONT_COLOR, str, NULL);
+    g_free(str);
+    gdk_color_free(p_clr);
+
+    /* Set background colour */
+    g_object_get(G_OBJECT(fd->bg_clr), "color", &p_clr, NULL);
+    str = g_strdup_printf("#%02x%02x%02x", p_clr->red >> 8, p_clr->green >> 8, p_clr->blue >> 8);
+    gconf_client_set_string(g_c, OSSO_XTERM_GCONF_BG_COLOR, str, NULL);
+    g_free(str);
+    gdk_color_free(p_clr);
+  }
+  gtk_widget_destroy(GTK_WIDGET(fd->dlg));
+  memset(fd, 0, sizeof(FontDialog));
+}
+
+static void
 create_font_dialog(FontDialog *fd)
 {
   int Nix;
@@ -215,7 +258,7 @@ create_font_dialog(FontDialog *fd)
     *ls_size = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
   GtkCellLayout *cl;
   GtkCellRenderer *cr;
-  fd->dlg = GTK_DIALOG(gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Pick a Font"), NULL, GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
+  fd->dlg = GTK_DIALOG(gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Pick a Font"), NULL, GTK_DIALOG_NO_SEPARATOR,
       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE, GTK_RESPONSE_OK, NULL));
   fd->preview = g_object_new(GTK_TYPE_LABEL, "visible", TRUE, "label", PREVIEW_TEXT, "justify", GTK_JUSTIFY_LEFT, "use-underline", FALSE, NULL);
   fd->preview_bg = g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, NULL);
@@ -261,20 +304,20 @@ create_font_dialog(FontDialog *fd)
   hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, NULL);
   align = g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 1.0, "yscale", 0.0, "child", hbox, NULL);
   gtk_widget_set_size_request(align, -1, 70);
+  fd->fg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
+  fd->bg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox),
     g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 0.0, "yscale", 0.0, "child",
       g_object_new(GTK_TYPE_LABEL,
         "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", fd->fg_clr, "label", g_dgettext("gtk20", "Color"), "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
     "expand", FALSE, NULL);
-  fd->fg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
-  gtk_container_add_with_properties(GTK_CONTAINER(hbox), font_dialog.fg_clr, "expand", FALSE, NULL);
+  gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->fg_clr, "expand", FALSE, NULL);
   g_signal_connect(G_OBJECT(fd->fg_clr), "notify::color", (GCallback)clr_changed, fd);
-  fd->bg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
   g_signal_connect(G_OBJECT(fd->bg_clr), "notify::color", (GCallback)clr_changed, fd);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->bg_clr, "expand", FALSE, NULL);
-  gtk_container_add_with_properties(GTK_CONTAINER(font_dialog.dlg->vbox), align, "expand", FALSE, NULL);
-
+  gtk_container_add_with_properties(GTK_CONTAINER(fd->dlg->vbox), align, "expand", FALSE, NULL);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->preview_bg, "expand", TRUE, NULL);
+  g_signal_connect(G_OBJECT(fd->dlg), "response", (GCallback)font_dialog_response, fd);
 }
 
 void
@@ -289,102 +332,76 @@ show_font_dialog(GtkWindow *parent)
   GtkListStore *ls_name;
   GtkTreeIter itr_family;
   GConfClient *g_c = gconf_client_get_default();
-  GdkColor clr, *p_clr;
+  GdkColor clr;
 
   /* Create the font dialog if not already done */
-  if (NULL == font_dialog.dlg)
+  if (NULL == font_dialog.dlg) {
     create_font_dialog(&font_dialog);
-  gtk_window_set_transient_for(GTK_WINDOW(font_dialog.dlg), parent);
-  if (GTK_WIDGET_REALIZED(GTK_WIDGET(font_dialog.tv_name)))
-    hildon_pannable_area_jump_to(HILDON_PANNABLE_AREA(gtk_widget_get_parent(GTK_WIDGET(font_dialog.tv_name))), -1, 0);
-  if (GTK_WIDGET_REALIZED(GTK_WIDGET(font_dialog.tv_size)))
-    hildon_pannable_area_jump_to(HILDON_PANNABLE_AREA(gtk_widget_get_parent(GTK_WIDGET(font_dialog.tv_size))), -1, 0);
+    gtk_window_set_transient_for(GTK_WINDOW(font_dialog.dlg), parent);
+    if (GTK_WIDGET_REALIZED(GTK_WIDGET(font_dialog.tv_name)))
+      hildon_pannable_area_jump_to(HILDON_PANNABLE_AREA(gtk_widget_get_parent(GTK_WIDGET(font_dialog.tv_name))), -1, 0);
+    if (GTK_WIDGET_REALIZED(GTK_WIDGET(font_dialog.tv_size)))
+      hildon_pannable_area_jump_to(HILDON_PANNABLE_AREA(gtk_widget_get_parent(GTK_WIDGET(font_dialog.tv_size))), -1, 0);
 
-  /* Re-fill the font list */
-  ls_name = GTK_LIST_STORE(font_dialog.tm_name);
-  gtk_list_store_clear(ls_name);
-  pango_context_list_families(pctx, &families, &n_families);
-  for (Nix = 0 ; Nix < n_families ; Nix++)
-    if (pango_font_family_is_monospace(families[Nix])) {
-      pango_font_family_list_faces(families[Nix], &faces, &n_faces);
-      g_qsort_with_data(faces, n_faces, sizeof(PangoFontFace *), (GCompareDataFunc)compare_faces, NULL);
-      for (Nix1 = 0 ; Nix1 < n_faces ; Nix1++) {
-        pfd_face = pango_font_face_describe(faces[Nix1]);
-        str = pango_font_description_to_string(pfd_face);
-        gtk_list_store_append(ls_name, &itr_family);
-        gtk_list_store_set(ls_name, &itr_family, 
-          FONT_NAME_STRING_COLUMN, str,         FONT_NAME_FAMILY_COLUMN, families[Nix], 
-          FONT_NAME_FACE_COLUMN,   faces[Nix1], FONT_NAME_PFD_COLUMN,    pfd_face,
-          -1);
-        g_free(str);
+    /* Re-fill the font list */
+    ls_name = GTK_LIST_STORE(font_dialog.tm_name);
+    gtk_list_store_clear(ls_name);
+    pango_context_list_families(pctx, &families, &n_families);
+    for (Nix = 0 ; Nix < n_families ; Nix++)
+      if (pango_font_family_is_monospace(families[Nix])) {
+        pango_font_family_list_faces(families[Nix], &faces, &n_faces);
+        g_qsort_with_data(faces, n_faces, sizeof(PangoFontFace *), (GCompareDataFunc)compare_faces, NULL);
+        for (Nix1 = 0 ; Nix1 < n_faces ; Nix1++) {
+          pfd_face = pango_font_face_describe(faces[Nix1]);
+          str = pango_font_description_to_string(pfd_face);
+          gtk_list_store_append(ls_name, &itr_family);
+          gtk_list_store_set(ls_name, &itr_family, 
+            FONT_NAME_STRING_COLUMN, str,         FONT_NAME_FAMILY_COLUMN, families[Nix], 
+            FONT_NAME_FACE_COLUMN,   faces[Nix1], FONT_NAME_PFD_COLUMN,    pfd_face,
+            -1);
+          g_free(str);
+        }
+        g_free(faces); faces = NULL;
+        n_faces = 0;
       }
-      g_free(faces); faces = NULL;
-      n_faces = 0;
-    }
-  g_free(families);
+    g_free(families);
 
-  /* Init dialog from gconf */
-  /* Font name */
-  name = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_FONT_NAME, NULL);
-  if (!name)
-    name = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
+    /* Init dialog from gconf */
+    /* Font name */
+    name = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_FONT_NAME, NULL);
+    if (!name)
+      name = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
 
-  /* Font size */
-  size = gconf_client_get_int(g_c, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
-  if (!size)
-    size = OSSO_XTERM_DEFAULT_FONT_BASE_SIZE;
-  if (name && size) 
-    select_font(name, size, &font_dialog);
-  g_free(name); name = NULL;
-  size = 0;
+    /* Font size */
+    size = gconf_client_get_int(g_c, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
+    if (!size)
+      size = OSSO_XTERM_DEFAULT_FONT_BASE_SIZE;
+    if (name && size) 
+      select_font(name, size, &font_dialog);
+    g_free(name); name = NULL;
+    size = 0;
 
-  /* Foreground colour */
-  str = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_FONT_COLOR, NULL);
-  if (!str)
-    str = g_strdup(OSSO_XTERM_DEFAULT_FONT_COLOR);
-  gdk_color_parse(str, &clr);
-  g_free(str);
-  g_object_set(G_OBJECT(font_dialog.fg_clr), "color", &clr, NULL);
-
-  /* Background colour */
-  str = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_BG_COLOR, NULL);
-  if (!str)
-    str = g_strdup(OSSO_XTERM_DEFAULT_BG_COLOR);
-  gdk_color_parse(str, &clr);
-  g_free(str);
-  g_object_set(G_OBJECT(font_dialog.bg_clr), "color", &clr, NULL);
-
-  if (GTK_RESPONSE_OK == gtk_dialog_run(font_dialog.dlg)) {
-    GtkTreeIter itr_name, itr_size;
-
-    /* Set new font name and size */
-    if (gtk_tree_selection_get_selected(font_dialog.sel_name, NULL, &itr_name) &&
-        gtk_tree_selection_get_selected(font_dialog.sel_size, NULL, &itr_size)) {
-
-      gtk_tree_model_get(font_dialog.tm_name, &itr_name, FONT_NAME_STRING_COLUMN, &name, -1);
-      gtk_tree_model_get(font_dialog.tm_size, &itr_size, FONT_SIZE_INT_COLUMN, &size, -1);
-
-      if (name) {
-        gconf_client_set_string(g_c, OSSO_XTERM_GCONF_FONT_NAME, name, NULL);
-        g_free(name); name = NULL;
-      }
-      if (size)
-        gconf_client_set_int(g_c, OSSO_XTERM_GCONF_FONT_BASE_SIZE, size, NULL);
-    }
-
-    /* Set foreground colour */
-    g_object_get(G_OBJECT(font_dialog.fg_clr), "color", &p_clr, NULL);
-    str = g_strdup_printf("#%02x%02x%02x", p_clr->red >> 8, p_clr->green >> 8, p_clr->blue >> 8);
-    gconf_client_set_string(g_c, OSSO_XTERM_GCONF_FONT_COLOR, str, NULL);
+    /* Foreground colour */
+    str = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_FONT_COLOR, NULL);
+    if (!str)
+      str = g_strdup(OSSO_XTERM_DEFAULT_FONT_COLOR);
+    gdk_color_parse(str, &clr);
     g_free(str);
-    gdk_color_free(p_clr);
+    g_object_set(G_OBJECT(font_dialog.fg_clr), "color", &clr, NULL);
 
-    /* Set background colour */
-    g_object_get(G_OBJECT(font_dialog.bg_clr), "color", &p_clr, NULL);
-    str = g_strdup_printf("#%02x%02x%02x", p_clr->red >> 8, p_clr->green >> 8, p_clr->blue >> 8);
-    gconf_client_set_string(g_c, OSSO_XTERM_GCONF_BG_COLOR, str, NULL);
+    /* Background colour */
+    str = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_BG_COLOR, NULL);
+    if (!str)
+      str = g_strdup(OSSO_XTERM_DEFAULT_BG_COLOR);
+    gdk_color_parse(str, &clr);
     g_free(str);
-    gdk_color_free(p_clr);
+    g_object_set(G_OBJECT(font_dialog.bg_clr), "color", &clr, NULL);
+
+    gtk_widget_show(GTK_WIDGET(font_dialog.dlg));
   }
-  gtk_widget_hide(GTK_WIDGET(font_dialog.dlg));
+  else {
+    gtk_widget_hide(GTK_WIDGET(font_dialog.dlg));
+    gtk_window_set_transient_for(GTK_WINDOW(font_dialog.dlg), parent);
+    gtk_window_present(GTK_WINDOW(font_dialog.dlg));
+  }
 }

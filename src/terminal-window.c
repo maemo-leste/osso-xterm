@@ -341,7 +341,7 @@ terminal_window_init (TerminalWindow *window)
 
   /* Select font */
   button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_SELECT_FONT, "use-stock", TRUE, NULL);
-  g_signal_connect_swapped(G_OBJECT(button), "clicked", (GCallback)show_font_dialog, window);
+  g_signal_connect_data(G_OBJECT(button), "clicked", (GCallback)show_font_dialog, window, NULL, G_CONNECT_AFTER | G_CONNECT_SWAPPED);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
   /* Copy */
