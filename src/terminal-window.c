@@ -120,9 +120,8 @@ struct _TerminalWindow
 
   GtkWidget *copy_button;
   GtkWidget *paste_button;
-  GtkWidget *unfs_button;
   HildonAppMenu *match_menu;
-
+  GtkWidget *fs_unfs_alignment;
   GConfClient *gconf_client;
 
   TerminalWidget *terminal;
@@ -130,6 +129,25 @@ struct _TerminalWindow
 };
 
 static GObjectClass *parent_class;
+
+static gboolean
+hide_the_widget(GtkWidget *widget)
+{
+  gtk_widget_hide(widget);
+  return FALSE;
+}
+
+#define HIDE_WIDGET_TIMEOUT 2000
+
+static void
+show_widget_for_a_while(GtkWidget *widget)
+{
+  guint timeout_id;
+
+  gtk_widget_show(widget);
+  timeout_id = g_timeout_add(HIDE_WIDGET_TIMEOUT, (GSourceFunc)hide_the_widget, widget);
+  g_object_weak_ref(G_OBJECT(widget), (GWeakNotify)g_source_remove, GUINT_TO_POINTER(timeout_id));
+}
 
 #if (0)
 static GtkActionEntry action_entries[] =
@@ -182,6 +200,7 @@ realize(GtkWidget *widget)
 
   if (widget->window) {
     unsigned char value = 1;
+    g_print("TerminalWindow::realize: 0x%x\n",(int)(widget->window));
     Atom hildon_zoom_key_atom = gdk_x11_get_xatom_by_name("_HILDON_ZOOM_KEY_ATOM"),
          integer_atom = gdk_x11_get_xatom_by_name("INTEGER");
     Display *dpy = GDK_DISPLAY_XDISPLAY(gdk_drawable_get_display(widget->window));
@@ -326,7 +345,7 @@ terminal_window_init (TerminalWindow *window)
 
   window->terminal = NULL;
   window->encoding = NULL;
-  window->unfs_button = NULL;
+  window->fs_unfs_alignment = NULL;
 
   gtk_window_set_title(GTK_WINDOW(window), "X Terminal");
 
@@ -440,8 +459,6 @@ terminal_window_dispose (GObject *object)
   window->copy_button = NULL;
   g_object_unref(window->paste_button);
   window->paste_button = NULL;
-  g_object_unref(window->unfs_button);
-  window->unfs_button = NULL;
   g_object_unref(window->match_menu);
   window->match_menu = NULL;
 
@@ -626,16 +643,80 @@ notify_match(GtkWidget *widget, GParamSpec *pspec, TerminalWindow *wnd)
 }
 
 static void
+set_size_request(GtkWidget *widget, GtkAllocation *alloc)
+{
+  gtk_widget_set_size_request(widget, alloc->width, alloc->height);
+}
+
+static void
+fixed_size_allocate(GtkContainer *fixed, GtkAllocation *alloc, gpointer null)
+{
+  gtk_container_foreach (fixed, (GtkCallback)set_size_request, alloc);
+}
+
+static void
+put_fs_unfs_button_above_vte(GtkWidget *vte, GtkWidget *fs_unfs_button)
+{
+  g_print("put_fs_unfs_button_above_vte\n");
+  if (GTK_WIDGET_REALIZED(vte) && GTK_WIDGET_REALIZED(fs_unfs_button)) {
+    g_print("fs_unfs_button->window: 0x%x, vte->window: 0x%x\n", (int)(fs_unfs_button->window), (int)(vte->window));
+    gdk_window_raise(fs_unfs_button->window);
+  }
+}
+
+static gboolean
+button_press_event(GtkWidget *terminal_window, GdkEventButton *event)
+{
+  g_print("button_press_event\n");
+
+  if (gdk_screen_get_width(gdk_screen_get_default()) - 1 == event->x && 
+      terminal_window_is_fullscreen(TERMINAL_WINDOW(terminal_window))) {
+    show_widget_for_a_while(TERMINAL_WINDOW(terminal_window)->fs_unfs_alignment);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static void
 terminal_window_real_add (
     TerminalWindow *window,
     TerminalWidget *widget)
 {
+    GtkWidget *fixed, *fs_unfs_button, *unfs_button, *terminal_eb;
+    GtkAction *fullscreen;
+
+    fixed = g_object_new(GTK_TYPE_FIXED, "visible", TRUE, NULL);
+    g_signal_connect(G_OBJECT(fixed), "size-allocate", (GCallback)fixed_size_allocate, NULL);
+
+    gtk_container_add(GTK_CONTAINER(window), fixed);
+
+    terminal_eb = g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, "above-child", TRUE, "visible-window", FALSE, NULL);
+    gtk_container_add(GTK_CONTAINER(fixed), terminal_eb);
+    gtk_container_add(GTK_CONTAINER(terminal_eb), GTK_WIDGET(widget));
+
+    g_signal_connect_swapped(G_OBJECT(terminal_eb), "button-press-event", (GCallback)button_press_event, window);
+
+    fullscreen = g_object_new(GTK_TYPE_TOGGLE_ACTION, "visible", TRUE, "active", FALSE, "icon-name", "general_fullsize", "name", "fullscreen", NULL);
+    g_signal_connect(G_OBJECT(fullscreen), "toggled", (GCallback)terminal_window_action_fullscreen, window);
+
+    fs_unfs_button = g_object_new(GTK_TYPE_TOGGLE_BUTTON,
+      "visible", TRUE,
+      "image", g_object_new(GTK_TYPE_IMAGE,
+        "visible", TRUE,
+        "icon-name", "general_fullsize",
+        "pixel-size", HILDON_ICON_PIXEL_SIZE_FINGER,
+        NULL),
+      NULL);
+    gtk_action_connect_proxy(fullscreen, fs_unfs_button);
+    window->fs_unfs_alignment = g_object_new(GTK_TYPE_ALIGNMENT, "xalign", 1.0, "yalign", 1.0, "xscale", 0.0, "yscale", 0.0,
+      "child", g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, "child", fs_unfs_button, NULL), NULL);
+    gtk_container_add(GTK_CONTAINER(fixed), window->fs_unfs_alignment);
   /*
     gchar *title = terminal_widget_get_title(widget);
     g_object_set(GTK_WINDOW (window), "title", title, NULL);
     g_free(title);
   */
-    gtk_container_add(GTK_CONTAINER (window), GTK_WIDGET(widget));
 
     /* add terminal to window */
     window->terminal = g_object_ref_sink(widget);
@@ -649,19 +730,21 @@ terminal_window_real_add (
     terminal_window_update_actions (window);
     g_signal_connect(G_OBJECT(widget->terminal), "notify::match", (GCallback)notify_match, window);
 
-    window->unfs_button = GTK_WIDGET(
-        g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON,
-                     "visible", TRUE,
-                     "active", FALSE,
-                     "icon-widget", g_object_new(GTK_TYPE_IMAGE,
-                                                 "visible", TRUE,
-                                                 "icon-name", "general_fullsize",
-                                                 "icon-size", HILDON_ICON_SIZE_TOOLBAR,
-                                                 NULL),
-                     NULL));
-    g_object_ref_sink(window->unfs_button);
-    g_signal_connect(G_OBJECT(window->unfs_button), "toggled", (GCallback)terminal_window_action_fullscreen, window);
-    terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(window->unfs_button));
+    unfs_button = gtk_action_create_tool_item (fullscreen);
+    terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(unfs_button));
+
+    if (!(GTK_WIDGET_REALIZED(widget->terminal) && GTK_WIDGET_REALIZED(fs_unfs_button))) {
+      if (!(GTK_WIDGET_REALIZED(widget->terminal))) {
+        g_print("terminal_window_real_add: widget->terminal is not yet realized\n");
+        g_signal_connect(widget->terminal, "realize", (GCallback)put_fs_unfs_button_above_vte, fs_unfs_button);
+      }
+      if (!(GTK_WIDGET_REALIZED(fs_unfs_button))) {
+        g_print("terminal_window_real_add: fs_unfs_button is not yet realized\n");
+        g_signal_connect_swapped(fs_unfs_button, "realize", (GCallback)put_fs_unfs_button_above_vte, widget->terminal);
+      }
+    }
+    else
+      put_fs_unfs_button_above_vte(widget->terminal, fs_unfs_button);
 }
 
 /**
@@ -722,7 +805,7 @@ terminal_window_launch (
   child_launched = terminal_widget_launch_child (TERMINAL_WIDGET (terminal));
 
   if (child_launched) {
-    gtk_widget_show_all(GTK_WIDGET(window));
+    gtk_widget_show(GTK_WIDGET(window));
 
     if (window->encoding == NULL) {
       gconf_client_set_string(window->gconf_client, OSSO_XTERM_GCONF_ENCODING, 
@@ -746,13 +829,15 @@ void terminal_window_set_state (TerminalWindow *window, gboolean go_fs)
       if(!fs){
         gtk_window_fullscreen(GTK_WINDOW(window));
         terminal_widget_update_tool_bar(
-            window->terminal, terminal_widget_need_toolbar(window->terminal));
+            window->terminal, FALSE/*terminal_widget_need_toolbar(window->terminal)*/);
+        show_widget_for_a_while(window->fs_unfs_alignment);
       }
     } else {
       if(fs){
         gtk_window_unfullscreen(GTK_WINDOW(window));
         terminal_widget_update_tool_bar(
-            window->terminal, terminal_widget_need_fullscreen_toolbar(window->terminal));
+            window->terminal, TRUE /*terminal_widget_need_fullscreen_toolbar(window->terminal)*/);
+        gtk_widget_hide(window->fs_unfs_alignment);
       }
     }
 }

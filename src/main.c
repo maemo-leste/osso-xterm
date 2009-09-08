@@ -84,7 +84,7 @@ main (int argc, char **argv)
 
   g_set_application_name (_("X Terminal"));
 
-  gtk_init (&argc, &argv);
+  hildon_gtk_init (&argc, &argv);
 
   add_stock_icons();
 
