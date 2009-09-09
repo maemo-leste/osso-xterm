@@ -51,6 +51,7 @@ struct _TerminalWidget
 {
   GtkHBox              __parent__;
   gboolean             dispose_has_run;
+  GtkWidget           *pannable;
   GtkWidget           *terminal;
   GtkWidget	      *tbar;
   GtkToolItem         *pan_button;

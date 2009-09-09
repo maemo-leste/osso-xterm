@@ -376,7 +376,6 @@ terminal_widget_init (TerminalWidget *widget)
   GSList *keys;
   GSList *key_labels;
   GConfValue *gconf_value;
-  GtkWidget *hbox;
 
   widget->dispose_has_run = FALSE;
 
@@ -498,15 +497,15 @@ terminal_widget_init (TerminalWidget *widget)
   g_signal_connect (G_OBJECT (widget->terminal), "window-title-changed",
                     G_CALLBACK (terminal_widget_vte_window_title_changed), widget);
 
-  hbox = g_object_new(HILDON_TYPE_PANNABLE_AREA,
+  widget->pannable = g_object_new(HILDON_TYPE_PANNABLE_AREA,
     "drag-inertia", 0.1,
     "hovershoot-max", 0,
     "vovershoot-max", 0,
     "child", widget->terminal,
     NULL);
-  gtk_widget_show (hbox);
+  gtk_widget_show (widget->pannable);
 
-  gtk_box_pack_start (GTK_BOX (widget), hbox, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (widget), widget->pannable, TRUE, TRUE, 0);
   gtk_widget_show (widget->terminal);
 
   /* setup Drag'n'Drop support */

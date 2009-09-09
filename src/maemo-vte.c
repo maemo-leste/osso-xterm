@@ -16,6 +16,8 @@ enum
   MATCH_PROPERTY,
 };
 
+static GdkPixbuf *fs_button_pb = NULL;
+
 struct _MaemoVtePrivate
 {
   GtkIMContext *imc;
@@ -23,15 +25,27 @@ struct _MaemoVtePrivate
   gboolean pan_mode;
   gboolean control_mask;
   gboolean been_panning;
+  char *match;
   guint fs_button_timeout_id;
   guint fadeout_anim_timeout_id;
-  char *match;
+  guint count;
+  GdkPixbuf *next_frame;
+  int cx_next_frame;
+  int cy_next_frame;
+  gboolean fs_button_click;
 };
 
 #define PERFORM_SYNC(mvte,src) \
   ((mvte)->priv->foreign_vadj && \
    (((mvte)->priv->pan_mode) || \
     ((src) != (mvte)->priv->foreign_vadj)))
+
+enum {
+  MVTE_FS_BUTTON_CLICKED_SIGNAL,
+  MVTE_N_SIGNALS
+};
+
+static int mvte_signals[MVTE_N_SIGNALS] = { 0 };
 
 static void set_control_mask(MaemoVte *mvte, gboolean on);
 
@@ -86,26 +100,11 @@ sync_vadj_value(GtkAdjustment *src, MaemoVte *mvte)
 
   if (!(src && dst)) return;
 
-/*  g_printerr("%s : before : src : "
-                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
-                  __FUNCTION__, src->upper, src->lower, src->page_size, src->value, src->step_increment, src->page_increment);
-  g_printerr("%s : before : dst : "
-                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
-                  __FUNCTION__, dst->upper, dst->lower, dst->page_size, dst->value, dst->step_increment, dst->page_increment);
-*/
   if (dst->value != src->value * factor) {
     dst->value = src->value * factor;
     mvte->priv->been_panning = TRUE;
     gtk_adjustment_value_changed(dst);
   }
-/*
-  g_printerr("%s : after : src : "
-                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
-                  __FUNCTION__, src->upper, src->lower, src->page_size, src->value, src->step_increment, src->page_increment);
-  g_printerr("%s : after : dst : "
-                  "upper: %f, lower: %f, page_size: %f, value: %f, step_inc: %f, page_inc: %f\n",
-                  __FUNCTION__, dst->upper, dst->lower, dst->page_size, dst->value, dst->step_increment, dst->page_increment);
-*/
 }
 
 static void
@@ -144,49 +143,7 @@ set_pan_mode(MaemoVte *mvte, gboolean pan_mode)
     g_object_notify(G_OBJECT(mvte), "pan-mode");
   }
 }
-#if (0)
-static void
-dump_key_event(GdkEventKey *event)
-{
-  g_print(".type = %s\n.send_event = %s\n.time = %d\n.state = ", 
-    event->type == GDK_KEY_PRESS   ? "GDK_KEY_PRESS"   : 
-    event->type == GDK_KEY_RELEASE ? "GDK_KEY_RELEASE" : "Other",
-    event->send_event ? "TRUE" : "FALSE", 
-    event->time);
 
-  if (event->state & GDK_SHIFT_MASK) g_print("GDK_SHIFT_MASK ");
-  if (event->state & GDK_LOCK_MASK) g_print("GDK_LOCK_MASK ");
-  if (event->state & GDK_CONTROL_MASK) g_print("GDK_CONTROL_MASK ");
-  if (event->state & GDK_MOD1_MASK) g_print("GDK_MOD1_MASK ");
-  if (event->state & GDK_MOD2_MASK) g_print("GDK_MOD2_MASK ");
-  if (event->state & GDK_MOD3_MASK) g_print("GDK_MOD3_MASK ");
-  if (event->state & GDK_MOD4_MASK) g_print("GDK_MOD4_MASK ");
-  if (event->state & GDK_MOD5_MASK) g_print("GDK_MOD5_MASK ");
-  if (event->state & GDK_BUTTON1_MASK) g_print("GDK_BUTTON1_MASK ");
-  if (event->state & GDK_BUTTON2_MASK) g_print("GDK_BUTTON2_MASK ");
-  if (event->state & GDK_BUTTON3_MASK) g_print("GDK_BUTTON3_MASK ");
-  if (event->state & GDK_BUTTON4_MASK) g_print("GDK_BUTTON4_MASK ");
-  if (event->state & GDK_BUTTON5_MASK) g_print("GDK_BUTTON5_MASK ");
-
-  /* The next few modifiers are used by XKB, so we skip to the end.
-   * Bits 15 - 25 are currently unused. Bit 29 is used internally.
-   */
-  
-  if (event->state & GDK_SUPER_MASK) g_print("GDK_SUPER_MASK ");
-  if (event->state & GDK_HYPER_MASK) g_print("GDK_HYPER_MASK ");
-  if (event->state & GDK_META_MASK) g_print("GDK_META_MASK ");
-  if (event->state & GDK_RELEASE_MASK) g_print("GDK_RELEASE_MASK ");
-  if (event->state & GDK_MODIFIER_MASK) g_print("GDK_MODIFIER_MASK ");
-
-  g_print("\n.keyval = %s\n.length = %d\n.string = %s\n.hardware_keycode = %d\n.group = %d\n.is_modifier = %s\n\n", 
-    gdk_keyval_name(event->keyval), 
-    event->length, 
-    event->string,
-    event->hardware_keycode,
-    event->group,
-    event->is_modifier ? "TRUE" : "FALSE");
-}
-#endif /* (0) */
 static void
 control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
 {
@@ -288,7 +245,10 @@ get_property(GObject *obj, guint property_id, GValue *value, GParamSpec *pspec)
 static gboolean
 maybe_ignore_mouse_event(GtkWidget *widget, GdkEvent *event, gboolean (*mouse_event)(GtkWidget *, GdkEvent *))
 {
-  return MAEMO_VTE(widget)->priv->pan_mode
+  MaemoVte *mvte = MAEMO_VTE(widget);
+  return mvte->priv->pan_mode                || 
+         mvte->priv->fs_button_timeout_id    ||
+         mvte->priv->fs_button_click
     ? TRUE
     : mouse_event
       ? mouse_event(widget, event)
@@ -314,18 +274,68 @@ check_match(MaemoVte *mvte, int x, int y)
   }
 }
 
+static void
+queue_fs_button_draw_update(MaemoVte *vs) {
+  GdkDrawable *wnd = GTK_WIDGET(vs)->window;
+
+  if (wnd && vs->priv->next_frame) {
+    int cx, cy;
+    GdkRectangle rc;
+
+    gdk_drawable_get_size(wnd, &cx, &cy);
+    rc.x      = cx - vs->priv->cx_next_frame;
+    rc.y      = cy - vs->priv->cy_next_frame;
+    rc.width  = vs->priv->cx_next_frame;
+    rc.height = vs->priv->cy_next_frame;
+
+    gdk_window_invalidate_rect(wnd, &rc, FALSE);
+  }
+}
+
+void
+maemo_vte_hide_fullscreen_button(MaemoVte *vs)
+{
+  if (vs->priv->fadeout_anim_timeout_id) {
+    g_source_remove(vs->priv->fadeout_anim_timeout_id);
+    vs->priv->fadeout_anim_timeout_id = 0;
+  }
+  if (vs->priv->fs_button_timeout_id) {
+    g_source_remove(vs->priv->fs_button_timeout_id);
+    vs->priv->fs_button_timeout_id = 0;
+  }
+  vs->priv->count = 0;
+
+  queue_fs_button_draw_update(vs);
+}
+
 static gboolean
 button_press_event(GtkWidget *widget, GdkEventButton *event)
 {
+  gboolean keep_processing = TRUE;
   MaemoVte *mvte = MAEMO_VTE(widget);
 
-  gtk_widget_grab_focus(widget);
+  if (mvte->priv->fs_button_timeout_id) {
+    int cx, cy;
 
-  mvte->priv->been_panning = FALSE;
+    gdk_drawable_get_size(widget->window, &cx, &cy);
+    if (event->x >= cx - mvte->priv->cx_next_frame && event->x <= cx && 
+        event->y >= cy - mvte->priv->cy_next_frame && event->y <= cy) {
+      g_signal_emit(G_OBJECT(widget), mvte_signals[MVTE_FS_BUTTON_CLICKED_SIGNAL], 0);
+      mvte->priv->fs_button_click = TRUE;
+      keep_processing = FALSE;
+    }
+    maemo_vte_hide_fullscreen_button(mvte);
+  }
 
-  if (mvte->priv->imc)
-    if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
-      return TRUE;
+  if (keep_processing) {
+    gtk_widget_grab_focus(widget);
+
+    mvte->priv->been_panning = FALSE;
+
+    if (mvte->priv->imc)
+      if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
+        return TRUE;
+  }
 
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
@@ -345,12 +355,17 @@ button_release_event(GtkWidget *widget, GdkEventButton *event)
 {
   MaemoVte *mvte = MAEMO_VTE(widget);
 
-  if (mvte->priv->imc)
-    if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
-      return TRUE;
+  if (mvte->priv->fs_button_click)
+    mvte->priv->fs_button_click = FALSE;
+  else 
+  if (!(mvte->priv->fs_button_timeout_id)) {
+    if (mvte->priv->imc)
+      if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
+        return TRUE;
 
-  if (!(mvte->priv->been_panning))
-    check_match(mvte, event->x, event->y);
+    if (!(mvte->priv->been_panning))
+      check_match(mvte, event->x, event->y);
+  }
 
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
@@ -428,6 +443,46 @@ finalize(GObject *obj)
 }
 
 static void
+settings_notify(GObject *settings, GParamSpec *pspec, gpointer null)
+{
+  if (fs_button_pb)
+    g_object_unref(fs_button_pb);
+
+  fs_button_pb = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(), "general_fullsize", HILDON_ICON_PIXEL_SIZE_THUMB, 0, NULL);
+}
+
+static gboolean
+expose_event(GtkWidget *widget, GdkEventExpose *event)
+{
+  MaemoVte *mvte = MAEMO_VTE(widget);
+  GdkGC *gc;
+  gboolean ret = FALSE;
+  gboolean (*parent_expose_event) (GtkWidget *, GdkEventExpose *) =
+    GTK_WIDGET_CLASS(g_type_class_peek(g_type_parent(MAEMO_VTE_TYPE)))->expose_event;
+
+  if (parent_expose_event)
+    ret = parent_expose_event(widget, event);
+
+  if (mvte->priv->fs_button_timeout_id || mvte->priv->fadeout_anim_timeout_id) {
+    gc = gdk_gc_new(widget->window);
+    if (widget->window && gc) {
+      int cx, cy;
+
+      gdk_drawable_get_size(widget->window, &cx, &cy);
+      gdk_gc_set_clip_region(gc, event->region);
+      gdk_draw_pixbuf(widget->window, gc, mvte->priv->next_frame, 
+        0, 0, 
+        cx - mvte->priv->cx_next_frame, cy - mvte->priv->cy_next_frame,
+        mvte->priv->cx_next_frame, mvte->priv->cy_next_frame, 
+        GDK_RGB_DITHER_NONE, 0, 0);
+      g_object_unref(gc);
+    }
+  }
+
+  return ret;
+}
+
+static void
 class_init(gpointer g_class, gpointer null)
 {
   GtkIMContextClass *gtk_imc_class = GTK_IM_CONTEXT_CLASS(g_type_class_ref(GTK_TYPE_IM_MULTICONTEXT));
@@ -464,6 +519,7 @@ class_init(gpointer g_class, gpointer null)
   widget_class->key_press_event = key_press_release_event;
   widget_class->key_release_event = key_press_release_event;
   widget_class->realize = realize;
+  widget_class->expose_event = expose_event;
 
   widget_class->set_scroll_adjustments_signal =
     g_signal_new(
@@ -477,7 +533,19 @@ class_init(gpointer g_class, gpointer null)
       GTK_TYPE_ADJUSTMENT,
       GTK_TYPE_ADJUSTMENT);
 
+  mvte_signals[MVTE_FS_BUTTON_CLICKED_SIGNAL] =
+    g_signal_new("fs-button-clicked",
+      G_OBJECT_CLASS_TYPE(g_class),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+      G_STRUCT_OFFSET(MaemoVteClass, fs_button_clicked),
+      NULL, NULL,
+      g_cclosure_marshal_VOID__VOID,
+      G_TYPE_NONE, 0);
+
   mvte_class->set_scroll_adjustments = set_scroll_adjustments;
+
+  g_signal_connect(gtk_settings_get_default(), "notify", (GCallback)settings_notify, NULL);
+  settings_notify(NULL, NULL, NULL);
 
   g_type_class_add_private(g_class, sizeof(MaemoVtePrivate));
 }
@@ -493,6 +561,15 @@ instance_init(GTypeInstance *instance, gpointer g_class)
   mvte->priv->pan_mode = FALSE;
   mvte->priv->control_mask = FALSE;
   mvte->priv->match = NULL;
+
+  mvte->priv->fs_button_timeout_id = 0;
+  mvte->priv->fadeout_anim_timeout_id = 0;
+  mvte->priv->count = 0;
+  mvte->priv->next_frame = NULL;
+  mvte->priv->cx_next_frame = 0;
+  mvte->priv->cy_next_frame = 0;
+  mvte->priv->fs_button_click = FALSE;
+
   if ((adj = vte_terminal_get_adjustment(VTE_TERMINAL(instance))) != NULL) {
     g_signal_connect(G_OBJECT(adj), "changed",       (GCallback)sync_vadj,       instance);
     g_signal_connect(G_OBJECT(adj), "value-changed", (GCallback)sync_vadj_value, instance);
@@ -524,26 +601,73 @@ maemo_vte_get_type( void )
   return the_type;
 }
 
+static int alphas[] = {63, 28, 15, 10, 7, 5, 3, 3, 2, 2, 1, 0};
+
+static gboolean
+fadeout_anim_timeout(MaemoVte *vs)
+{
+  int alpha = 255 - alphas[vs->priv->count];
+  if (vs->priv->count >= G_N_ELEMENTS(alphas)) {
+    vs->priv->fadeout_anim_timeout_id = 0;
+    return FALSE;
+  }
+
+  gdk_pixbuf_fill(vs->priv->next_frame, alpha);
+  gdk_pixbuf_composite(fs_button_pb, vs->priv->next_frame, 
+    0, 0, 
+    vs->priv->cx_next_frame, vs->priv->cy_next_frame, 
+    0, 0,
+    1.0, 1.0,
+    GDK_INTERP_NEAREST,
+    alphas[vs->priv->count]);
+
+  vs->priv->count++;
+
+  queue_fs_button_draw_update(vs);
+
+  return TRUE;
+}
+
 static gboolean
 fs_button_timeout(MaemoVte *vs)
 {
   vs->priv->fs_button_timeout_id = 0;
+
+  vs->priv->count = 0;
+  vs->priv->fadeout_anim_timeout_id =
+    g_timeout_add(100, (GSourceFunc)fadeout_anim_timeout, vs);
+
   return FALSE;
 }
-
-int alphas[] = {255, 63, 28, 15, 10, 7, 5, 3, 3, 2, 2, 1};
 
 void
 maemo_vte_show_fullscreen_button(MaemoVte *vs)
 {
-  if (vs->priv->fadeout_anim_timeout_id) {
-    g_source_remove(vs->priv->fadeout_anim_timeout_id);
-    vs->priv->fadeout_anim_timeout_id = 0;
+  if (GTK_WIDGET(vs)->window)
+    gdk_window_process_updates(GTK_WIDGET(vs)->window, FALSE);
+
+  maemo_vte_hide_fullscreen_button(vs);
+
+  if (vs->priv->next_frame) {
+    g_object_unref(vs->priv->next_frame);
+    vs->priv->next_frame = NULL;
   }
-  if (vs->priv->fs_button_timeout_id)
-    g_source_remove(vs->priv->fs_button_timeout_id);
+
+  if (fs_button_pb) {
+    int alpha = 255 - alphas[0];
+    vs->priv->next_frame = gdk_pixbuf_copy(fs_button_pb);
+    gdk_pixbuf_fill(vs->priv->next_frame, 0x00000000);
+    gdk_pixbuf_composite(fs_button_pb, vs->priv->next_frame,
+      0, 0, 
+      vs->priv->cx_next_frame, vs->priv->cy_next_frame, 
+      0, 0,
+      1.0, 1.0,
+      GDK_INTERP_NEAREST,
+      alphas[vs->priv->count]);
+    vs->priv->cx_next_frame = gdk_pixbuf_get_width(fs_button_pb);
+    vs->priv->cy_next_frame = gdk_pixbuf_get_height(fs_button_pb);
+  }
 
   vs->priv->fs_button_timeout_id = 
     g_timeout_add(2000, (GSourceFunc)fs_button_timeout, vs);
-  gtk_widget_queue_draw(GTK_WIDGET(vs));
 }

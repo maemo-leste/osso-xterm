@@ -34,6 +34,7 @@
 #include <libosso.h>
 #include "font-dialog.h"
 #include "terminal-gconf.h"
+#include "maemo-vte.h"
 
 #ifdef HAVE_OSSO_BROWSER
 #include <osso-browser-interface.h>
@@ -121,33 +122,22 @@ struct _TerminalWindow
   GtkWidget *copy_button;
   GtkWidget *paste_button;
   HildonAppMenu *match_menu;
-  GtkWidget *fs_unfs_alignment;
+  GtkWidget *unfs_button;
   GConfClient *gconf_client;
 
   TerminalWidget *terminal;
   gchar *encoding;
+
+  gboolean vte_button_press_tracking;
+  int vte_button_press_x;
+  int vte_button_press_y;
+  guint show_button_idle_id;
+
+  gboolean slide_open;
+  guint slide_open_id;
 };
 
 static GObjectClass *parent_class;
-
-static gboolean
-hide_the_widget(GtkWidget *widget)
-{
-  gtk_widget_hide(widget);
-  return FALSE;
-}
-
-#define HIDE_WIDGET_TIMEOUT 2000
-
-static void
-show_widget_for_a_while(GtkWidget *widget)
-{
-  guint timeout_id;
-
-  gtk_widget_show(widget);
-  timeout_id = g_timeout_add(HIDE_WIDGET_TIMEOUT, (GSourceFunc)hide_the_widget, widget);
-  g_object_weak_ref(G_OBJECT(widget), (GWeakNotify)g_source_remove, GUINT_TO_POINTER(timeout_id));
-}
 
 #if (0)
 static GtkActionEntry action_entries[] =
@@ -200,7 +190,7 @@ realize(GtkWidget *widget)
 
   if (widget->window) {
     unsigned char value = 1;
-    g_print("TerminalWindow::realize: 0x%x\n",(int)(widget->window));
+
     Atom hildon_zoom_key_atom = gdk_x11_get_xatom_by_name("_HILDON_ZOOM_KEY_ATOM"),
          integer_atom = gdk_x11_get_xatom_by_name("INTEGER");
     Display *dpy = GDK_DISPLAY_XDISPLAY(gdk_drawable_get_display(widget->window));
@@ -328,6 +318,23 @@ make_match_menu(TerminalWindow *wnd)
 }
 
 static void
+slide_open_value_changed(GConfClient *client, guint id, GConfEntry *entry, TerminalWindow *window)
+{
+  window->slide_open = gconf_value_get_bool(gconf_entry_get_value(entry));
+
+  if (terminal_window_is_fullscreen(window)) {
+    if (window->slide_open) {
+      terminal_widget_update_tool_bar(window->terminal, FALSE);
+      maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+    }
+    else {
+      terminal_widget_update_tool_bar(window->terminal, TRUE);
+      maemo_vte_hide_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+    }
+  }
+}
+
+static void
 terminal_window_init (TerminalWindow *window)
 {
   //  GtkWidget           *popup;
@@ -345,7 +352,12 @@ terminal_window_init (TerminalWindow *window)
 
   window->terminal = NULL;
   window->encoding = NULL;
-  window->fs_unfs_alignment = NULL;
+  window->unfs_button = NULL;
+  window->vte_button_press_tracking = FALSE;
+  window->vte_button_press_x = 0;
+  window->vte_button_press_y = 0;
+  window->show_button_idle_id = 0;
+  window->slide_open = FALSE;
 
   gtk_window_set_title(GTK_WINDOW(window), "X Terminal");
 
@@ -438,6 +450,16 @@ terminal_window_init (TerminalWindow *window)
   gtk_window_set_role (GTK_WINDOW (window), role);
   g_free (role);
 
+  gconf_client_add_dir(window->gconf_client, "/system/osso/af", 0, NULL);
+  window->slide_open_id =
+    gconf_client_notify_add(window->gconf_client, "/system/osso/af/slide-open", (GConfClientNotifyFunc)slide_open_value_changed, window, NULL, NULL);
+  window->slide_open = gconf_client_get_bool(window->gconf_client, "/system/osso/af/slide-open", &error);
+  if (error) {
+    g_printerr("Unable to get keyboard slide status from gconf: %s\n", error->message);
+    g_error_free(error);
+    error = NULL;
+    window->slide_open = FALSE;
+  }
 }
 
 
@@ -462,6 +484,9 @@ terminal_window_dispose (GObject *object)
   g_object_unref(window->match_menu);
   window->match_menu = NULL;
 
+  gconf_client_add_dir(window->gconf_client, "/system/osso/af", GCONF_CLIENT_PRELOAD_NONE, NULL);
+  gconf_client_notify_remove(window->gconf_client, window->slide_open_id);
+
   parent_class->dispose (object);
 }
 
@@ -478,6 +503,11 @@ terminal_window_finalize (GObject *object)
 
   g_free(window->encoding);
   window->encoding = NULL;
+
+  if (window->show_button_idle_id) {
+    g_source_remove(window->show_button_idle_id);
+    window->show_button_idle_id = 0;
+  }
 
   parent_class->finalize (object);
 }
@@ -643,40 +673,23 @@ notify_match(GtkWidget *widget, GParamSpec *pspec, TerminalWindow *wnd)
 }
 
 static void
-set_size_request(GtkWidget *widget, GtkAllocation *alloc)
+horizontal_movement(GtkWidget *pannable, gint direction, gdouble x_init, gdouble y_init, TerminalWindow *window)
 {
-  gtk_widget_set_size_request(widget, alloc->width, alloc->height);
-}
-
-static void
-fixed_size_allocate(GtkContainer *fixed, GtkAllocation *alloc, gpointer null)
-{
-  gtk_container_foreach (fixed, (GtkCallback)set_size_request, alloc);
-}
-
-static void
-put_fs_unfs_button_above_vte(GtkWidget *vte, GtkWidget *fs_unfs_button)
-{
-  g_print("put_fs_unfs_button_above_vte\n");
-  if (GTK_WIDGET_REALIZED(vte) && GTK_WIDGET_REALIZED(fs_unfs_button)) {
-    g_print("fs_unfs_button->window: 0x%x, vte->window: 0x%x\n", (int)(fs_unfs_button->window), (int)(vte->window));
-    gdk_window_raise(fs_unfs_button->window);
+  if (window->slide_open) {
+    if (gdk_screen_get_width(gdk_screen_get_default()) - 1 == x_init && 
+        terminal_window_is_fullscreen(window)) {
+      maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+    }
   }
 }
 
-static gboolean
-button_press_event(GtkWidget *terminal_window, GdkEventButton *event)
+static void
+mvte_fs_button_clicked(MaemoVte *mvte, TerminalWindow *terminal_window)
 {
-  g_print("button_press_event\n");
+  gboolean active;
 
-  if (gdk_screen_get_width(gdk_screen_get_default()) - 1 == event->x && 
-      terminal_window_is_fullscreen(TERMINAL_WINDOW(terminal_window))) {
-    show_widget_for_a_while(TERMINAL_WINDOW(terminal_window)->fs_unfs_alignment);
-    maemo_vte_show_fullscreen_button(MAEMO_VTE(TERMINAL_WINDOW(terminal_window)->terminal->terminal));
-    return TRUE;
-  }
-
-  return FALSE;
+  g_object_get(G_OBJECT(terminal_window->unfs_button), "active", &active, NULL);
+  g_object_set(G_OBJECT(terminal_window->unfs_button), "active", !active, NULL);
 }
 
 static void
@@ -684,40 +697,13 @@ terminal_window_real_add (
     TerminalWindow *window,
     TerminalWidget *widget)
 {
-    GtkWidget *fixed, *fs_unfs_button, *unfs_button, *terminal_eb;
-    GtkAction *fullscreen;
-
-    fixed = g_object_new(GTK_TYPE_FIXED, "visible", TRUE, NULL);
-    g_signal_connect(G_OBJECT(fixed), "size-allocate", (GCallback)fixed_size_allocate, NULL);
-
-    gtk_container_add(GTK_CONTAINER(window), fixed);
-
-    terminal_eb = g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, "above-child", TRUE, "visible-window", FALSE, NULL);
-    gtk_container_add(GTK_CONTAINER(fixed), terminal_eb);
-    gtk_container_add(GTK_CONTAINER(terminal_eb), GTK_WIDGET(widget));
-
-    g_signal_connect_swapped(G_OBJECT(terminal_eb), "button-press-event", (GCallback)button_press_event, window);
-
-    fullscreen = g_object_new(GTK_TYPE_TOGGLE_ACTION, "visible", TRUE, "active", FALSE, "icon-name", "general_fullsize", "name", "fullscreen", NULL);
-    g_signal_connect(G_OBJECT(fullscreen), "toggled", (GCallback)terminal_window_action_fullscreen, window);
-
-    fs_unfs_button = g_object_new(GTK_TYPE_TOGGLE_BUTTON,
-      "visible", TRUE,
-      "image", g_object_new(GTK_TYPE_IMAGE,
-        "visible", TRUE,
-        "icon-name", "general_fullsize",
-        "pixel-size", HILDON_ICON_PIXEL_SIZE_FINGER,
-        NULL),
-      NULL);
-    gtk_action_connect_proxy(fullscreen, fs_unfs_button);
-    window->fs_unfs_alignment = g_object_new(GTK_TYPE_ALIGNMENT, "xalign", 1.0, "yalign", 1.0, "xscale", 0.0, "yscale", 0.0,
-      "child", g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, "child", fs_unfs_button, NULL), NULL);
-    gtk_container_add(GTK_CONTAINER(fixed), window->fs_unfs_alignment);
   /*
     gchar *title = terminal_widget_get_title(widget);
     g_object_set(GTK_WINDOW (window), "title", title, NULL);
     g_free(title);
   */
+
+    gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(widget));
 
     /* add terminal to window */
     window->terminal = g_object_ref_sink(widget);
@@ -731,21 +717,12 @@ terminal_window_real_add (
     terminal_window_update_actions (window);
     g_signal_connect(G_OBJECT(widget->terminal), "notify::match", (GCallback)notify_match, window);
 
-    unfs_button = gtk_action_create_tool_item (fullscreen);
-    terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(unfs_button));
-
-    if (!(GTK_WIDGET_REALIZED(widget->terminal) && GTK_WIDGET_REALIZED(fs_unfs_button))) {
-      if (!(GTK_WIDGET_REALIZED(widget->terminal))) {
-        g_print("terminal_window_real_add: widget->terminal is not yet realized\n");
-        g_signal_connect(widget->terminal, "realize", (GCallback)put_fs_unfs_button_above_vte, fs_unfs_button);
-      }
-      if (!(GTK_WIDGET_REALIZED(fs_unfs_button))) {
-        g_print("terminal_window_real_add: fs_unfs_button is not yet realized\n");
-        g_signal_connect_swapped(fs_unfs_button, "realize", (GCallback)put_fs_unfs_button_above_vte, widget->terminal);
-      }
-    }
-    else
-      put_fs_unfs_button_above_vte(widget->terminal, fs_unfs_button);
+    window->unfs_button = g_object_new(GTK_TYPE_TOGGLE_TOOL_BUTTON,
+      "visible", TRUE,
+      "icon-name", "general_fullsize",
+      NULL);
+    g_signal_connect(G_OBJECT(window->unfs_button), "toggled", (GCallback)terminal_window_action_fullscreen, window);
+    terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(window->unfs_button));
 }
 
 /**
@@ -762,6 +739,49 @@ terminal_window_remove (TerminalWindow    *window,
 
   gtk_widget_destroy (GTK_WIDGET (widget));
 }
+
+static gboolean
+vte_button_press_event(GtkWidget *vte, GdkEventButton *event, TerminalWindow *window)
+{
+  if (window->slide_open) {
+    window->vte_button_press_x = event->x;
+    window->vte_button_press_y = event->y;
+    window->vte_button_press_tracking = TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
+show_button_idly(TerminalWindow *window)
+{
+  maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+  window->show_button_idle_id = 0;
+  return FALSE;
+}
+
+static gboolean
+vte_button_release_event(GtkWidget *vte, GdkEventButton *event, TerminalWindow *window)
+{
+  if (window->slide_open) {
+    int dclick_distance = 0, x_distance, y_distance;
+
+    g_object_get(G_OBJECT(gtk_settings_get_default()), "gtk-double-click-distance", &dclick_distance, NULL);
+
+    x_distance = window->vte_button_press_x - event->x;
+    y_distance = window->vte_button_press_y - event->y;
+    x_distance = ABS(x_distance);
+    y_distance = ABS(y_distance);
+
+    if (x_distance <= dclick_distance && y_distance <= dclick_distance && terminal_window_is_fullscreen(window)) {
+      if (!(window->show_button_idle_id))
+        window->show_button_idle_id = g_idle_add((GSourceFunc)show_button_idly, window);
+    }
+  }
+
+  return FALSE;
+}
+
 
 /**
  * terminal_window_launch
@@ -808,16 +828,18 @@ terminal_window_launch (
   if (child_launched) {
     gtk_widget_show(GTK_WIDGET(window));
 
+    g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->terminal), "fs-button-clicked", (GCallback)mvte_fs_button_clicked, window);
+    g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->pannable), "horizontal-movement", (GCallback)horizontal_movement, window);
+    g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->terminal), "button-press-event", (GCallback)vte_button_press_event, window);
+    g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->terminal), "button-release-event", (GCallback)vte_button_release_event, window);
+
     if (window->encoding == NULL) {
       gconf_client_set_string(window->gconf_client, OSSO_XTERM_GCONF_ENCODING, 
 			      OSSO_XTERM_DEFAULT_ENCODING, NULL);
       g_object_set (window->terminal, "encoding", 
 		    OSSO_XTERM_DEFAULT_ENCODING, NULL);
-    } else {
+    } else
       g_object_set (window->terminal, "encoding", window->encoding, NULL);
-    }
-
-  /*  g_idle_add ((GSourceFunc)_im_context_focus, window->terminal); */
   }
   return child_launched;
 }
@@ -830,16 +852,14 @@ void terminal_window_set_state (TerminalWindow *window, gboolean go_fs)
       if(!fs){
         gtk_window_fullscreen(GTK_WINDOW(window));
         terminal_widget_update_tool_bar(
-            window->terminal, FALSE/*terminal_widget_need_toolbar(window->terminal)*/);
-        show_widget_for_a_while(window->fs_unfs_alignment);
-      maemo_vte_show_fullscreen_button(MAEMO_VTE(TERMINAL_WINDOW(terminal_window)->terminal->terminal));
+            window->terminal, !(window->slide_open));
+        if (window->slide_open)
+          maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
       }
     } else {
       if(fs){
         gtk_window_unfullscreen(GTK_WINDOW(window));
-        terminal_widget_update_tool_bar(
-            window->terminal, TRUE /*terminal_widget_need_fullscreen_toolbar(window->terminal)*/);
-        gtk_widget_hide(window->fs_unfs_alignment);
+        terminal_widget_update_tool_bar(window->terminal, TRUE);
       }
     }
 }
