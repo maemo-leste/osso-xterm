@@ -23,6 +23,8 @@ struct _MaemoVtePrivate
   gboolean pan_mode;
   gboolean control_mask;
   gboolean been_panning;
+  guint fs_button_timeout_id;
+  guint fadeout_anim_timeout_id;
   char *match;
 };
 
@@ -520,4 +522,28 @@ maemo_vte_get_type( void )
   }
 
   return the_type;
+}
+
+static gboolean
+fs_button_timeout(MaemoVte *vs)
+{
+  vs->priv->fs_button_timeout_id = 0;
+  return FALSE;
+}
+
+int alphas[] = {255, 63, 28, 15, 10, 7, 5, 3, 3, 2, 2, 1};
+
+void
+maemo_vte_show_fullscreen_button(MaemoVte *vs)
+{
+  if (vs->priv->fadeout_anim_timeout_id) {
+    g_source_remove(vs->priv->fadeout_anim_timeout_id);
+    vs->priv->fadeout_anim_timeout_id = 0;
+  }
+  if (vs->priv->fs_button_timeout_id)
+    g_source_remove(vs->priv->fs_button_timeout_id);
+
+  vs->priv->fs_button_timeout_id = 
+    g_timeout_add(2000, (GSourceFunc)fs_button_timeout, vs);
+  gtk_widget_queue_draw(GTK_WIDGET(vs));
 }

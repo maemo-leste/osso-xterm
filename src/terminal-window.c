@@ -672,6 +672,7 @@ button_press_event(GtkWidget *terminal_window, GdkEventButton *event)
   if (gdk_screen_get_width(gdk_screen_get_default()) - 1 == event->x && 
       terminal_window_is_fullscreen(TERMINAL_WINDOW(terminal_window))) {
     show_widget_for_a_while(TERMINAL_WINDOW(terminal_window)->fs_unfs_alignment);
+    maemo_vte_show_fullscreen_button(MAEMO_VTE(TERMINAL_WINDOW(terminal_window)->terminal->terminal));
     return TRUE;
   }
 
@@ -831,6 +832,7 @@ void terminal_window_set_state (TerminalWindow *window, gboolean go_fs)
         terminal_widget_update_tool_bar(
             window->terminal, FALSE/*terminal_widget_need_toolbar(window->terminal)*/);
         show_widget_for_a_while(window->fs_unfs_alignment);
+      maemo_vte_show_fullscreen_button(MAEMO_VTE(TERMINAL_WINDOW(terminal_window)->terminal->terminal));
       }
     } else {
       if(fs){

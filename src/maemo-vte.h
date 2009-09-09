@@ -31,6 +31,8 @@ GType maemo_vte_get_type( void );
 #define MAEMO_VTE_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), MAEMO_VTE_TYPE, MaemoVteClass))
 #define MAEMO_VTE_PARENT_CLASS (g_type_class_peek(g_type_parent(MAEMO_VTE_TYPE)))
 
+void maemo_vte_show_fullscreen_button(MaemoVte *vs);
+
 G_END_DECLS
 
 #endif /* !_MAEMO_VTE_H_ */
