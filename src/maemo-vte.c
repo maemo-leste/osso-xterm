@@ -606,13 +606,12 @@ static int alphas[] = {63, 28, 15, 10, 7, 5, 3, 3, 2, 2, 1, 0};
 static gboolean
 fadeout_anim_timeout(MaemoVte *vs)
 {
-  int alpha = 255 - alphas[vs->priv->count];
   if (vs->priv->count >= G_N_ELEMENTS(alphas)) {
     vs->priv->fadeout_anim_timeout_id = 0;
     return FALSE;
   }
 
-  gdk_pixbuf_fill(vs->priv->next_frame, alpha);
+  gdk_pixbuf_fill(vs->priv->next_frame, alphas[vs->priv->count]);
   gdk_pixbuf_composite(fs_button_pb, vs->priv->next_frame, 
     0, 0, 
     vs->priv->cx_next_frame, vs->priv->cy_next_frame, 
@@ -654,18 +653,19 @@ maemo_vte_show_fullscreen_button(MaemoVte *vs)
   }
 
   if (fs_button_pb) {
-    int alpha = 255 - alphas[0];
     vs->priv->next_frame = gdk_pixbuf_copy(fs_button_pb);
-    gdk_pixbuf_fill(vs->priv->next_frame, 0x00000000);
-    gdk_pixbuf_composite(fs_button_pb, vs->priv->next_frame,
+
+    vs->priv->cx_next_frame = gdk_pixbuf_get_width(fs_button_pb);
+    vs->priv->cy_next_frame = gdk_pixbuf_get_height(fs_button_pb);
+
+    gdk_pixbuf_fill(vs->priv->next_frame, 0x00000080);
+    gdk_pixbuf_composite(fs_button_pb, vs->priv->next_frame, 
       0, 0, 
       vs->priv->cx_next_frame, vs->priv->cy_next_frame, 
       0, 0,
       1.0, 1.0,
       GDK_INTERP_NEAREST,
-      alphas[vs->priv->count]);
-    vs->priv->cx_next_frame = gdk_pixbuf_get_width(fs_button_pb);
-    vs->priv->cy_next_frame = gdk_pixbuf_get_height(fs_button_pb);
+      255);
   }
 
   vs->priv->fs_button_timeout_id = 
