@@ -325,11 +325,11 @@ slide_open_value_changed(GConfClient *client, guint id, GConfEntry *entry, Termi
   if (terminal_window_is_fullscreen(window)) {
     if (window->slide_open) {
       terminal_widget_update_tool_bar(window->terminal, FALSE);
-      maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+      maemo_vte_show_overlay_pixbuf(MAEMO_VTE(window->terminal->terminal));
     }
     else {
       terminal_widget_update_tool_bar(window->terminal, TRUE);
-      maemo_vte_hide_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+      maemo_vte_hide_overlay_pixbuf(MAEMO_VTE(window->terminal->terminal));
     }
   }
 }
@@ -678,18 +678,9 @@ horizontal_movement(GtkWidget *pannable, gint direction, gdouble x_init, gdouble
   if (window->slide_open) {
     if (gdk_screen_get_width(gdk_screen_get_default()) - 1 == x_init && 
         terminal_window_is_fullscreen(window)) {
-      maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+      maemo_vte_show_overlay_pixbuf(MAEMO_VTE(window->terminal->terminal));
     }
   }
-}
-
-static void
-mvte_fs_button_clicked(MaemoVte *mvte, TerminalWindow *terminal_window)
-{
-  gboolean active;
-
-  g_object_get(G_OBJECT(terminal_window->unfs_button), "active", &active, NULL);
-  g_object_set(G_OBJECT(terminal_window->unfs_button), "active", !active, NULL);
 }
 
 static void
@@ -755,7 +746,7 @@ vte_button_press_event(GtkWidget *vte, GdkEventButton *event, TerminalWindow *wi
 static gboolean
 show_button_idly(TerminalWindow *window)
 {
-  maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+  maemo_vte_show_overlay_pixbuf(MAEMO_VTE(window->terminal->terminal));
   window->show_button_idle_id = 0;
   return FALSE;
 }
@@ -828,7 +819,6 @@ terminal_window_launch (
   if (child_launched) {
     gtk_widget_show(GTK_WIDGET(window));
 
-    g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->terminal), "fs-button-clicked", (GCallback)mvte_fs_button_clicked, window);
     g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->pannable), "horizontal-movement", (GCallback)horizontal_movement, window);
     g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->terminal), "button-press-event", (GCallback)vte_button_press_event, window);
     g_signal_connect(G_OBJECT(TERMINAL_WIDGET(terminal)->terminal), "button-release-event", (GCallback)vte_button_release_event, window);
@@ -854,7 +844,7 @@ void terminal_window_set_state (TerminalWindow *window, gboolean go_fs)
         terminal_widget_update_tool_bar(
             window->terminal, !(window->slide_open));
         if (window->slide_open)
-          maemo_vte_show_fullscreen_button(MAEMO_VTE(window->terminal->terminal));
+          maemo_vte_show_overlay_pixbuf(MAEMO_VTE(window->terminal->terminal));
       }
     } else {
       if(fs){

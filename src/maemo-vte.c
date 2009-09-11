@@ -1,7 +1,7 @@
 #include <hildon/hildon.h>
 #include <gdk/gdkkeysyms.h>
 #include "maemo-vte.h"
-#include "vte-marshallers.h"
+#include "maemo-vte-marshallers.h"
 
 typedef struct
 {
@@ -13,39 +13,51 @@ enum
 {
   PAN_MODE_PROPERTY = 1,
   CONTROL_MASK_PROPERTY,
+  OVERLAY_PIXBUF_PROPERTY,
   MATCH_PROPERTY,
 };
 
-static GdkPixbuf *fs_button_pb = NULL;
+#define PERFORM_SYNC(mvte,src) \
+  ((mvte)->foreign_vadj && \
+   (((mvte)->pan_mode) || \
+    ((src) != (mvte)->foreign_vadj)))
 
-struct _MaemoVtePrivate
+enum {
+  MVTE_OVERLAY_CLICKED_SIGNAL,
+  MVTE_N_SIGNALS
+};
+
+static int mvte_signals[MVTE_N_SIGNALS] = { 0 };
+
+struct _MaemoVte
 {
+  VteTerminal parent_instance;
+
   GtkIMContext *imc;
   GtkAdjustment *foreign_vadj;
   gboolean pan_mode;
   gboolean control_mask;
   gboolean been_panning;
   char *match;
-  guint fs_button_timeout_id;
+  guint overlay_timeout_id;
   guint fadeout_anim_timeout_id;
   guint count;
+  GdkPixbuf *overlay_pixbuf;
   GdkPixbuf *next_frame;
   int cx_next_frame;
   int cy_next_frame;
-  gboolean fs_button_click;
+  gboolean overlay_click;
 };
 
-#define PERFORM_SYNC(mvte,src) \
-  ((mvte)->priv->foreign_vadj && \
-   (((mvte)->priv->pan_mode) || \
-    ((src) != (mvte)->priv->foreign_vadj)))
+struct _MaemoVteClass
+{
+  VteTerminalClass parent_class;
 
-enum {
-  MVTE_FS_BUTTON_CLICKED_SIGNAL,
-  MVTE_N_SIGNALS
+  void (*set_scroll_adjustments) (MaemoVte *vs, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment);
+  void (*overlay_clicked) (MaemoVte *vs, int x, int y);
 };
 
-static int mvte_signals[MVTE_N_SIGNALS] = { 0 };
+G_DEFINE_TYPE(MaemoVte, maemo_vte, VTE_TYPE_TERMINAL);
 
 static void set_control_mask(MaemoVte *mvte, gboolean on);
 
@@ -55,12 +67,12 @@ set_up_sync(MaemoVte *mvte, GtkAdjustment **p_src, GtkAdjustment **p_dst, double
   if (!PERFORM_SYNC(mvte,(*p_src)))
     (*p_src) = vte_terminal_get_adjustment(VTE_TERMINAL(mvte));
 
-  if ((*p_src) == mvte->priv->foreign_vadj) {
+  if ((*p_src) == mvte->foreign_vadj) {
     (*p_dst) = vte_terminal_get_adjustment(VTE_TERMINAL(mvte));
     (*p_factor) = 1.0 / ((double)(VTE_TERMINAL(mvte)->char_height));
   }
   else {
-    (*p_dst) = mvte->priv->foreign_vadj;
+    (*p_dst) = mvte->foreign_vadj;
     (*p_factor) = ((double)(VTE_TERMINAL(mvte)->char_height));
   }
 }
@@ -85,7 +97,7 @@ sync_vadj(GtkAdjustment *src, MaemoVte *mvte)
     dst->step_increment = src->step_increment * factor;
     dst->page_increment = src->page_increment * factor;
     dst->page_size      = src->page_size * factor;
-    mvte->priv->been_panning = TRUE;
+    mvte->been_panning = TRUE;
     gtk_adjustment_changed(dst);
   }
 }
@@ -102,7 +114,7 @@ sync_vadj_value(GtkAdjustment *src, MaemoVte *mvte)
 
   if (dst->value != src->value * factor) {
     dst->value = src->value * factor;
-    mvte->priv->been_panning = TRUE;
+    mvte->been_panning = TRUE;
     gtk_adjustment_value_changed(dst);
   }
 }
@@ -113,17 +125,17 @@ set_scroll_adjustments(MaemoVte *mvte, GtkAdjustment *hadjustment, GtkAdjustment
   GtkAdjustment *my_vadj = vte_terminal_get_adjustment(VTE_TERMINAL(mvte));
   /* This function ignores hadjustment */
 
-  if (mvte->priv->foreign_vadj) {
-    g_signal_handlers_disconnect_by_func(G_OBJECT(mvte->priv->foreign_vadj), sync_vadj,       mvte);
-    g_signal_handlers_disconnect_by_func(G_OBJECT(mvte->priv->foreign_vadj), sync_vadj_value, mvte);
-    g_signal_handlers_disconnect_by_func(G_OBJECT(my_vadj),                  sync_vadj,       mvte);
-    g_signal_handlers_disconnect_by_func(G_OBJECT(my_vadj),                  sync_vadj_value, mvte);
-    g_object_unref(mvte->priv->foreign_vadj);
-    mvte->priv->foreign_vadj = NULL;
+  if (mvte->foreign_vadj) {
+    g_signal_handlers_disconnect_by_func(G_OBJECT(mvte->foreign_vadj), sync_vadj,       mvte);
+    g_signal_handlers_disconnect_by_func(G_OBJECT(mvte->foreign_vadj), sync_vadj_value, mvte);
+    g_signal_handlers_disconnect_by_func(G_OBJECT(my_vadj),            sync_vadj,       mvte);
+    g_signal_handlers_disconnect_by_func(G_OBJECT(my_vadj),            sync_vadj_value, mvte);
+    g_object_unref(mvte->foreign_vadj);
+    mvte->foreign_vadj = NULL;
   }
 
   if (vadjustment) {
-    mvte->priv->foreign_vadj = g_object_ref(vadjustment);
+    mvte->foreign_vadj = g_object_ref(vadjustment);
     g_signal_connect(G_OBJECT(vadjustment), "changed",       (GCallback)sync_vadj,       mvte);
     g_signal_connect(G_OBJECT(vadjustment), "value-changed", (GCallback)sync_vadj_value, mvte);
     g_signal_connect(G_OBJECT(my_vadj),     "changed",       (GCallback)sync_vadj,       mvte);
@@ -134,8 +146,8 @@ set_scroll_adjustments(MaemoVte *mvte, GtkAdjustment *hadjustment, GtkAdjustment
 static void
 set_pan_mode(MaemoVte *mvte, gboolean pan_mode)
 {
-  if (pan_mode != mvte->priv->pan_mode) {
-    mvte->priv->pan_mode = pan_mode;
+  if (pan_mode != mvte->pan_mode) {
+    mvte->pan_mode = pan_mode;
     if (!pan_mode) {
       sync_vadj(vte_terminal_get_adjustment(VTE_TERMINAL(mvte)), mvte);
       sync_vadj_value(vte_terminal_get_adjustment(VTE_TERMINAL(mvte)), mvte);
@@ -151,7 +163,7 @@ control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
   MaemoVte *mvte = g_object_get_data(G_OBJECT(wnd), "mvte");
 
   if (mvte)
-    if (mvte->priv->control_mask) {
+    if (mvte->control_mask) {
       int Nix;
 
       if (text)
@@ -198,9 +210,30 @@ control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
 static void
 set_control_mask(MaemoVte *mvte, gboolean new_value)
 {
-  if (mvte->priv->control_mask != new_value) {
-    mvte->priv->control_mask = new_value;
+  if (mvte->control_mask != new_value) {
+    mvte->control_mask = new_value;
     g_object_notify(G_OBJECT(mvte), "control-mask");
+  }
+}
+
+static void
+set_overlay_pixbuf(MaemoVte *mvte, GdkPixbuf *pb)
+{
+  if (pb != mvte->overlay_pixbuf) {
+    if (mvte->overlay_pixbuf) {
+      g_object_unref(mvte->overlay_pixbuf);
+      mvte->overlay_pixbuf = NULL;
+    }
+
+    if (pb) {
+      mvte->overlay_pixbuf = gdk_pixbuf_copy(pb);
+      mvte->cx_next_frame = gdk_pixbuf_get_width(mvte->overlay_pixbuf);
+      mvte->cy_next_frame = gdk_pixbuf_get_height(mvte->overlay_pixbuf);
+      if (mvte->overlay_timeout_id || mvte->fadeout_anim_timeout_id)
+        gtk_widget_queue_draw(GTK_WIDGET(mvte));
+    }
+
+    g_object_notify(G_OBJECT(mvte), "overlay-pixbuf");
   }
 }
 
@@ -215,6 +248,10 @@ set_property(GObject *obj, guint property_id, const GValue *value, GParamSpec *p
     case CONTROL_MASK_PROPERTY:
       set_control_mask(MAEMO_VTE(obj), g_value_get_boolean(value));
       break;
+    
+    case OVERLAY_PIXBUF_PROPERTY:
+      set_overlay_pixbuf(MAEMO_VTE(obj), g_value_get_object(value));
+      break;
 
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, property_id, pspec);
@@ -226,15 +263,15 @@ get_property(GObject *obj, guint property_id, GValue *value, GParamSpec *pspec)
 {
   switch (property_id) {
     case PAN_MODE_PROPERTY:
-      g_value_set_boolean(value, MAEMO_VTE(obj)->priv->pan_mode);
+      g_value_set_boolean(value, MAEMO_VTE(obj)->pan_mode);
       break;
 
     case CONTROL_MASK_PROPERTY:
-      g_value_set_boolean(value, MAEMO_VTE(obj)->priv->control_mask);
+      g_value_set_boolean(value, MAEMO_VTE(obj)->control_mask);
       break;
 
     case MATCH_PROPERTY:
-      g_value_set_string(value, MAEMO_VTE(obj)->priv->match);
+      g_value_set_string(value, MAEMO_VTE(obj)->match);
       break;
 
     default:
@@ -246,9 +283,9 @@ static gboolean
 maybe_ignore_mouse_event(GtkWidget *widget, GdkEvent *event, gboolean (*mouse_event)(GtkWidget *, GdkEvent *))
 {
   MaemoVte *mvte = MAEMO_VTE(widget);
-  return mvte->priv->pan_mode                || 
-         mvte->priv->fs_button_timeout_id    ||
-         mvte->priv->fs_button_click
+  return mvte->pan_mode           || 
+         mvte->overlay_timeout_id ||
+         mvte->overlay_click
     ? TRUE
     : mouse_event
       ? mouse_event(widget, event)
@@ -267,45 +304,45 @@ check_match(MaemoVte *mvte, int x, int y)
 
   possible_match = vte_terminal_match_check(vte, (x - x_pad) / vte->char_width, (y - y_pad) / vte->char_height, &tag);
 
-  if (possible_match || g_strcmp0(possible_match, mvte->priv->match)) {
-    g_free(mvte->priv->match);
-    mvte->priv->match = possible_match;
+  if (possible_match || g_strcmp0(possible_match, mvte->match)) {
+    g_free(mvte->match);
+    mvte->match = possible_match;
     g_object_notify(G_OBJECT(mvte), "match");
   }
 }
 
 static void
-queue_fs_button_draw_update(MaemoVte *vs) {
+queue_overlay_pixbuf_draw_update(MaemoVte *vs) {
   GdkDrawable *wnd = GTK_WIDGET(vs)->window;
 
-  if (wnd && vs->priv->next_frame) {
+  if (wnd && vs->next_frame) {
     int cx, cy;
     GdkRectangle rc;
 
     gdk_drawable_get_size(wnd, &cx, &cy);
-    rc.x      = cx - vs->priv->cx_next_frame;
-    rc.y      = cy - vs->priv->cy_next_frame;
-    rc.width  = vs->priv->cx_next_frame;
-    rc.height = vs->priv->cy_next_frame;
+    rc.x      = 0;
+    rc.y      = cy - vs->cy_next_frame;
+    rc.width  = vs->cx_next_frame;
+    rc.height = vs->cy_next_frame;
 
     gdk_window_invalidate_rect(wnd, &rc, FALSE);
   }
 }
 
 void
-maemo_vte_hide_fullscreen_button(MaemoVte *vs)
+maemo_vte_hide_overlay_pixbuf(MaemoVte *vs)
 {
-  if (vs->priv->fadeout_anim_timeout_id) {
-    g_source_remove(vs->priv->fadeout_anim_timeout_id);
-    vs->priv->fadeout_anim_timeout_id = 0;
+  if (vs->fadeout_anim_timeout_id) {
+    g_source_remove(vs->fadeout_anim_timeout_id);
+    vs->fadeout_anim_timeout_id = 0;
   }
-  if (vs->priv->fs_button_timeout_id) {
-    g_source_remove(vs->priv->fs_button_timeout_id);
-    vs->priv->fs_button_timeout_id = 0;
+  if (vs->overlay_timeout_id) {
+    g_source_remove(vs->overlay_timeout_id);
+    vs->overlay_timeout_id = 0;
   }
-  vs->priv->count = 0;
+  vs->count = 0;
 
-  queue_fs_button_draw_update(vs);
+  queue_overlay_pixbuf_draw_update(vs);
 }
 
 static gboolean
@@ -314,32 +351,34 @@ button_press_event(GtkWidget *widget, GdkEventButton *event)
   gboolean keep_processing = TRUE;
   MaemoVte *mvte = MAEMO_VTE(widget);
 
-  if (mvte->priv->fs_button_timeout_id) {
+  if (mvte->overlay_timeout_id) {
     int cx, cy;
 
     gdk_drawable_get_size(widget->window, &cx, &cy);
-    if (event->x >= cx - mvte->priv->cx_next_frame && event->x <= cx && 
-        event->y >= cy - mvte->priv->cy_next_frame && event->y <= cy) {
-      g_signal_emit(G_OBJECT(widget), mvte_signals[MVTE_FS_BUTTON_CLICKED_SIGNAL], 0);
-      mvte->priv->fs_button_click = TRUE;
+    if (event->x >= 0 && event->x <= mvte->cx_next_frame && 
+        event->y >= cy - mvte->cy_next_frame && event->y <= cy) {
+      g_signal_emit(G_OBJECT(widget), mvte_signals[MVTE_OVERLAY_CLICKED_SIGNAL], 0, 
+        (int)(event->x - cx + mvte->cx_next_frame),
+        (int)(event->y - cy + mvte->cy_next_frame));
+      mvte->overlay_click = TRUE;
       keep_processing = FALSE;
     }
-    maemo_vte_hide_fullscreen_button(mvte);
+    maemo_vte_hide_overlay_pixbuf(mvte);
   }
 
   if (keep_processing) {
     gtk_widget_grab_focus(widget);
 
-    mvte->priv->been_panning = FALSE;
+    mvte->been_panning = FALSE;
 
-    if (mvte->priv->imc)
-      if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
+    if (mvte->imc)
+      if (hildon_gtk_im_context_filter_event(mvte->imc, (GdkEvent *)event))
         return TRUE;
   }
 
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
-      (GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->button_press_event));
+      (GTK_WIDGET_CLASS(maemo_vte_parent_class)->button_press_event));
 }
 
 static gboolean
@@ -347,7 +386,7 @@ motion_notify_event(GtkWidget *widget, GdkEventMotion *event)
 {
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
-      (GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->motion_notify_event));
+      (GTK_WIDGET_CLASS(maemo_vte_parent_class)->motion_notify_event));
 }
 
 static gboolean
@@ -355,21 +394,21 @@ button_release_event(GtkWidget *widget, GdkEventButton *event)
 {
   MaemoVte *mvte = MAEMO_VTE(widget);
 
-  if (mvte->priv->fs_button_click)
-    mvte->priv->fs_button_click = FALSE;
+  if (mvte->overlay_click)
+    mvte->overlay_click = FALSE;
   else 
-  if (!(mvte->priv->fs_button_timeout_id)) {
-    if (mvte->priv->imc)
-      if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
+  if (!(mvte->overlay_timeout_id)) {
+    if (mvte->imc)
+      if (hildon_gtk_im_context_filter_event(mvte->imc, (GdkEvent *)event))
         return TRUE;
 
-    if (!(mvte->priv->been_panning))
+    if (!(mvte->been_panning))
       check_match(mvte, event->x, event->y);
   }
 
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
-      (GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->button_release_event));
+      (GTK_WIDGET_CLASS(maemo_vte_parent_class)->button_release_event));
 }
 
 static gboolean
@@ -378,10 +417,10 @@ key_press_release_event(GtkWidget *widget, GdkEventKey *event)
   MaemoVte *mvte = MAEMO_VTE(widget);
   gboolean (*parent_key_press_release_event)(GtkWidget *, GdkEventKey *) =
     (event->type == GDK_KEY_PRESS)
-      ? GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->key_press_event
-      : GTK_WIDGET_CLASS(MAEMO_VTE_PARENT_CLASS)->key_release_event;
+      ? GTK_WIDGET_CLASS(maemo_vte_parent_class)->key_press_event
+      : GTK_WIDGET_CLASS(maemo_vte_parent_class)->key_release_event;
 
-  if (mvte->priv->control_mask)
+  if (mvte->control_mask)
     event->state |= GDK_CONTROL_MASK;
 
 //  dump_key_event(event);
@@ -426,7 +465,7 @@ realize(GtkWidget *widget)
     g_signal_connect(G_OBJECT(imc), "retrieve-surrounding", (GCallback)imc_retrieve_surrounding, widget);
     if (imc) {
       g_object_set(G_OBJECT(imc), "hildon-input-mode", HILDON_GTK_INPUT_MODE_FULL, NULL);
-      MAEMO_VTE(widget)->priv->imc = imc;
+      MAEMO_VTE(widget)->imc = imc;
     }
   }
 }
@@ -437,18 +476,19 @@ finalize(GObject *obj)
   void (*parent_finalize)(GObject *) = G_OBJECT_CLASS(g_type_class_peek(g_type_parent(MAEMO_VTE_TYPE)))->finalize;
   MaemoVte *mvte = MAEMO_VTE(obj);
 
-  g_free(mvte->priv->match);
+  if (mvte->overlay_pixbuf)
+    g_object_unref(mvte->overlay_pixbuf);
+
+  if (mvte->next_frame)
+    g_object_unref(mvte->next_frame);
+
+  if (mvte->foreign_vadj)
+    g_object_unref(mvte->foreign_vadj);
+
+  g_free(mvte->match);
+
   if (parent_finalize)
     parent_finalize(obj);
-}
-
-static void
-settings_notify(GObject *settings, GParamSpec *pspec, gpointer null)
-{
-  if (fs_button_pb)
-    g_object_unref(fs_button_pb);
-
-  fs_button_pb = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(), "general_fullsize", HILDON_ICON_PIXEL_SIZE_THUMB, 0, NULL);
 }
 
 static gboolean
@@ -463,17 +503,17 @@ expose_event(GtkWidget *widget, GdkEventExpose *event)
   if (parent_expose_event)
     ret = parent_expose_event(widget, event);
 
-  if (mvte->priv->fs_button_timeout_id || mvte->priv->fadeout_anim_timeout_id) {
+  if (mvte->overlay_timeout_id || mvte->fadeout_anim_timeout_id) {
     gc = gdk_gc_new(widget->window);
     if (widget->window && gc) {
       int cx, cy;
 
       gdk_drawable_get_size(widget->window, &cx, &cy);
       gdk_gc_set_clip_region(gc, event->region);
-      gdk_draw_pixbuf(widget->window, gc, mvte->priv->next_frame, 
+      gdk_draw_pixbuf(widget->window, gc, mvte->next_frame, 
         0, 0, 
-        cx - mvte->priv->cx_next_frame, cy - mvte->priv->cy_next_frame,
-        mvte->priv->cx_next_frame, mvte->priv->cy_next_frame, 
+        0, cy - mvte->cy_next_frame,
+        mvte->cx_next_frame, mvte->cy_next_frame, 
         GDK_RGB_DITHER_NONE, 0, 0);
       g_object_unref(gc);
     }
@@ -483,12 +523,11 @@ expose_event(GtkWidget *widget, GdkEventExpose *event)
 }
 
 static void
-class_init(gpointer g_class, gpointer null)
+maemo_vte_class_init(MaemoVteClass *mvte_class)
 {
   GtkIMContextClass *gtk_imc_class = GTK_IM_CONTEXT_CLASS(g_type_class_ref(GTK_TYPE_IM_MULTICONTEXT));
-  GObjectClass *gobject_class = G_OBJECT_CLASS(g_class);
-  MaemoVteClass *mvte_class = MAEMO_VTE_CLASS(g_class);
-  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(g_class);
+  GObjectClass *gobject_class = G_OBJECT_CLASS(mvte_class);
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(mvte_class);
 
   gobject_class->finalize = finalize;
   gobject_class->set_property = set_property;
@@ -513,6 +552,10 @@ class_init(gpointer g_class, gpointer null)
     g_param_spec_string("match", "Match", "The latest regex match the user has clicked on",
       NULL, G_PARAM_READABLE));
 
+  g_object_class_install_property(gobject_class, OVERLAY_PIXBUF_PROPERTY,
+    g_param_spec_object("overlay-pixbuf", "Overlay Pixbuf", "A GdkPixbuf to overlay",
+      GDK_TYPE_PIXBUF, G_PARAM_WRITABLE));
+
   widget_class->button_press_event = button_press_event;
   widget_class->motion_notify_event = motion_notify_event;
   widget_class->button_release_event = button_release_event;
@@ -524,7 +567,7 @@ class_init(gpointer g_class, gpointer null)
   widget_class->set_scroll_adjustments_signal =
     g_signal_new(
       "set-scroll-adjustments",
-      G_OBJECT_CLASS_TYPE(g_class),
+      G_OBJECT_CLASS_TYPE(mvte_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
       G_STRUCT_OFFSET(MaemoVteClass, set_scroll_adjustments),
       NULL, NULL,
@@ -533,72 +576,43 @@ class_init(gpointer g_class, gpointer null)
       GTK_TYPE_ADJUSTMENT,
       GTK_TYPE_ADJUSTMENT);
 
-  mvte_signals[MVTE_FS_BUTTON_CLICKED_SIGNAL] =
-    g_signal_new("fs-button-clicked",
-      G_OBJECT_CLASS_TYPE(g_class),
+  mvte_signals[MVTE_OVERLAY_CLICKED_SIGNAL] =
+    g_signal_new("overlay-clicked",
+      G_OBJECT_CLASS_TYPE(mvte_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
-      G_STRUCT_OFFSET(MaemoVteClass, fs_button_clicked),
+      G_STRUCT_OFFSET(MaemoVteClass, overlay_clicked),
       NULL, NULL,
-      g_cclosure_marshal_VOID__VOID,
-      G_TYPE_NONE, 0);
+      _vte_marshal_VOID__INT_INT,
+      G_TYPE_NONE, 2,
+      G_TYPE_INT,
+      G_TYPE_INT);
 
   mvte_class->set_scroll_adjustments = set_scroll_adjustments;
-
-  g_signal_connect(gtk_settings_get_default(), "notify", (GCallback)settings_notify, NULL);
-  settings_notify(NULL, NULL, NULL);
-
-  g_type_class_add_private(g_class, sizeof(MaemoVtePrivate));
 }
 
 static void
-instance_init(GTypeInstance *instance, gpointer g_class)
+maemo_vte_init(MaemoVte *mvte)
 {
-  MaemoVte *mvte = MAEMO_VTE(instance);
   GtkAdjustment *adj = NULL;
 
-  mvte->priv = G_TYPE_INSTANCE_GET_PRIVATE(instance, MAEMO_VTE_TYPE, MaemoVtePrivate);
-  mvte->priv->foreign_vadj = NULL;
-  mvte->priv->pan_mode = FALSE;
-  mvte->priv->control_mask = FALSE;
-  mvte->priv->match = NULL;
+  mvte->foreign_vadj = NULL;
+  mvte->pan_mode = FALSE;
+  mvte->control_mask = FALSE;
+  mvte->match = NULL;
 
-  mvte->priv->fs_button_timeout_id = 0;
-  mvte->priv->fadeout_anim_timeout_id = 0;
-  mvte->priv->count = 0;
-  mvte->priv->next_frame = NULL;
-  mvte->priv->cx_next_frame = 0;
-  mvte->priv->cy_next_frame = 0;
-  mvte->priv->fs_button_click = FALSE;
+  mvte->overlay_timeout_id = 0;
+  mvte->fadeout_anim_timeout_id = 0;
+  mvte->count = 0;
+  mvte->next_frame = NULL;
+  mvte->cx_next_frame = 0;
+  mvte->cy_next_frame = 0;
+  mvte->overlay_click = FALSE;
+  mvte->overlay_pixbuf = NULL;
 
-  if ((adj = vte_terminal_get_adjustment(VTE_TERMINAL(instance))) != NULL) {
-    g_signal_connect(G_OBJECT(adj), "changed",       (GCallback)sync_vadj,       instance);
-    g_signal_connect(G_OBJECT(adj), "value-changed", (GCallback)sync_vadj_value, instance);
+  if ((adj = vte_terminal_get_adjustment(VTE_TERMINAL(mvte))) != NULL) {
+    g_signal_connect(G_OBJECT(adj), "changed",       (GCallback)sync_vadj,       mvte);
+    g_signal_connect(G_OBJECT(adj), "value-changed", (GCallback)sync_vadj_value, mvte);
   }
-}
-
-GType
-maemo_vte_get_type( void )
-{
-  static GType the_type = 0;
-
-  if (!the_type) {
-    static GTypeInfo the_type_info = {
-      .class_size     = sizeof(MaemoVteClass),
-      .base_init      = NULL,
-      .base_finalize  = NULL,
-      .class_init     = class_init,
-      .class_finalize = NULL,
-      .class_data     = NULL,
-      .instance_size  = sizeof(MaemoVte),
-      .n_preallocs    = 0,
-      .instance_init  = instance_init,
-      .value_table    = NULL
-    };
-
-    the_type = g_type_register_static(VTE_TYPE_TERMINAL, MAEMO_VTE_TYPE_STRING, &the_type_info, 0);
-  }
-
-  return the_type;
 }
 
 static int alphas[] = {63, 28, 15, 10, 7, 5, 3, 3, 2, 2, 1, 0};
@@ -606,68 +620,65 @@ static int alphas[] = {63, 28, 15, 10, 7, 5, 3, 3, 2, 2, 1, 0};
 static gboolean
 fadeout_anim_timeout(MaemoVte *vs)
 {
-  if (vs->priv->count >= G_N_ELEMENTS(alphas)) {
-    vs->priv->fadeout_anim_timeout_id = 0;
+  if (vs->count >= G_N_ELEMENTS(alphas)) {
+    vs->fadeout_anim_timeout_id = 0;
     return FALSE;
   }
 
-  gdk_pixbuf_fill(vs->priv->next_frame, alphas[vs->priv->count]);
-  gdk_pixbuf_composite(fs_button_pb, vs->priv->next_frame, 
+  gdk_pixbuf_fill(vs->next_frame, alphas[vs->count]);
+  gdk_pixbuf_composite(vs->overlay_pixbuf, vs->next_frame, 
     0, 0, 
-    vs->priv->cx_next_frame, vs->priv->cy_next_frame, 
+    vs->cx_next_frame, vs->cy_next_frame, 
     0, 0,
     1.0, 1.0,
     GDK_INTERP_NEAREST,
-    alphas[vs->priv->count]);
+    alphas[vs->count]);
 
-  vs->priv->count++;
+  vs->count++;
 
-  queue_fs_button_draw_update(vs);
+  queue_overlay_pixbuf_draw_update(vs);
 
   return TRUE;
 }
 
 static gboolean
-fs_button_timeout(MaemoVte *vs)
+overlay_timeout(MaemoVte *vs)
 {
-  vs->priv->fs_button_timeout_id = 0;
+  vs->overlay_timeout_id = 0;
 
-  vs->priv->count = 0;
-  vs->priv->fadeout_anim_timeout_id =
+  vs->count = 0;
+  vs->fadeout_anim_timeout_id =
     g_timeout_add(100, (GSourceFunc)fadeout_anim_timeout, vs);
 
   return FALSE;
 }
 
 void
-maemo_vte_show_fullscreen_button(MaemoVte *vs)
+maemo_vte_show_overlay_pixbuf(MaemoVte *vs)
 {
   if (GTK_WIDGET(vs)->window)
     gdk_window_process_updates(GTK_WIDGET(vs)->window, FALSE);
 
-  maemo_vte_hide_fullscreen_button(vs);
+  maemo_vte_hide_overlay_pixbuf(vs);
 
-  if (vs->priv->next_frame) {
-    g_object_unref(vs->priv->next_frame);
-    vs->priv->next_frame = NULL;
+  if (vs->next_frame) {
+    g_object_unref(vs->next_frame);
+    vs->next_frame = NULL;
   }
 
-  if (fs_button_pb) {
-    vs->priv->next_frame = gdk_pixbuf_copy(fs_button_pb);
+  if (vs->overlay_pixbuf) {
+    vs->next_frame = gdk_pixbuf_copy(vs->overlay_pixbuf);
 
-    vs->priv->cx_next_frame = gdk_pixbuf_get_width(fs_button_pb);
-    vs->priv->cy_next_frame = gdk_pixbuf_get_height(fs_button_pb);
-
-    gdk_pixbuf_fill(vs->priv->next_frame, 0x00000080);
-    gdk_pixbuf_composite(fs_button_pb, vs->priv->next_frame, 
+    gdk_pixbuf_fill(vs->next_frame, 0x00000080);
+    gdk_pixbuf_composite(vs->overlay_pixbuf, vs->next_frame, 
       0, 0, 
-      vs->priv->cx_next_frame, vs->priv->cy_next_frame, 
+      vs->cx_next_frame, vs->cy_next_frame, 
       0, 0,
       1.0, 1.0,
       GDK_INTERP_NEAREST,
       255);
   }
 
-  vs->priv->fs_button_timeout_id = 
-    g_timeout_add(2000, (GSourceFunc)fs_button_timeout, vs);
+  vs->overlay_timeout_id = 
+    g_timeout_add(2000, (GSourceFunc)overlay_timeout, vs);
 }

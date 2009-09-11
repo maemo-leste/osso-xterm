@@ -274,6 +274,31 @@ terminal_widget_class_init (TerminalWidgetClass *klass)
 }
 
 static void
+take_toolbar_snapshot(TerminalWidget *widget)
+{
+  GdkPixmap *pm = gtk_widget_get_snapshot(widget->tbar, NULL);
+
+  if (pm) {
+    int cx, cy;
+    GdkPixbuf *pb = NULL;
+
+    gdk_drawable_get_size(pm, &cx, &cy);
+
+    pb = gdk_pixbuf_get_from_drawable(
+      gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, cx, cy), 
+      pm, gdk_colormap_get_system(), 0, 0, 0, 0, cx, cy);
+
+    if (pb) {
+      g_object_set(G_OBJECT(widget->terminal),
+        "overlay-pixbuf",  pb,
+        NULL);
+      g_object_unref(pb);
+    }
+    g_object_unref(pm);
+  }
+}
+
+static void
 maybe_set_pan_mode(TerminalWidget *terminal_widget, GParamSpec *pspec, GObject *src)
 {
   g_assert(G_OBJECT(terminal_widget));
@@ -314,6 +339,8 @@ maybe_set_pan_mode(TerminalWidget *terminal_widget, GParamSpec *pspec, GObject *
       g_object_set(mvte_obj, "pan-mode", FALSE, NULL);
     gtk_widget_hide(GTK_WIDGET(pan_btn_obj));
   }
+
+  terminal_widget->toolbar_needs_snapshot = TRUE;
 
   g_object_thaw_notify(pan_btn_obj);
 }
@@ -368,16 +395,26 @@ terminal_widget_need_fullscreen_toolbar(TerminalWidget *widget)
   return toolbar;
 }
 
+static gboolean
+toolbar_expose_event(GtkWidget *tb, GdkEventExpose *event, TerminalWidget *widget)
+{
+  if (widget->toolbar_needs_snapshot) {
+    widget->toolbar_needs_snapshot = FALSE;
+    take_toolbar_snapshot(widget);
+  }
+
+  return FALSE;
+}
+
 static void
 terminal_widget_init (TerminalWidget *widget)
 {
   GError *err = NULL;
-  gboolean toolbar;
   GSList *keys;
   GSList *key_labels;
-  GConfValue *gconf_value;
 
   widget->dispose_has_run = FALSE;
+  widget->toolbar_needs_snapshot = TRUE;
 
   widget->working_directory = g_get_current_dir ();
   widget->custom_title = g_strdup ("");
@@ -492,7 +529,7 @@ terminal_widget_init (TerminalWidget *widget)
                     G_CALLBACK (terminal_widget_vte_key_press_event), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "selection-changed",
                     G_CALLBACK (terminal_widget_vte_selection_changed), widget);
-  g_signal_connect (G_OBJECT (widget->terminal), "realize",
+  g_signal_connect (G_OBJECT (widget->terminal), "show",
                     G_CALLBACK (terminal_widget_vte_realize), widget);
   g_signal_connect (G_OBJECT (widget->terminal), "window-title-changed",
                     G_CALLBACK (terminal_widget_vte_window_title_changed), widget);
@@ -521,10 +558,14 @@ terminal_widget_init (TerminalWidget *widget)
   gtk_widget_grab_focus(widget->terminal);
 
   widget->tbar = g_object_ref_sink(gtk_toolbar_new());
+  gtk_widget_add_events(widget->tbar, GDK_EXPOSURE_MASK);
+
   g_object_set(widget->tbar, 
 	       "orientation", GTK_ORIENTATION_HORIZONTAL,
 	       NULL);
   gtk_widget_show (GTK_WIDGET (widget->tbar));
+
+  g_signal_connect(G_OBJECT(widget->tbar), "expose-event", (GCallback)toolbar_expose_event, widget);
 
   widget->cbutton = g_object_ref_sink(gtk_toggle_tool_button_new());
   gtk_tool_item_set_expand(widget->cbutton, FALSE);

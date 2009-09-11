@@ -34,13 +34,13 @@ osso_xterm_LDADD =    \
   $(NULL)
 
 EXTRA_DIST =           \
-  vte-marshallers.list \
+  maemo-vte-marshallers.list \
   $(NULL)
 
 BUILT_SOURCES =     \
   stock-icon-list.h \
-  vte-marshallers.c \
-  vte-marshallers.h \
+  maemo-vte-marshallers.c \
+  maemo-vte-marshallers.h \
   $(NULL)
 
 osso_xterm_LDFLAGS =  \
@@ -78,12 +78,12 @@ osso_xterm_SOURCES =    \
 
 nodist_osso_xterm_SOURCES = $(BUILT_SOURCES)
 
-vte-marshallers.c: vte-marshallers.h vte-marshallers.list 
-	( echo '#include "vte-marshallers.h"' ; @GLIB_GENMARSHAL@ --body --prefix=_vte_marshal vte-marshallers.list ; ) > $@.tmp
+maemo-vte-marshallers.c: maemo-vte-marshallers.h maemo-vte-marshallers.list 
+	( echo '#include "maemo-vte-marshallers.h"' ; @GLIB_GENMARSHAL@ --body --prefix=_vte_marshal maemo-vte-marshallers.list ; ) > $@.tmp
 	mv $@.tmp $@
 
-vte-marshallers.h: vte-marshallers.list
-	@GLIB_GENMARSHAL@ --header --prefix=_vte_marshal vte-marshallers.list > $@.tmp
+maemo-vte-marshallers.h: maemo-vte-marshallers.list
+	@GLIB_GENMARSHAL@ --header --prefix=_vte_marshal maemo-vte-marshallers.list > $@.tmp
 	mv $@.tmp $@
 
 clean-local:
@@ -107,4 +107,4 @@ stock-icon-list.h: $(shell ls ../pixmaps/*.$(ICON_EXTENSION))
 	echo '#endif /* !_HAVE_STOCK_ICON_LIST_H_ */'                                                                    >> $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES = $(BUILT_SOURCES) vte-marshallers.c.tmp vte-marshallers.h.tmp
+CLEANFILES = $(BUILT_SOURCES) maemo-vte-marshallers.c.tmp maemo-vte-marshallers.h.tmp

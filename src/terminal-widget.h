@@ -82,6 +82,7 @@ struct _TerminalWidget
 //  gboolean	       im_pending;
 
   GtkWindow           *app;
+  gboolean toolbar_needs_snapshot;
 };
 
 GType        terminal_widget_get_type                     (void) G_GNUC_CONST;
