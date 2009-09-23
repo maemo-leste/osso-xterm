@@ -127,6 +127,8 @@ struct _TerminalWindow
 
   TerminalWidget *terminal;
   gchar *encoding;
+
+  guint take_screenshot_idle_id;
 };
 
 static GObjectClass *parent_class;
@@ -327,6 +329,7 @@ terminal_window_init (TerminalWindow *window)
   window->terminal = NULL;
   window->encoding = NULL;
   window->unfs_button = NULL;
+  window->take_screenshot_idle_id = 0;
 
   gtk_window_set_title(GTK_WINDOW(window), "X Terminal");
 
@@ -444,6 +447,11 @@ terminal_window_dispose (GObject *object)
   window->unfs_button = NULL;
   g_object_unref(window->match_menu);
   window->match_menu = NULL;
+
+  if (window->take_screenshot_idle_id) {
+    g_source_remove(window->take_screenshot_idle_id);
+    window->take_screenshot_idle_id = 0;
+  }
 
   parent_class->dispose (object);
 }
@@ -625,6 +633,18 @@ notify_match(GtkWidget *widget, GParamSpec *pspec, TerminalWindow *wnd)
   }
 }
 
+#define SCREENSHOT_FILE_NAME "/home/user/.cache/launch/com.nokia.xterm.pvr"
+
+static gboolean
+maybe_take_screenshot(TerminalWindow *window)
+{
+  if (!g_file_test(SCREENSHOT_FILE_NAME, G_FILE_TEST_EXISTS))
+    hildon_gtk_window_take_screenshot(GTK_WINDOW(window), TRUE);
+  window->take_screenshot_idle_id = 0;
+
+  return FALSE;
+}
+
 static void
 terminal_window_real_add (
     TerminalWindow *window,
@@ -662,6 +682,8 @@ terminal_window_real_add (
     g_object_ref_sink(window->unfs_button);
     g_signal_connect(G_OBJECT(window->unfs_button), "toggled", (GCallback)terminal_window_action_fullscreen, window);
     terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(window->unfs_button));
+
+  window->take_screenshot_idle_id = g_idle_add((GSourceFunc)maybe_take_screenshot, window);
 }
 
 /**
