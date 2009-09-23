@@ -1,9 +1,3 @@
-osso-xterm (0.14.mh26) unstable; urgency=low
-
-  * When fullscreen with HKB slid out, hide toolbar and display overlay unfullscreen button
-
- -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed,  9 Sep 2009 20:18:34 +0300
-
 osso-xterm (0.14.mh25) unstable; urgency=low
 
   * Use G_CONNECT_AFTER as well as swappage when bringing up the font dialog

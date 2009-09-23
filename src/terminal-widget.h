@@ -51,7 +51,6 @@ struct _TerminalWidget
 {
   GtkHBox              __parent__;
   gboolean             dispose_has_run;
-  GtkWidget           *pannable;
   GtkWidget           *terminal;
   GtkWidget	      *tbar;
   GtkToolItem         *pan_button;
@@ -82,7 +81,6 @@ struct _TerminalWidget
 //  gboolean	       im_pending;
 
   GtkWindow           *app;
-  gboolean toolbar_needs_snapshot;
 };
 
 GType        terminal_widget_get_type                     (void) G_GNUC_CONST;
