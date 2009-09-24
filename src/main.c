@@ -36,6 +36,7 @@
 
 #include "terminal-manager.h"
 #include "stock-icons.h"
+#include "terminal-gconf.h"
 
 static gint osso_xterm_incoming(const gchar *interface,
     const gchar *method,
@@ -63,6 +64,20 @@ static gint osso_xterm_incoming(const gchar *interface,
   retval->type = DBUS_TYPE_BOOLEAN;
 
   return OSSO_OK;
+}
+
+static void
+gconf_setting_changed(GConfClient *client, guint connection_id, GConfEntry *entry, gpointer null)
+{
+	g_unlink(OSSO_XTERM_SCREENSHOT_FILE_NAME);
+}
+
+static void
+add_screenshot_remover()
+{
+	GConfClient *gconf_client = gconf_client_get_default();
+
+	gconf_client_notify_add(gconf_client, OSSO_XTERM_GCONF_PATH, (GConfClientNotifyFunc)gconf_setting_changed, NULL, NULL, NULL);
 }
 
 int
@@ -148,6 +163,8 @@ main (int argc, char **argv)
   osso_rpc_set_default_cb_f(osso_context,
       osso_xterm_incoming,
       manager);
+
+	add_screenshot_remover();
 
   gtk_main ();
 

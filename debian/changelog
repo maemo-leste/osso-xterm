@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh27) unstable; urgency=low
+
+  * Remove the screenshot whenever a gconf setting changes
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Thu, 24 Sep 2009 12:35:33 +0300
+
 osso-xterm (0.14.mh26) unstable; urgency=low
 
   * Fixes: NB#140310 (Xterm needs to take a screenshot for startup acceleration)

@@ -633,12 +633,10 @@ notify_match(GtkWidget *widget, GParamSpec *pspec, TerminalWindow *wnd)
   }
 }
 
-#define SCREENSHOT_FILE_NAME "/home/user/.cache/launch/com.nokia.xterm.pvr"
-
 static gboolean
 maybe_take_screenshot(TerminalWindow *window)
 {
-  if (!g_file_test(SCREENSHOT_FILE_NAME, G_FILE_TEST_EXISTS))
+  if (!g_file_test(OSSO_XTERM_SCREENSHOT_FILE_NAME, G_FILE_TEST_EXISTS))
     hildon_gtk_window_take_screenshot(GTK_WINDOW(window), TRUE);
   window->take_screenshot_idle_id = 0;
 

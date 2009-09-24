@@ -28,6 +28,7 @@
 #define STREQ(a,b) (strcmp((a), (b)) == 0)
 
 #define OSSO_XTERM_GCONF_PATH        "/apps/osso/xterm"
+#define OSSO_XTERM_SCREENSHOT_FILE_NAME "/home/user/.cache/launch/com.nokia.xterm.pvr"
 
 /* Integer */
 #define OSSO_XTERM_GCONF_FONT_BASE_SIZE   OSSO_XTERM_GCONF_PATH "/font_size"
