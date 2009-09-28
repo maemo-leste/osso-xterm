@@ -101,11 +101,11 @@ static void            terminal_window_action_paste            (GtkButton       
 		                                                         TerminalWindow     *window);
 static void            terminal_window_action_fullscreen       (GtkWidget       * fs_button,
                                                              TerminalWindow     *window);
+static void            terminal_window_action_reset            (GtkWidget       *button,
+                                                             TerminalWindow     *window);
+static void            terminal_window_action_reset_and_clear  (GtkWidget       *button,
+                                                             TerminalWindow     *window);
 #if (0)
-static void            terminal_window_action_reset            (GtkAction       *action,
-                                                             TerminalWindow     *window);
-static void            terminal_window_action_reset_and_clear  (GtkAction       *action,
-                                                             TerminalWindow     *window);
 static void            terminal_window_action_encoding         (GtkAction       *action,
 								TerminalWindow  *window);
 
@@ -360,6 +360,16 @@ terminal_window_init (TerminalWindow *window)
   g_signal_connect(G_OBJECT(hildon_app_menu), "show", (GCallback)terminal_window_paste_show, window);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(window->paste_button));
 
+	/* Reset */
+	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", "Reset", NULL);
+	g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset, window);
+	hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+
+	/* Reset And Clear */
+	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", "Reset And Clear", NULL);
+	g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset_and_clear, window);
+	hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+
   hildon_window_set_app_menu(HILDON_WINDOW(window), HILDON_APP_MENU(hildon_app_menu));
 
   g_signal_connect( G_OBJECT(window), "key-press-event",
@@ -557,9 +567,8 @@ terminal_window_action_fullscreen (GtkWidget *fs_button,
   terminal_window_set_state(window, fs);
 }
 
-#if (0)
 static void
-terminal_window_action_reset (GtkAction   *action,
+terminal_window_action_reset (GtkWidget *button,
                            TerminalWindow *window)
 {
   TerminalWidget *active;
@@ -570,7 +579,7 @@ terminal_window_action_reset (GtkAction   *action,
 
 
 static void
-terminal_window_action_reset_and_clear (GtkAction    *action,
+terminal_window_action_reset_and_clear (GtkWidget *button,
                                      TerminalWindow  *window)
 {
   TerminalWidget *active;
@@ -579,6 +588,7 @@ terminal_window_action_reset_and_clear (GtkAction    *action,
   terminal_widget_reset (active, TRUE);
 }
 
+#if (0)
 static void
 terminal_window_action_encoding (GtkAction       *action,
 				 TerminalWindow  *window)
