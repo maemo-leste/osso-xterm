@@ -107,6 +107,15 @@ if test "x$GLIB_GENMARSHAL" == "x"; then
 fi
 AC_SUBST([GLIB_GENMARSHAL])
 
+dnl ===========================================================================
+dnl === gettext                                                             ===
+dnl ===========================================================================
+
+GETTEXT_PACKAGE=$PACKAGE
+AC_SUBST(GETTEXT_PACKAGE)
+ALL_LINGUAS="cs da de es fi fr it nl no pl pt ru sv"
+AM_GLIB_GNU_GETTEXT
+
 AC_OUTPUT([
 Makefile
 icons/Makefile
@@ -117,4 +126,5 @@ icons/64x64/Makefile
 etc/Makefile
 src/Makefile
 pixmaps/Makefile
+po/Makefile.in
 ])

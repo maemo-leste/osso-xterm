@@ -45,7 +45,7 @@
 #include <locale.h>
 
 #define GETTEXT_PACKAGE "osso-browser-ui"
-#define _(String) gettext(String)
+#define _(String) g_dgettext(PACKAGE, String)
 #define N_(String) String
 
 #if HILDON == 0
@@ -361,12 +361,12 @@ terminal_window_init (TerminalWindow *window)
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(window->paste_button));
 
 	/* Reset */
-	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", "Reset", NULL);
+	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset"), NULL);
 	g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset, window);
 	hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
 	/* Reset And Clear */
-	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", "Reset And Clear", NULL);
+	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset And Clear"), NULL);
 	g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset_and_clear, window);
 	hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 

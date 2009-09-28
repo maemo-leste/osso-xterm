@@ -1,0 +1,20 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: osso-xterm 0.14.mh27\n"
+"Report-Msgid-Bugs-To: Gabriel Schulhof <gabriel.schulhof@nokia.com>\n"
+"POT-Creation-Date: 2009-09-28 13:47+0300\n"
+"PO-Revision-Date: 2009-09-28 13:47+0300\n"
+"Last-Translator: Gabriel Schulhof <gabriel.schulhof@nokia.com>>\n"
+"Language-Team: Gabriel Schulhof <gabriel.schulhof@nokia.com>>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Already at maximum font size."
+msgstr ""
+
+msgid "Reset"
+msgstr "Ripristina"
+
+msgid "Reset And Clear"
+msgstr "Ripristina e pulisci"
