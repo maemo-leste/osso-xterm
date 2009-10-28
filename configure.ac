@@ -113,7 +113,7 @@ dnl ===========================================================================
 
 GETTEXT_PACKAGE=$PACKAGE
 AC_SUBST(GETTEXT_PACKAGE)
-ALL_LINGUAS="cs da de es fi fr it nl no pl pt ru sv"
+ALL_LINGUAS="cs da de es_ES es_MX fi fr_CA fr_FR it nl no pl pt ru sv"
 AM_GLIB_GNU_GETTEXT
 
 AC_OUTPUT([
