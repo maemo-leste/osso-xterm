@@ -1,3 +1,10 @@
+osso-xterm (0.14.mh29) unstable; urgency=low
+
+  * Added translations for minimum/maximum font size
+  * Fixes: NB#143527 (X-Terminal: "Already at maximum font size." (and "minimum") untranslated)
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed, 28 Oct 2009 09:46:36 +0200
+
 osso-xterm (0.14.mh28) unstable; urgency=low
 
   * Add "Reset" and "Reset and Clear" buttons
