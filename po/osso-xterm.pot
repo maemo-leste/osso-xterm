@@ -1,6 +1,9 @@
 msgid "Already at maximum font size."
 msgstr ""
 
+msgid "Already at minimum font size."
+msgstr ""
+
 msgid "Reset"
 msgstr ""
 

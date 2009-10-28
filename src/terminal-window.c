@@ -249,6 +249,9 @@ terminal_window_key_press_event (TerminalWindow *window,
         case HILDON_HARDKEY_DECREASE: /* Zoom out */
           {
             TerminalWidget *tw = terminal_window_get_active(window);
+
+            g_print("TerminalWindow::key-press-event: HILDON_HARDKEY_DECREASE\n");
+
             if (tw) {
               if (!terminal_widget_modify_font_size(tw, -FONT_SIZE_INC))
                 hildon_banner_show_information(GTK_WIDGET(window), "NULL", _("Already at minimum font size."));

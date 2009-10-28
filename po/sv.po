@@ -11,7 +11,10 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Already at maximum font size."
-msgstr ""
+msgstr "Har redan största teckenstorlek."
+
+msgid "Already at minimum font size."
+msgstr "Har redan minsta teckenstorlek."
 
 msgid "Reset"
 msgstr "Återställ"

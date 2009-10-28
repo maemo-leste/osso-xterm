@@ -40,7 +40,7 @@ typedef struct _TerminalWidget      TerminalWidget;
 
 struct _TerminalWidgetClass
 {
-  GtkHBoxClass __parent__;
+  GtkVBoxClass __parent__;
 
   /* signals */
   void (*context_menu) (TerminalWidget *widget, GdkEvent *event);
@@ -49,7 +49,7 @@ struct _TerminalWidgetClass
 
 struct _TerminalWidget
 {
-  GtkHBox              __parent__;
+  GtkVBox              __parent__;
   gboolean             dispose_has_run;
   GtkWidget           *terminal;
   GtkWidget	      *tbar;

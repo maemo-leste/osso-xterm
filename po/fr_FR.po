@@ -11,13 +11,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Already at maximum font size."
-msgstr "Fontin kokoa ei voi enää suurentaa."
+msgstr "Taille de la police déjà au maximum."
 
 msgid "Already at minimum font size."
-msgstr "Fontin kokoa ei voi enää pienentää."
+msgstr "Taille de la police déjà au minimum."
 
 msgid "Reset"
-msgstr "Alusta"
+msgstr "Réinitialiser"
 
 msgid "Reset And Clear"
-msgstr "Alusta ja tyhjennä"
+msgstr "Réinitialiser et effacer"
