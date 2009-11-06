@@ -1,6 +1,7 @@
 osso-xterm (0.14.mh30) unstable; urgency=low
 
   * New icons.
+  * Fixes: NB#140490 (XTerminal icon missing)
 
  -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Fri,  6 Nov 2009 13:39:21 +0200
 
