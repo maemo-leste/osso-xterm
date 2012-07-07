@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include <vte/vte.h>
 #include <gconf/gconf-client.h>
 #include <hildon/hildon.h>
@@ -35,6 +36,10 @@ typedef struct
 
   GtkWidget *fg_clr;
   GtkWidget *bg_clr;
+
+  GtkWidget *reverse_button;
+  GtkWidget *scroll_button;
+  GtkWidget *scrollback_entry;
 } FontDialog;
 
 static FontDialog font_dialog = { NULL };
@@ -206,6 +211,8 @@ font_dialog_response(GtkWidget *dlg, gint response_id, FontDialog *fd)
   if (GTK_RESPONSE_OK == response_id) {
     char *name = NULL, *str = NULL;
     int size;
+    gboolean b;
+    gint lines;
     GtkTreeIter itr_name, itr_size;
     GConfClient *g_c = gconf_client_get_default();
     GdkColor *p_clr = NULL;
@@ -238,6 +245,18 @@ font_dialog_response(GtkWidget *dlg, gint response_id, FontDialog *fd)
     gconf_client_set_string(g_c, OSSO_XTERM_GCONF_BG_COLOR, str, NULL);
     g_free(str);
     gdk_color_free(p_clr);
+
+    /* Set reverse color */
+    b = hildon_check_button_get_active (HILDON_CHECK_BUTTON (fd->reverse_button));
+    gconf_client_set_bool(g_c, OSSO_XTERM_GCONF_REVERSE, b, NULL);
+
+    /* Set always scroll */
+    b = hildon_check_button_get_active (HILDON_CHECK_BUTTON (fd->scroll_button));
+    gconf_client_set_bool(g_c, OSSO_XTERM_GCONF_ALWAYS_SCROLL, b, NULL);
+
+    /* Set scrollback lines */
+    lines = atoi (gtk_entry_get_text (GTK_ENTRY (fd->scrollback_entry)));
+    gconf_client_set_int(g_c, OSSO_XTERM_GCONF_SCROLLBACK, lines, NULL);
   }
   gtk_widget_destroy(GTK_WIDGET(fd->dlg));
   memset(fd, 0, sizeof(FontDialog));
@@ -298,7 +317,7 @@ create_font_dialog(FontDialog *fd)
     g_free(str);
   }
 
-  gtk_widget_set_size_request(hbox, -1, 280);
+  gtk_widget_set_size_request(hbox, -1, 205);
   gtk_container_add(GTK_CONTAINER(fd->dlg->vbox), hbox);
 
   hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, NULL);
@@ -318,6 +337,54 @@ create_font_dialog(FontDialog *fd)
   gtk_container_add_with_properties(GTK_CONTAINER(fd->dlg->vbox), align, "expand", FALSE, NULL);
   gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->preview_bg, "expand", TRUE, NULL);
   g_signal_connect(G_OBJECT(fd->dlg), "response", (GCallback)font_dialog_response, fd);
+  
+  GConfClient *gconf_client = gconf_client_get_default ();
+  gboolean reverse = OSSO_XTERM_DEFAULT_REVERSE;
+  gboolean always_scroll = OSSO_XTERM_DEFAULT_ALWAYS_SCROLL;
+  gint scrollback = OSSO_XTERM_DEFAULT_SCROLLBACK;
+  GConfValue *value;
+  
+  value = gconf_client_get (gconf_client, OSSO_XTERM_GCONF_REVERSE, NULL);
+  if (value && value->type == GCONF_VALUE_BOOL)
+    reverse = gconf_value_get_bool (value);
+
+  value = gconf_client_get (gconf_client, OSSO_XTERM_GCONF_ALWAYS_SCROLL, NULL);
+  if (value && value->type == GCONF_VALUE_BOOL)
+    always_scroll = gconf_value_get_bool (value);
+
+  value = gconf_client_get (gconf_client, OSSO_XTERM_GCONF_SCROLLBACK, NULL);
+  if (value && value->type == GCONF_VALUE_INT)
+    scrollback = gconf_value_get_int (value);
+
+  fd->reverse_button = hildon_check_button_new (HILDON_SIZE_FINGER_HEIGHT);
+  hildon_check_button_set_active (HILDON_CHECK_BUTTON (fd->reverse_button), reverse);
+  gtk_widget_set_size_request (fd->reverse_button, -1, 60);
+  gtk_button_set_label (GTK_BUTTON (fd->reverse_button), "Reverse colors");
+  
+  fd->scroll_button = hildon_check_button_new (HILDON_SIZE_FINGER_HEIGHT);
+  hildon_check_button_set_active (HILDON_CHECK_BUTTON (fd->scroll_button), always_scroll);
+  gtk_widget_set_size_request (fd->scroll_button, -1, 60);
+  gtk_button_set_label (GTK_BUTTON (fd->scroll_button), "Always scroll");
+  
+  hbox = gtk_hbox_new (TRUE, 0);
+  gtk_container_add (GTK_CONTAINER (hbox), fd->reverse_button);
+  gtk_container_add (GTK_CONTAINER (hbox), fd->scroll_button);
+  gtk_widget_show_all (hbox);
+  gtk_container_add (GTK_CONTAINER (fd->dlg->vbox), hbox);
+
+  GtkWidget *scrollback_label = gtk_label_new ("Terminal scrollback lines:");
+  fd->scrollback_entry = hildon_entry_new (HILDON_SIZE_AUTO);
+  gchar* scrollback_s = g_strdup_printf ("%i", scrollback);
+  gtk_entry_set_text (GTK_ENTRY (fd->scrollback_entry), scrollback_s);
+  g_free(scrollback_s);
+  gtk_widget_set_size_request (fd->scrollback_entry, -1, 50);
+  g_object_set (G_OBJECT (fd->scrollback_entry), "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
+
+  hbox = gtk_hbox_new (TRUE, 0);
+  gtk_container_add (GTK_CONTAINER (hbox), scrollback_label);
+  gtk_container_add (GTK_CONTAINER (hbox), fd->scrollback_entry);
+  gtk_widget_show_all (hbox);
+  gtk_container_add (GTK_CONTAINER (fd->dlg->vbox), hbox);
 }
 
 void

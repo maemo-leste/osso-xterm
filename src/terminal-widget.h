@@ -65,6 +65,7 @@ struct _TerminalWidget
 
   GConfClient         *gconf_client;
   guint                scrollbar_conid;
+  guint                scrolling_conid;
   guint		       scrollback_conid;
   guint                toolbar_conid;
   guint                toolbar_fs_conid;

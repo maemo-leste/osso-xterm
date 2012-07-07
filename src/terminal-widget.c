@@ -960,9 +960,38 @@ terminal_widget_update_scrolling_lines (TerminalWidget *widget)
 
 
 static void
+terminal_widget_gconf_scrolling_on_output (GConfClient *client, guint conn_id, GConfEntry *entry, TerminalWidget *widget)
+{
+  gboolean enable = OSSO_XTERM_DEFAULT_ALWAYS_SCROLL;
+  if (entry && entry->value && entry->value->type == GCONF_VALUE_BOOL) {
+    enable = gconf_value_get_bool (entry->value);
+  }
+  vte_terminal_set_scroll_on_output (VTE_TERMINAL (widget->terminal), enable);
+}
+
+static void
 terminal_widget_update_scrolling_on_output (TerminalWidget *widget)
 {
-  vte_terminal_set_scroll_on_output (VTE_TERMINAL (widget->terminal), TRUE);
+  GConfEntry *entry;
+  GConfValue *value;
+  value = gconf_client_get (widget->gconf_client,
+			    OSSO_XTERM_GCONF_ALWAYS_SCROLL, NULL);
+  entry = gconf_entry_new_nocopy (g_strdup(OSSO_XTERM_GCONF_ALWAYS_SCROLL),
+				  value);
+
+  if (widget->scrolling_conid == 0) {
+    widget->scrolling_conid = gconf_client_notify_add(
+						       widget->gconf_client,
+						       OSSO_XTERM_GCONF_ALWAYS_SCROLL,
+						       (GConfClientNotifyFunc)terminal_widget_gconf_scrolling_on_output,
+						       widget,
+						       NULL, NULL);
+  }
+  terminal_widget_gconf_scrolling_on_output (widget->gconf_client,
+					  widget->scrolling_conid,
+					  entry,
+					  widget);
+  gconf_entry_unref(entry);
 }
 
 
