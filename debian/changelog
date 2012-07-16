@@ -1,3 +1,12 @@
+osso-xterm (0.14.mh31+0cssu0) unstable; urgency=low
+
+  * Add support for configuring more OSSO-Xterm applications settings:
+  * Reverse colors - Reverse background and foreground colors (gconf key already exists)
+  * Always scroll - Auto scrolling terminal if is not at buttom of screen
+  * Scrollback lines - Specify number of scrollback terminal history lines (gconf key already exists)
+
+ -- Pali Rohár <pali.rohar@gmail.com>  Mon, 16 Jul 2012 09:54:19 +0200
+
 osso-xterm (0.14.mh30+0m5) unstable; urgency=low
 
   * This entry has been added by BIFH queue processor
