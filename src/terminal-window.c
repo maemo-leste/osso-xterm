@@ -334,6 +334,9 @@ terminal_window_init (TerminalWindow *window)
 
   gtk_window_set_title(GTK_WINDOW(window), "X Terminal");
 
+  /* Enable portrait mode */
+  hildon_gtk_window_set_portrait_flags(GTK_WINDOW(window), HILDON_PORTRAIT_MODE_SUPPORT);
+
   hildon_app_menu = hildon_app_menu_new();
 
   window->match_menu = g_object_ref_sink(make_match_menu(window));
