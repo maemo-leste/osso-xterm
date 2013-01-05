@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh31+0cssu1) unstable; urgency=low
+
+  * Enable portrait mode
+
+ -- Pali Rohár <pali.rohar@gmail.com>  Sat, 05 Jan 2013 14:21:30 +0100
+
 osso-xterm (0.14.mh31+0cssu0) unstable; urgency=low
 
   * Add support for configuring more OSSO-Xterm applications settings:
