@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh31+0cssu2) unstable; urgency=low
+
+  * Do not allow setting negative scrollback lines
+
+ -- Pali Rohár <pali.rohar@gmail.com>  Sun, 13 Jan 2013 12:33:49 +0100
+
 osso-xterm (0.14.mh31+0cssu1) unstable; urgency=low
 
   * Enable portrait mode

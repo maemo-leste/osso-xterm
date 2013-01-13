@@ -930,6 +930,7 @@ terminal_widget_gconf_scrollback_lines(GConfClient    *client,
   if (entry && entry->value && entry->value->type == GCONF_VALUE_INT) {
     lines = gconf_value_get_int(entry->value);
   }
+  if (lines <= 0) lines = OSSO_XTERM_DEFAULT_SCROLLBACK;
   vte_terminal_set_scrollback_lines (VTE_TERMINAL (widget->terminal), lines);
 }
 

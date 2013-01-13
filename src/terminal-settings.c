@@ -134,6 +134,7 @@ terminal_settings_init (TerminalSettings *settings)
   if (!sb) {
     sb = OSSO_XTERM_DEFAULT_SCROLLBACK;
   }
+  if (sb <= 0) lines = OSSO_XTERM_DEFAULT_SCROLLBACK;
 
   g_object_unref(gc);
 

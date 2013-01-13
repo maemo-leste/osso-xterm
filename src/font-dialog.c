@@ -256,6 +256,7 @@ font_dialog_response(GtkWidget *dlg, gint response_id, FontDialog *fd)
 
     /* Set scrollback lines */
     lines = atoi (gtk_entry_get_text (GTK_ENTRY (fd->scrollback_entry)));
+    if (lines <= 0) lines = OSSO_XTERM_DEFAULT_SCROLLBACK;
     gconf_client_set_int(g_c, OSSO_XTERM_GCONF_SCROLLBACK, lines, NULL);
   }
   gtk_widget_destroy(GTK_WIDGET(fd->dlg));
@@ -355,6 +356,7 @@ create_font_dialog(FontDialog *fd)
   value = gconf_client_get (gconf_client, OSSO_XTERM_GCONF_SCROLLBACK, NULL);
   if (value && value->type == GCONF_VALUE_INT)
     scrollback = gconf_value_get_int (value);
+  if (scrollback <= 0) scrollback = OSSO_XTERM_DEFAULT_SCROLLBACK;
 
   fd->reverse_button = hildon_check_button_new (HILDON_SIZE_FINGER_HEIGHT);
   hildon_check_button_set_active (HILDON_CHECK_BUTTON (fd->reverse_button), reverse);
