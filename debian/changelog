@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh31) unstable; urgency=medium
+
+  * Prepare for maemo-leste
+
+ -- Ivan J. <parazyd@dyne.org>  Sun, 22 Oct 2017 16:20:00 +0200
+
 osso-xterm (0.14.mh31+0cssu2) unstable; urgency=low
 
   * Do not allow setting negative scrollback lines
