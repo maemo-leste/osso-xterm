@@ -6,19 +6,24 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 OPTS = ""
 CFLAGS += -g
 
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	CFLAGS += -O0
-else
-	CFLAGS += -O2
-endif
+#ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+#	CFLAGS += -O0
+#else
+#	CFLAGS += -O2
+#endif
 ifneq (,$(findstring thumb,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -mthumb
 endif
 
-ifeq (,$(findstring nolauncher,$(DEB_BUILD_OPTIONS)))
-	OPTS += "--enable-maemo-launcher=yes"
-	USE_MAEMO_LAUNCHER = true
-endif
+#ifeq (,$(findstring nolauncher,$(DEB_BUILD_OPTIONS)))
+#	OPTS += "--enable-maemo-launcher=yes"
+#	USE_MAEMO_LAUNCHER = true
+#endif
+
+# temporary launcher hack
+CFLAGS += -O0
+OPTS += "--enable-maemo-launcher=no"
+USE_MAEMO_LAUNCHER = false
 
 PACKAGENAME=osso-xterm
 
