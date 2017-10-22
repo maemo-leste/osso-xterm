@@ -20,7 +20,7 @@ osso_xterm_CFLAGS =     \
 	$(MAEMO_LAUNCHER_CFLAGS) \
   $(NULL)
 
-UNWANTED = -export-dynamic -Wl,--export-dynamic
+#UNWANTED = -export-dynamic -Wl,--export-dynamic
 osso_xterm_LDADD =    \
 	$(filter-out $(UNWANTED), \
 	$(MAEMO_LAUNCHER_LIBS) \

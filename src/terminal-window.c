@@ -36,9 +36,9 @@
 #include "terminal-gconf.h"
 
 #ifdef HAVE_OSSO_BROWSER
-#include <osso-browser-interface.h>
+//#include <osso-browser-interface.h>
 #else
-#include <tablet-browser-interface.h>
+//#include <tablet-browser-interface.h>
 #endif
 
 #include <libintl.h>
@@ -264,7 +264,7 @@ terminal_window_key_press_event (TerminalWindow *window,
 static void
 open_match(GtkWidget *btn, TerminalWindow *wnd)
 {
-  char *match = g_object_get_data(G_OBJECT(wnd->match_menu), "match");
+/*  char *match = g_object_get_data(G_OBJECT(wnd->match_menu), "match");
 
   if (match) {
     DBusConnection *conn = dbus_bus_get(DBUS_BUS_SESSION, NULL);
@@ -278,7 +278,7 @@ open_match(GtkWidget *btn, TerminalWindow *wnd)
         }
       }
     }
-  }
+  }*/
 }
 
 static void
