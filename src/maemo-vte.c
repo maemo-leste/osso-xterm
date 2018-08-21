@@ -321,9 +321,9 @@ button_press_event(GtkWidget *widget, GdkEventButton *event)
 
   mvte->priv->been_panning = FALSE;
 
-/*  if (mvte->priv->imc)
+  if (mvte->priv->imc)
     if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
-      return TRUE;*/
+      return TRUE;
 
   return maybe_ignore_mouse_event (widget, (GdkEvent *)event,
     (gboolean (*)(GtkWidget *, GdkEvent *))
@@ -343,9 +343,9 @@ button_release_event(GtkWidget *widget, GdkEventButton *event)
 {
   MaemoVte *mvte = MAEMO_VTE(widget);
 
-/*  if (mvte->priv->imc)
+  if (mvte->priv->imc)
     if (hildon_gtk_im_context_filter_event(mvte->priv->imc, (GdkEvent *)event))
-      return TRUE;*/
+      return TRUE;
 
   if (!(mvte->priv->been_panning))
     check_match(mvte, event->x, event->y);

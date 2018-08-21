@@ -625,8 +625,8 @@ terminal_widget_init (TerminalWidget *widget)
 			  "\\<news:[-A-Z\\^_a-z{|}~!\"#$%&'()*+,./0-9;:=?`]+"                             "@[" HOSTCHARS ".]+(:[0-9]+)?\\>");
 
 
-/*  gtk_widget_tap_and_hold_setup (GTK_WIDGET(widget->terminal), NULL, NULL,
-				 GTK_TAP_AND_HOLD_NONE);*/
+  gtk_widget_tap_and_hold_setup (GTK_WIDGET(widget->terminal), NULL, NULL,
+				 GTK_TAP_AND_HOLD_NONE);
   g_signal_connect_swapped(G_OBJECT(widget->terminal), "tap-and-hold",
 		           G_CALLBACK(terminal_widget_emit_context_menu),
 			   widget);
