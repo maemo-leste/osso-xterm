@@ -372,11 +372,11 @@ static void
 terminal_widget_init (TerminalWidget *widget)
 {
   GError *err = NULL;
-  gboolean toolbar;
   GSList *keys;
   GSList *key_labels;
-  GConfValue *gconf_value;
   GtkWidget *hbox;
+  GRegex *re[4];
+  gint i;
 
   widget->dispose_has_run = FALSE;
 
@@ -609,21 +609,23 @@ terminal_widget_init (TerminalWidget *widget)
 #define USER      "[" USERCHARS "]+(:["PASSCHARS "]+)?"
 #define URLPATH   "/[" PATHCHARS "]*[^]'.}>) \t\r\n,\\\"]"
 
-  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
-			  "\\<" SCHEME "//(" USER "@)?[" HOSTCHARS ".]+"
-			  "(:[0-9]+)?(" URLPATH ")?\\>");
+  re[0] = g_regex_new("\\<" SCHEME "//(" USER "@)?[" HOSTCHARS ".]+(:[0-9]+)?("
+		       URLPATH ")?\\>", 0, 0, NULL);
 
-  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
-			  "\\<(www|ftp)[" HOSTCHARS "]*\\.[" HOSTCHARS ".]+"
-			  "(:[0-9]+)?(" URLPATH ")?\\>");
+  re[1] = g_regex_new("\\<(www|ftp)[" HOSTCHARS "]*\\.[" HOSTCHARS ".]+"
+		      "(:[0-9]+)?(" URLPATH ")?\\>", 0, 0, NULL);
 
-  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
-			  "\\<(mailto:)?[a-z0-9][a-z0-9.-]*@[a-z0-9]"
-			  "[a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+\\>");
+  re[2] = g_regex_new("\\<(mailto:)?[a-z0-9][a-z0-9.-]*@[a-z0-9][a-z0-9-]*"
+		      "(\\.[a-z0-9][a-z0-9-]*)+\\>", 0, 0, NULL);
 
-  vte_terminal_match_add (VTE_TERMINAL(widget->terminal),
-			  "\\<news:[-A-Z\\^_a-z{|}~!\"#$%&'()*+,./0-9;:=?`]+"                             "@[" HOSTCHARS ".]+(:[0-9]+)?\\>");
+  re[3] = g_regex_new("\\<news:[-A-Z\\^_a-z{|}~!\"#$%&'()*+,./0-9;:=?`]+"
+		      "@[" HOSTCHARS ".]+(:[0-9]+)?\\>",
+		      0, 0, NULL);
 
+  for (i = 0; i < 4; i++) {
+    vte_terminal_match_add_gregex (VTE_TERMINAL(widget->terminal), re[i], 0);
+    g_regex_unref (re[i]);
+  }
 
   gtk_widget_tap_and_hold_setup (GTK_WIDGET(widget->terminal), NULL, NULL,
 				 GTK_TAP_AND_HOLD_NONE);
@@ -1469,7 +1471,7 @@ terminal_widget_launch_child (TerminalWidget *widget)
 
   if (!terminal_widget_get_child_command (widget, &command, &argv, &error))
     {
-      g_warning("Can create new terminal widget because: %s", error->message);
+      g_warning("Can't create new terminal widget because: %s", error->message);
       g_error_free (error);
       return FALSE;
     }

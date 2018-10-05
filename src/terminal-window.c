@@ -317,8 +317,6 @@ terminal_window_init (TerminalWindow *window)
   //  GtkWidget           *popup;
   GError              *error = NULL;
   gchar               *role;
-  gint                 font_size;
-  gboolean             reverse;
   GConfValue          *gconf_value;
   GSList              *keys;
   GSList              *key_labels;
@@ -381,9 +379,9 @@ terminal_window_init (TerminalWindow *window)
 
   window->gconf_client = gconf_client_get_default();
   
-  font_size = gconf_client_get_int(window->gconf_client,
-                                   OSSO_XTERM_GCONF_FONT_SIZE,
-                                   &error);
+  gconf_client_get_int(window->gconf_client,
+		       OSSO_XTERM_GCONF_FONT_SIZE,
+		       &error);
   if (error != NULL) {
       g_printerr("Unable to get font size from gconf: %s\n",
                  error->message);
@@ -400,10 +398,7 @@ terminal_window_init (TerminalWindow *window)
       g_error_free(error);
       error = NULL;
   }
-  reverse = OSSO_XTERM_DEFAULT_REVERSE;
   if (gconf_value) {
-          if (gconf_value->type == GCONF_VALUE_BOOL)
-                  reverse = gconf_value_get_bool(gconf_value);
           gconf_value_free(gconf_value);
   }
 

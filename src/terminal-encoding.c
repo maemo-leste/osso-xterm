@@ -215,11 +215,9 @@ create_tree_from_list (GSList *list, const gchar *curenc)
 
   /* Select current charset */
   {
-    GtkTreeModel *tmodel = NULL;
     GtkTreeIter siter;
     GtkTreePath *tpath;
 
-    tmodel = gtk_tree_row_reference_get_model (rowref);
     tpath = gtk_tree_row_reference_get_path (rowref);
 
     if (gtk_tree_model_get_iter (GTK_TREE_MODEL (model), &siter, tpath)) {
