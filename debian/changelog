@@ -1,3 +1,9 @@
+osso-xterm (0.14.mh34) unstable; urgency=medium
+
+  * Fix regression with regular expressions match
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Fri, 05 Oct 2018 18:53:57 +0300
+
 osso-xterm (0.14.mh33) unstable; urgency=medium
 
   * Fix scrolling support and some compilation warnings
