@@ -19,8 +19,6 @@ struct _MaemoVte
 struct _MaemoVteClass
 {
   VteTerminalClass parent_class;
-
-  void (*set_scroll_adjustments) (MaemoVte *vs, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment);
 };
 
 GType maemo_vte_get_type( void );

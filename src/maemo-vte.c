@@ -107,8 +107,9 @@ sync_vadj_value(GtkAdjustment *src, MaemoVte *mvte)
 }
 
 static void
-set_scroll_adjustments(MaemoVte *mvte, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment)
+set_scroll_adjustments(GtkWidget *widget, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment)
 {
+  MaemoVte *mvte = MAEMO_VTE(widget);
   GtkAdjustment *my_vadj = vte_terminal_get_adjustment(VTE_TERMINAL(mvte));
   /* This function ignores hadjustment */
 
@@ -430,7 +431,7 @@ class_init(gpointer g_class, gpointer null)
 {
   GtkIMContextClass *gtk_imc_class = GTK_IM_CONTEXT_CLASS(g_type_class_ref(GTK_TYPE_IM_MULTICONTEXT));
   GObjectClass *gobject_class = G_OBJECT_CLASS(g_class);
-  MaemoVteClass *mvte_class = MAEMO_VTE_CLASS(g_class);
+  VteTerminalClass *vte_class = VTE_TERMINAL_CLASS(g_class);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(g_class);
 
   gobject_class->finalize = finalize;
@@ -462,20 +463,7 @@ class_init(gpointer g_class, gpointer null)
   widget_class->key_press_event = key_press_release_event;
   widget_class->key_release_event = key_press_release_event;
   widget_class->realize = realize;
-
-  widget_class->set_scroll_adjustments_signal =
-    g_signal_new(
-      "set-scroll-adjustments",
-      G_OBJECT_CLASS_TYPE(g_class),
-      G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
-      G_STRUCT_OFFSET(MaemoVteClass, set_scroll_adjustments),
-      NULL, NULL,
-      _vte_marshal_VOID__OBJECT_OBJECT,
-      G_TYPE_NONE, 2,
-      GTK_TYPE_ADJUSTMENT,
-      GTK_TYPE_ADJUSTMENT);
-
-  mvte_class->set_scroll_adjustments = set_scroll_adjustments;
+  vte_class->set_scroll_adjustments = set_scroll_adjustments;
 
   g_type_class_add_private(g_class, sizeof(MaemoVtePrivate));
 }
