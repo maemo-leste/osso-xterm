@@ -125,6 +125,5 @@ icons/48x48/Makefile
 icons/64x64/Makefile
 etc/Makefile
 src/Makefile
-pixmaps/Makefile
 po/Makefile.in
 ])

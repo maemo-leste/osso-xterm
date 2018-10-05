@@ -6,8 +6,5 @@ SUBDIRS =								\
 	48x48								\
 	64x64
 
-pixmapdir = $(datadir)/pixmaps
-pixmap_DATA = terminal.xpm
-
 EXTRA_DIST = terminal.xpm
 

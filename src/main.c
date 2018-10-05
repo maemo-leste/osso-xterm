@@ -36,7 +36,6 @@
 #include <libosso.h>
 
 #include "terminal-manager.h"
-#include "stock-icons.h"
 #include "terminal-gconf.h"
 
 static gint osso_xterm_incoming(const gchar *interface,
@@ -101,8 +100,6 @@ main (int argc, char **argv)
   g_set_application_name (_("X Terminal"));
 
   gtk_init (&argc, &argv);
-
-  add_stock_icons();
 
   if (argc > 2 && !strcmp(argv[1], "-e")) {
     command = argv[2];

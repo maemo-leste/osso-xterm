@@ -5,7 +5,7 @@ MAINTAINERCLEANFILES = \
         config.guess config.sub acinclude.m4 aclocal.m4 \
         build-stamp
 
-SUBDIRS = po icons etc src pixmaps
+SUBDIRS = po icons etc src
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README THANKS aclocal/ax_cflags_gcc_option.m4
 

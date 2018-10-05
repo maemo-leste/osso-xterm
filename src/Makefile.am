@@ -58,7 +58,6 @@ osso_xterm_headers =    \
 	terminal-manager.h    \
 	terminal-encoding.h   \
 	shortcuts.h           \
-  stock-icons.h         \
   $(NULL)
 
 osso_xterm_SOURCES =    \
@@ -73,7 +72,6 @@ osso_xterm_SOURCES =    \
 	terminal-manager.c    \
 	terminal-encoding.c   \
 	shortcuts.c           \
-  stock-icons.c         \
   $(NULL)
 
 nodist_osso_xterm_SOURCES = $(BUILT_SOURCES)
