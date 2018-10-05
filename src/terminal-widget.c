@@ -609,17 +609,17 @@ terminal_widget_init (TerminalWidget *widget)
 #define USER      "[" USERCHARS "]+(:["PASSCHARS "]+)?"
 #define URLPATH   "/[" PATHCHARS "]*[^]'.}>) \t\r\n,\\\"]"
 
-  re[0] = g_regex_new("\\<" SCHEME "//(" USER "@)?[" HOSTCHARS ".]+(:[0-9]+)?("
-		       URLPATH ")?\\>", 0, 0, NULL);
+  re[0] = g_regex_new("\\b" SCHEME "//(" USER "@)?[" HOSTCHARS ".]+(:[0-9]+)?("
+		       URLPATH ")?\\b", 0, 0, NULL);
 
-  re[1] = g_regex_new("\\<(www|ftp)[" HOSTCHARS "]*\\.[" HOSTCHARS ".]+"
-		      "(:[0-9]+)?(" URLPATH ")?\\>", 0, 0, NULL);
+  re[1] = g_regex_new("\\b(www|ftp)[" HOSTCHARS "]*\\.[" HOSTCHARS ".]+"
+		      "(:[0-9]+)?(" URLPATH ")?\\b", 0, 0, NULL);
 
-  re[2] = g_regex_new("\\<(mailto:)?[a-z0-9][a-z0-9.-]*@[a-z0-9][a-z0-9-]*"
-		      "(\\.[a-z0-9][a-z0-9-]*)+\\>", 0, 0, NULL);
+  re[2] = g_regex_new("\\b(mailto:)?[a-z0-9][a-z0-9.-]*@[a-z0-9][a-z0-9-]*"
+		      "(\\.[a-z0-9][a-z0-9-]*)+\\b", 0, 0, NULL);
 
-  re[3] = g_regex_new("\\<news:[-A-Z\\^_a-z{|}~!\"#$%&'()*+,./0-9;:=?`]+"
-		      "@[" HOSTCHARS ".]+(:[0-9]+)?\\>",
+  re[3] = g_regex_new("\\bnews:[-A-Z\\^_a-z{|}~!\"#$%&'()*+,./0-9;:=?`]+"
+		      "@[" HOSTCHARS ".]+(:[0-9]+)?\\b",
 		      0, 0, NULL);
 
   for (i = 0; i < 4; i++) {
