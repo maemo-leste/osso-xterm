@@ -5,7 +5,7 @@ set -e
 # Install the new alternative.
 update-alternatives \
   --install /usr/bin/x-terminal-emulator x-terminal-emulator \
-  /usr/bin/osso-xterm.launch 5
+  /usr/bin/osso-xterm.launch 100
 
 #DEBHELPER#
 
