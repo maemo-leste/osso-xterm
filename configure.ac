@@ -28,6 +28,7 @@ AC_ARG_ENABLE([maemo-launcher],
 	            AC_MSG_RESULT([yes])
 		    PKG_CHECK_MODULES(MAEMO_LAUNCHER, [maemo-launcher-app])
 		    AC_SUBST(MAEMO_LAUNCHER_CFLAGS)
+		    MAEMO_LAUNCHER_LIBS="-Xcompiler \"$MAEMO_LAUNCHER_LIBS\""
 		    AC_SUBST(MAEMO_LAUNCHER_LIBS)
 		    ;;
 	       no)  maemo_launcher=false
