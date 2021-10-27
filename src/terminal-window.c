@@ -236,7 +236,9 @@ terminal_window_key_press_event (TerminalWindow *window,
             terminal_window_set_state(window, !terminal_window_is_fullscreen(window));
             return TRUE;
 
-        case HILDON_HARDKEY_INCREASE: /* Zoom in */
+        /* Zoom in */
+        case HILDON_HARDKEY_INCREASE:
+        case GDK_AudioRaiseVolume:
           {
             TerminalWidget *tw = terminal_window_get_active(window);
             if (tw) {
@@ -246,7 +248,9 @@ terminal_window_key_press_event (TerminalWindow *window,
           }
           return TRUE;
 
-        case HILDON_HARDKEY_DECREASE: /* Zoom out */
+        /* Zoom out */
+        case HILDON_HARDKEY_DECREASE:
+        case GDK_AudioLowerVolume:
           {
             TerminalWidget *tw = terminal_window_get_active(window);
 
