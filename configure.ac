@@ -1,7 +1,6 @@
 AC_INIT([osso-xterm],[0.14.mh26])
-
 dnl Initialize automake
-AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
+AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 
 AC_PROG_CC
@@ -9,6 +8,7 @@ AC_PROG_INSTALL
 AC_ISC_POSIX
 AC_HEADER_STDC
 AC_PROG_LIBTOOL
+IT_PROG_INTLTOOL([0.35.0])
 
 AX_CFLAGS_GCC_OPTION(-std=c99)
 AX_CFLAGS_GCC_OPTION(-Wall)
@@ -79,12 +79,7 @@ AC_SUBST(VTE_LIBS)
 AC_SUBST(VTE_CFLAGS)
 
 PKG_CHECK_MODULES(HILDON, hildon-1 >= 0.9.9, hildon1=yes, hildon1=no)
-if test "$hildon1" == "yes"; then
-	AC_DEFINE(HILDON, 1, [Version of hildon libraries])
-else
-	PKG_CHECK_MODULES(HILDON_LIBS, hildon-libs >= 0.12.0)
-	AC_DEFINE(HILDON, 0, [Version of hildon libraries])
-fi
+AC_DEFINE(HILDON, 1, [Version of hildon libraries])
 #PKG_CHECK_MODULES(BROWSER, maemo-browser-interface, [], [
 #	PKG_CHECK_MODULES(BROWSER, osso-browser-interface,[], [ 
 #		PKG_CHECK_MODULES(BROWSER, tablet-browser-interface)
