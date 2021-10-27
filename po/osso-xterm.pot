@@ -1,12 +1,231 @@
-msgid "Already at maximum font size."
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-10-27 15:55+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../src/font-dialog.c:281
+msgid "Pick a Font"
 msgstr ""
 
-msgid "Already at minimum font size."
+#: ../src/font-dialog.c:332
+msgid "Color"
 msgstr ""
 
+#: ../src/main.c:100
+msgid "X Terminal"
+msgstr ""
+
+#: ../src/main.c:155
+#, c-format
+msgid "Unable to launch terminal: %s\n"
+msgstr ""
+
+#: ../src/shortcuts.c:89 ../src/terminal-settings.c:217
+msgid "weba_fi_plugin_details_shortcut"
+msgstr ""
+
+#: ../src/shortcuts.c:92
+msgid "webb_me_new"
+msgstr ""
+
+#: ../src/shortcuts.c:93 ../src/shortcuts.c:215
+msgid "webb_me_edit"
+msgstr ""
+
+#: ../src/shortcuts.c:94
+msgid "webb_me_delete"
+msgstr ""
+
+#: ../src/shortcuts.c:95
+msgid "webb_me_close"
+msgstr ""
+
+#: ../src/shortcuts.c:118 ../src/shortcuts.c:226
+msgid "weba_fi_page_details_page_title"
+msgstr ""
+
+#: ../src/shortcuts.c:218 ../src/terminal-encoding.c:291
+#: ../src/terminal-settings.c:230
+msgid "weba_bd_ok"
+msgstr ""
+
+#: ../src/shortcuts.c:219 ../src/terminal-encoding.c:292
+#: ../src/terminal-settings.c:231
+msgid "weba_bd_cancel"
+msgstr ""
+
+#: ../src/shortcuts.c:231
+msgid "weba_fi_cookie_details_value"
+msgstr ""
+
+#: ../src/terminal-encoding.c:56
+msgid "weba_va_encoding_utf_8"
+msgstr ""
+
+#: ../src/terminal-encoding.c:59
+msgid "weba_va_encoding_iso_8859_1"
+msgstr ""
+
+#: ../src/terminal-encoding.c:62
+msgid "weba_va_encoding_iso_8859_15"
+msgstr ""
+
+#: ../src/terminal-encoding.c:65
+msgid "weba_va_encoding_iso_8859_2"
+msgstr ""
+
+#: ../src/terminal-encoding.c:68
+msgid "weba_va_encoding_iso_8859_7"
+msgstr ""
+
+#: ../src/terminal-encoding.c:71
+msgid "weba_va_encoding_iso_8859_9"
+msgstr ""
+
+#: ../src/terminal-encoding.c:74
+msgid "weba_va_encoding_big5"
+msgstr ""
+
+#: ../src/terminal-encoding.c:77
+msgid "weba_va_encoding_win_1250"
+msgstr ""
+
+#: ../src/terminal-encoding.c:80
+msgid "weba_va_encoding_win_1251"
+msgstr ""
+
+#: ../src/terminal-encoding.c:83
+msgid "weba_va_encoding_win_1253"
+msgstr ""
+
+#: ../src/terminal-encoding.c:86
+msgid "weba_va_encoding_win_1254"
+msgstr ""
+
+#: ../src/terminal-encoding.c:89
+msgid "weba_va_encoding_euc_tw"
+msgstr ""
+
+#: ../src/terminal-encoding.c:92
+msgid "weba_va_encoding_win_koi_8r"
+msgstr ""
+
+#: ../src/terminal-encoding.c:288
+msgid "weba_ti_encoding_title"
+msgstr ""
+
+#: ../src/terminal-manager.c:148
+msgid "Could not open console."
+msgstr ""
+
+#. FIXME: g_...dup should be used
+#: ../src/terminal-settings.c:171
+msgid "ecdg_ti_font"
+msgstr ""
+
+#: ../src/terminal-settings.c:189
+msgid "home_fi_set_backgr_color"
+msgstr ""
+
+#: ../src/terminal-settings.c:203
+msgid "weba_me_encoding"
+msgstr ""
+
+#: ../src/terminal-settings.c:312
+msgid "weba_ti_settings_title"
+msgstr ""
+
+#: ../src/terminal-tab-header.c:95 ../src/terminal-tab-header.c:96
+msgid "Tab title"
+msgstr ""
+
+#: ../src/terminal-widget.c:219 ../src/terminal-widget.c:220
+msgid "Custom title"
+msgstr ""
+
+#: ../src/terminal-widget.c:235
+msgid "Encoding"
+msgstr ""
+
+#: ../src/terminal-widget.c:236
+msgid "Terminal encoding"
+msgstr ""
+
+#: ../src/terminal-widget.c:246 ../src/terminal-widget.c:247
+msgid "Title"
+msgstr ""
+
+#: ../src/terminal-widget.c:820
+#, c-format
+msgid "Current user unknown"
+msgstr ""
+
+#: ../src/terminal-widget.c:1071
+#, c-format
+msgid ""
+"Unable to drop selection of type text/plain to terminal: Wrong format (%d) "
+"or length (%d)\n"
+msgstr ""
+
+#: ../src/terminal-widget.c:1087
+#, c-format
+msgid ""
+"Unable to drop Mozilla URL on terminal: Wrong format (%d) or length (%d)\n"
+msgstr ""
+
+#: ../src/terminal-widget.c:1113
+#, c-format
+msgid "Unable to drop URI list on terminal: Wrong format (%d) or length (%d)\n"
+msgstr ""
+
+#: ../src/terminal-widget.c:1657
+msgid "Untitled"
+msgstr ""
+
+#. Reset
+#: ../src/terminal-window.c:140 ../src/terminal-window.c:370
 msgid "Reset"
 msgstr ""
 
-msgid "Reset And Clear"
+#: ../src/terminal-window.c:141
+msgid "Reset and Clear"
 msgstr ""
 
+#: ../src/terminal-window.c:143
+msgid "weba_me_close_all_windows"
+msgstr ""
+
+#: ../src/terminal-window.c:145
+msgid "weba_fi_encoding_method"
+msgstr ""
+
+#: ../src/terminal-window.c:246
+msgid "Already at maximum font size."
+msgstr ""
+
+#: ../src/terminal-window.c:259
+msgid "Already at minimum font size."
+msgstr ""
+
+#: ../src/terminal-window.c:297 ../src/terminal-window.c:548
+msgid "ecoc_ib_edwin_copied"
+msgstr ""
+
+#. Reset And Clear
+#: ../src/terminal-window.c:375
+msgid "Reset And Clear"
+msgstr ""
