@@ -268,21 +268,8 @@ terminal_window_key_press_event (TerminalWindow *window,
 static void
 open_match(GtkWidget *btn, TerminalWindow *wnd)
 {
-/*  char *match = g_object_get_data(G_OBJECT(wnd->match_menu), "match");
-
-  if (match) {
-    DBusConnection *conn = dbus_bus_get(DBUS_BUS_SESSION, NULL);
-    if (conn) {
-      DBusMessage *msg = dbus_message_new_method_call(OSSO_BROWSER_SERVICE, "/", OSSO_BROWSER_SERVICE, OSSO_BROWSER_OPEN_NEW_WINDOW_REQ);
-      if (msg) {
-        if (dbus_message_append_args(msg, DBUS_TYPE_STRING, &match, DBUS_TYPE_INVALID)) {
-          DBusMessage *reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, NULL);
-          if (reply)
-            dbus_message_unref(reply);
-        }
-      }
-    }
-  }*/
+  char *match = g_object_get_data(G_OBJECT(wnd->match_menu), "match");
+  g_app_info_launch_default_for_uri(match, NULL, NULL);
 }
 
 static void
