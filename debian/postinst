@@ -2,10 +2,15 @@
 
 set -e
 
+# Remove old one
+update-alternatives \
+  --remove x-terminal-emulator \
+  /usr/bin/osso-xterm.launch
+
 # Install the new alternative.
 update-alternatives \
   --install /usr/bin/x-terminal-emulator x-terminal-emulator \
-  /usr/bin/osso-xterm.launch 100
+  /usr/bin/osso-xterm 100
 
 #DEBHELPER#
 
