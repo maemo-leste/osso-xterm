@@ -9,5 +9,4 @@ Terminal=false
 Type=Application
 Categories=System;TerminalEmulator;
 X-HildonDesk-ShowInToolbar=true
-X-Osso-Service=xterm
 X-Osso-Type=application/x-executable
