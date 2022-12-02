@@ -12,6 +12,26 @@
 			</locale>
 		</schema>
 		<schema>
+			<key>/schemas/apps/osso/xterm/alwaysscroll</key>
+			<applyto>/apps/osso/xterm/alwaysscroll</applyto>
+			<owner>osso-xterm</owner>
+			<type>bool</type>
+			<default>true</default>
+			<locale name="C">
+				<short>Always scroll</short>
+			</locale>
+		</schema>
+		<schema>
+			<key>/schemas/apps/osso/xterm/usehwkeys</key>
+			<applyto>/apps/osso/xterm/usehwkeys</applyto>
+			<owner>osso-xterm</owner>
+			<type>bool</type>
+			<default>true</default>
+			<locale name="C">
+				<short>Use hw volume keys to change font size</short>
+			</locale>
+		</schema>
+		<schema>
 			<key>/schemas/apps/osso/xterm/scrollbar</key>
 			<applyto>/apps/osso/xterm/scrollbar</applyto>
 			<owner>osso-xterm</owner>
