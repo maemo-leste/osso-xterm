@@ -127,6 +127,8 @@ struct _TerminalWindow
 
   TerminalWidget *terminal;
   gchar *encoding;
+  gboolean use_hw_keys;
+  gint use_hw_keys_gconf_id;
 
   guint take_screenshot_idle_id;
 };
@@ -148,11 +150,6 @@ static GtkActionEntry action_entries[] =
 #endif /* (0) */
 
 G_DEFINE_TYPE (TerminalWindow, terminal_window, HILDON_TYPE_WINDOW);
-
-typedef struct {
-    GtkWidget *dialog;
-    gchar *ret;
-} ctrl_dialog_data;
 
 static gboolean
 terminal_window_is_fullscreen(TerminalWindow *window)
@@ -183,13 +180,15 @@ realize(GtkWidget *widget)
     parent_realize(widget);
 
   if (widget->window) {
+    TerminalWindow *twindow = TERMINAL_WINDOW (widget);
     unsigned char value = 1;
     Atom hildon_zoom_key_atom = gdk_x11_get_xatom_by_name("_HILDON_ZOOM_KEY_ATOM"),
          integer_atom = gdk_x11_get_xatom_by_name("INTEGER");
     Display *dpy = GDK_DISPLAY_XDISPLAY(gdk_drawable_get_display(widget->window));
     Window w = GDK_WINDOW_XID(widget->window);
 
-    XChangeProperty(dpy, w, hildon_zoom_key_atom, integer_atom, 8, PropModeReplace, &value, 1);
+    if (twindow->use_hw_keys)
+      XChangeProperty(dpy, w, hildon_zoom_key_atom, integer_atom, 8, PropModeReplace, &value, 1);
   }
 }
 
@@ -241,7 +240,7 @@ terminal_window_key_press_event (TerminalWindow *window,
         case GDK_AudioRaiseVolume:
           {
             TerminalWidget *tw = terminal_window_get_active(window);
-            if (tw) {
+            if (tw && window->use_hw_keys) {
               if (!terminal_widget_modify_font_size(tw, FONT_SIZE_INC))
                 hildon_banner_show_information(GTK_WIDGET(window), "NULL", _("Already at maximum font size."));
             }
@@ -254,7 +253,7 @@ terminal_window_key_press_event (TerminalWindow *window,
           {
             TerminalWidget *tw = terminal_window_get_active(window);
 
-            if (tw) {
+            if (tw && window->use_hw_keys) {
               if (!terminal_widget_modify_font_size(tw, -FONT_SIZE_INC))
                 hildon_banner_show_information(GTK_WIDGET(window), "NULL", _("Already at minimum font size."));
             }
@@ -303,6 +302,24 @@ make_match_menu(TerminalWindow *wnd)
 }
 
 static void
+terminal_window_gconf_use_hw_keys (GConfClient *client, guint conn_id, GConfEntry *entry, TerminalWindow *window)
+{
+  if (entry && entry->value && entry->value->type == GCONF_VALUE_BOOL) {
+    window->use_hw_keys = gconf_value_get_bool (entry->value);
+    Window w = GDK_WINDOW_XID(GTK_WIDGET(window)->window);
+    unsigned char value = 1;
+    Atom hildon_zoom_key_atom = gdk_x11_get_xatom_by_name("_HILDON_ZOOM_KEY_ATOM");
+    Atom integer_atom = gdk_x11_get_xatom_by_name("INTEGER");
+    Display *dpy = GDK_DISPLAY_XDISPLAY(gdk_drawable_get_display(GTK_WIDGET(window)->window));
+
+    if (window->use_hw_keys)
+      XChangeProperty(dpy, w, hildon_zoom_key_atom, integer_atom, 8, PropModeReplace, &value, 1);
+    else
+      XDeleteProperty(dpy, w, hildon_zoom_key_atom);
+  }
+}
+
+static void
 terminal_window_init (TerminalWindow *window)
 {
   //  GtkWidget           *popup;
@@ -335,8 +352,8 @@ terminal_window_init (TerminalWindow *window)
   g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_new_window, window);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
-  /* Select font */
-  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_SELECT_FONT, "use-stock", TRUE, NULL);
+  /* Preferances */
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_PREFERENCES, "use-stock", TRUE, NULL);
   g_signal_connect_data(G_OBJECT(button), "clicked", (GCallback)show_font_dialog, window, NULL, G_CONNECT_AFTER | G_CONNECT_SWAPPED);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
@@ -353,15 +370,15 @@ terminal_window_init (TerminalWindow *window)
   g_signal_connect(G_OBJECT(hildon_app_menu), "show", (GCallback)terminal_window_paste_show, window);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(window->paste_button));
 
-	/* Reset */
-	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset"), NULL);
-	g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset, window);
-	hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+  /* Reset */
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset"), NULL);
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
-	/* Reset And Clear */
-	button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset And Clear"), NULL);
-	g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset_and_clear, window);
-	hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+  /* Reset And Clear */
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset And Clear"), NULL);
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset_and_clear, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
   hildon_window_set_app_menu(HILDON_WINDOW(window), HILDON_APP_MENU(hildon_app_menu));
 
@@ -370,15 +387,28 @@ terminal_window_init (TerminalWindow *window)
 
   window->gconf_client = gconf_client_get_default();
   
-  gconf_client_get_int(window->gconf_client,
-		       OSSO_XTERM_GCONF_FONT_SIZE,
-		       &error);
+  gconf_client_get_int(window->gconf_client, OSSO_XTERM_GCONF_FONT_SIZE, &error);
   if (error != NULL) {
       g_printerr("Unable to get font size from gconf: %s\n",
                  error->message);
       g_error_free(error);
       error = NULL;
   }
+
+  window->use_hw_keys = gconf_client_get_bool(window->gconf_client, OSSO_XTERM_GCONF_USE_HW_KEYS, &error);
+  if (error != NULL) {
+      g_printerr("Unable to get use hw keys from gconf: %s\n",
+                 error->message);
+      g_error_free(error);
+      error = NULL;
+  }
+
+  window->use_hw_keys_gconf_id = gconf_client_notify_add(
+                                  window->gconf_client,
+                                  OSSO_XTERM_GCONF_USE_HW_KEYS,
+                                  (GConfClientNotifyFunc)terminal_window_gconf_use_hw_keys,
+                                  window,
+                                  NULL, NULL);
 
   gconf_value = gconf_client_get(window->gconf_client,
                                  OSSO_XTERM_GCONF_REVERSE,
@@ -423,7 +453,6 @@ terminal_window_init (TerminalWindow *window)
   g_free (role);
 
 }
-
 
 static void
 terminal_window_dispose (GObject *object)
@@ -614,6 +643,9 @@ terminal_widget_destroyed (GObject *obj, TerminalWindow *window)
   g_debug (__FUNCTION__);
 #endif
   g_assert (TERMINAL_IS_WINDOW (window));
+
+  gconf_client_notify_remove(window->gconf_client,
+                              window->use_hw_keys_gconf_id);
   if(window->terminal != NULL){
     g_object_unref(window->terminal);
     window->terminal = NULL;

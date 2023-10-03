@@ -39,6 +39,7 @@ typedef struct
 
   GtkWidget *reverse_button;
   GtkWidget *scroll_button;
+  GtkWidget *use_hw_keys_button;
   GtkWidget *scrollback_entry;
 } FontDialog;
 
@@ -254,6 +255,10 @@ font_dialog_response(GtkWidget *dlg, gint response_id, FontDialog *fd)
     b = hildon_check_button_get_active (HILDON_CHECK_BUTTON (fd->scroll_button));
     gconf_client_set_bool(g_c, OSSO_XTERM_GCONF_ALWAYS_SCROLL, b, NULL);
 
+    /* Set use hw keys */
+    b = hildon_check_button_get_active (HILDON_CHECK_BUTTON (fd->use_hw_keys_button));
+    gconf_client_set_bool(g_c, OSSO_XTERM_GCONF_USE_HW_KEYS, b, NULL);
+
     /* Set scrollback lines */
     lines = atoi (gtk_entry_get_text (GTK_ENTRY (fd->scrollback_entry)));
     if (lines <= 0) lines = OSSO_XTERM_DEFAULT_SCROLLBACK;
@@ -278,7 +283,7 @@ create_font_dialog(FontDialog *fd)
     *ls_size = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
   GtkCellLayout *cl;
   GtkCellRenderer *cr;
-  fd->dlg = GTK_DIALOG(gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Pick a Font"), NULL, GTK_DIALOG_NO_SEPARATOR,
+  fd->dlg = GTK_DIALOG(gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Preferences"), NULL, GTK_DIALOG_NO_SEPARATOR,
       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE, GTK_RESPONSE_OK, NULL));
   fd->preview = g_object_new(GTK_TYPE_LABEL, "visible", TRUE, "label", PREVIEW_TEXT, "justify", GTK_JUSTIFY_LEFT, "use-underline", FALSE, NULL);
   fd->preview_bg = g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, NULL);
@@ -342,6 +347,7 @@ create_font_dialog(FontDialog *fd)
   GConfClient *gconf_client = gconf_client_get_default ();
   gboolean reverse = OSSO_XTERM_DEFAULT_REVERSE;
   gboolean always_scroll = OSSO_XTERM_DEFAULT_ALWAYS_SCROLL;
+  gboolean use_hw_keys = OSSO_XTERM_DEFAULT_USE_HW_KEYS;
   gint scrollback = OSSO_XTERM_DEFAULT_SCROLLBACK;
   GConfValue *value;
   
@@ -352,6 +358,10 @@ create_font_dialog(FontDialog *fd)
   value = gconf_client_get (gconf_client, OSSO_XTERM_GCONF_ALWAYS_SCROLL, NULL);
   if (value && value->type == GCONF_VALUE_BOOL)
     always_scroll = gconf_value_get_bool (value);
+
+  value = gconf_client_get (gconf_client, OSSO_XTERM_GCONF_USE_HW_KEYS, NULL);
+  if (value && value->type == GCONF_VALUE_BOOL)
+    use_hw_keys = gconf_value_get_bool (value);
 
   value = gconf_client_get (gconf_client, OSSO_XTERM_GCONF_SCROLLBACK, NULL);
   if (value && value->type == GCONF_VALUE_INT)
@@ -367,10 +377,16 @@ create_font_dialog(FontDialog *fd)
   hildon_check_button_set_active (HILDON_CHECK_BUTTON (fd->scroll_button), always_scroll);
   gtk_widget_set_size_request (fd->scroll_button, -1, 60);
   gtk_button_set_label (GTK_BUTTON (fd->scroll_button), "Always scroll");
+
+  fd->use_hw_keys_button = hildon_check_button_new (HILDON_SIZE_FINGER_HEIGHT);
+  hildon_check_button_set_active (HILDON_CHECK_BUTTON (fd->use_hw_keys_button), use_hw_keys);
+  gtk_widget_set_size_request (fd->use_hw_keys_button, -1, 60);
+  gtk_button_set_label (GTK_BUTTON (fd->use_hw_keys_button), "HW keys");
   
   hbox = gtk_hbox_new (TRUE, 0);
   gtk_container_add (GTK_CONTAINER (hbox), fd->reverse_button);
   gtk_container_add (GTK_CONTAINER (hbox), fd->scroll_button);
+  gtk_container_add (GTK_CONTAINER (hbox), fd->use_hw_keys_button);
   gtk_widget_show_all (hbox);
   gtk_container_add (GTK_CONTAINER (fd->dlg->vbox), hbox);
 
