@@ -53,6 +53,7 @@ osso_xterm_headers =    \
 	terminal-widget.h     \
 	terminal-window.h     \
 	terminal-manager.h    \
+	he-simple-color-dialog.h \
   $(NULL)
 
 osso_xterm_SOURCES =    \
@@ -63,6 +64,7 @@ osso_xterm_SOURCES =    \
 	terminal-widget.c     \
 	terminal-window.c     \
 	terminal-manager.c    \
+	he-simple-color-dialog.c \
   $(NULL)
 
 nodist_osso_xterm_SOURCES = $(BUILT_SOURCES)

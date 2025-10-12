@@ -3,3 +3,4 @@ src/main.c
 src/terminal-manager.c
 src/terminal-widget.c
 src/terminal-window.c
+src/he-simple-color-dialog.c
