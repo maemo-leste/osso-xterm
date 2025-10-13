@@ -1935,6 +1935,13 @@ static void
 terminal_widget_do_keys(TerminalWidget *widget,
 			const gchar *key_string)
 {
+  // Keys enclosed in "" are treated as literal strings to be inserted
+  size_t len = strlen(key_string);
+  if (len >= 2 && key_string[0] == '"' && key_string[len-1] == '"') {
+    vte_terminal_feed_child(VTE_TERMINAL(widget->terminal), key_string + 1, len - 2);
+    return;
+  }
+
   guint keyval = 0;
   guint state = 0;
 
