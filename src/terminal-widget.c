@@ -1966,6 +1966,17 @@ terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item)
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar), item, -1);
 }
 
+void
+terminal_widget_add_expanding_spacer(TerminalWidget *widget)
+{
+  gtk_container_add_with_properties(GTK_CONTAINER(widget->tbar),
+      GTK_WIDGET(g_object_new(GTK_TYPE_SEPARATOR_TOOL_ITEM,
+          "draw", FALSE,
+          NULL)),
+      "expand", TRUE,
+      NULL);
+}
+
 gboolean
 terminal_widget_modify_font_size(TerminalWidget *widget, int increment)
 {

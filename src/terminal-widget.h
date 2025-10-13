@@ -134,6 +134,8 @@ void terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window);
 
 void terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item);
 
+void terminal_widget_add_expanding_spacer(TerminalWidget *widget);
+
 gboolean terminal_widget_modify_font_size(TerminalWidget *widget, int increment);
 
 G_END_DECLS;
