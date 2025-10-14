@@ -1,3 +1,13 @@
+osso-xterm (0.16) unstable; urgency=medium
+
+  * Add stable position for copy and paste buttons (thp)
+  * Move fullscreen button to the right, add more literal string toolbar
+    buttons (thp)
+  * Fix dhpk-shlibdeps usage (thp)
+  * Clean up and improve preferences UI (thp)
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 14 Oct 2025 13:26:37 +0200
+
 osso-xterm (0.15) unstable; urgency=medium
 
   * Modernise debian directory
