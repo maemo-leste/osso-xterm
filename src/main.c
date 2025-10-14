@@ -101,6 +101,14 @@ main (int argc, char **argv)
 
   gtk_init (&argc, &argv);
 
+  gboolean force_new_instance = FALSE;
+  if (argc > 1 && !strcmp(argv[1], "--new-instance")) {
+      force_new_instance = TRUE;
+      argv[1] = argv[0];
+      --argc;
+      ++argv;
+  }
+
   if (argc > 2 && !strcmp(argv[1], "-e")) {
     command = argv[2];
   } else if (argc > 1) {
@@ -110,7 +118,7 @@ main (int argc, char **argv)
   system_bus = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
   if (system_bus && dbus_bus_name_has_owner(system_bus,
 	"com.nokia.xterm",
-	NULL)) {
+	NULL) && !force_new_instance) {
     DBusConnection *session_bus = dbus_bus_get(DBUS_BUS_SESSION, NULL);
     if (!session_bus) {
       exit(EXIT_FAILURE);
