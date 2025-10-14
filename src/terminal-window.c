@@ -651,6 +651,7 @@ terminal_window_real_add (
                      NULL));
     g_object_ref_sink(window->unfs_button);
     g_signal_connect(G_OBJECT(window->unfs_button), "toggled", (GCallback)terminal_window_action_fullscreen, window);
+    terminal_widget_add_expanding_spacer(TERMINAL_WIDGET(widget));
     terminal_widget_add_tool_item(TERMINAL_WIDGET(widget), GTK_TOOL_ITEM(window->unfs_button));
 
   window->take_screenshot_idle_id = g_idle_add((GSourceFunc)maybe_take_screenshot, window);
