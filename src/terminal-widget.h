@@ -78,9 +78,6 @@ struct _TerminalWidget
   guint                fg_conid;
   guint                bg_conid;
 
-//  GtkIMContext        *im_context;
-//  gboolean	       im_pending;
-
   GtkWindow           *app;
 };
 
@@ -134,11 +131,6 @@ gboolean terminal_widget_need_toolbar(TerminalWidget *widget);
 gboolean terminal_widget_need_fullscreen_toolbar(TerminalWidget *widget);
 
 void terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window);
-
-#if 0
-void terminal_widget_send_keys(TerminalWidget *widget,
-                               const gchar *key_string);
-#endif
 
 void terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item);
 

@@ -143,49 +143,6 @@ set_pan_mode(MaemoVte *mvte, gboolean pan_mode)
     g_object_notify(G_OBJECT(mvte), "pan-mode");
   }
 }
-#if (0)
-static void
-dump_key_event(GdkEventKey *event)
-{
-  g_print(".type = %s\n.send_event = %s\n.time = %d\n.state = ", 
-    event->type == GDK_KEY_PRESS   ? "GDK_KEY_PRESS"   : 
-    event->type == GDK_KEY_RELEASE ? "GDK_KEY_RELEASE" : "Other",
-    event->send_event ? "TRUE" : "FALSE", 
-    event->time);
-
-  if (event->state & GDK_SHIFT_MASK) g_print("GDK_SHIFT_MASK ");
-  if (event->state & GDK_LOCK_MASK) g_print("GDK_LOCK_MASK ");
-  if (event->state & GDK_CONTROL_MASK) g_print("GDK_CONTROL_MASK ");
-  if (event->state & GDK_MOD1_MASK) g_print("GDK_MOD1_MASK ");
-  if (event->state & GDK_MOD2_MASK) g_print("GDK_MOD2_MASK ");
-  if (event->state & GDK_MOD3_MASK) g_print("GDK_MOD3_MASK ");
-  if (event->state & GDK_MOD4_MASK) g_print("GDK_MOD4_MASK ");
-  if (event->state & GDK_MOD5_MASK) g_print("GDK_MOD5_MASK ");
-  if (event->state & GDK_BUTTON1_MASK) g_print("GDK_BUTTON1_MASK ");
-  if (event->state & GDK_BUTTON2_MASK) g_print("GDK_BUTTON2_MASK ");
-  if (event->state & GDK_BUTTON3_MASK) g_print("GDK_BUTTON3_MASK ");
-  if (event->state & GDK_BUTTON4_MASK) g_print("GDK_BUTTON4_MASK ");
-  if (event->state & GDK_BUTTON5_MASK) g_print("GDK_BUTTON5_MASK ");
-
-  /* The next few modifiers are used by XKB, so we skip to the end.
-   * Bits 15 - 25 are currently unused. Bit 29 is used internally.
-   */
-  
-  if (event->state & GDK_SUPER_MASK) g_print("GDK_SUPER_MASK ");
-  if (event->state & GDK_HYPER_MASK) g_print("GDK_HYPER_MASK ");
-  if (event->state & GDK_META_MASK) g_print("GDK_META_MASK ");
-  if (event->state & GDK_RELEASE_MASK) g_print("GDK_RELEASE_MASK ");
-  if (event->state & GDK_MODIFIER_MASK) g_print("GDK_MODIFIER_MASK ");
-
-  g_print("\n.keyval = %s\n.length = %d\n.string = %s\n.hardware_keycode = %d\n.group = %d\n.is_modifier = %s\n\n", 
-    gdk_keyval_name(event->keyval), 
-    event->length, 
-    event->string,
-    event->hardware_keycode,
-    event->group,
-    event->is_modifier ? "TRUE" : "FALSE");
-}
-#endif /* (0) */
 static void
 control_mode_commit(GtkIMContext *imc, gchar *text, GdkWindow *wnd)
 {

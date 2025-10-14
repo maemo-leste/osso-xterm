@@ -38,7 +38,6 @@ EXTRA_DIST =           \
   $(NULL)
 
 BUILT_SOURCES =     \
-  stock-icon-list.h \
   vte-marshallers.c \
   vte-marshallers.h \
   $(NULL)
@@ -51,13 +50,9 @@ osso_xterm_LDFLAGS =  \
 osso_xterm_headers =    \
 	font-dialog.h         \
 	terminal-gconf.h      \
-	terminal-settings.h   \
-	terminal-tab-header.h \
 	terminal-widget.h     \
 	terminal-window.h     \
 	terminal-manager.h    \
-	terminal-encoding.h   \
-	shortcuts.h           \
   $(NULL)
 
 osso_xterm_SOURCES =    \
@@ -65,13 +60,9 @@ osso_xterm_SOURCES =    \
 	font-dialog.c         \
 	main.c                \
 	maemo-vte.c           \
-	terminal-tab-header.c \
-	terminal-settings.c   \
 	terminal-widget.c     \
 	terminal-window.c     \
 	terminal-manager.c    \
-	terminal-encoding.c   \
-	shortcuts.c           \
   $(NULL)
 
 nodist_osso_xterm_SOURCES = $(BUILT_SOURCES)
@@ -86,23 +77,5 @@ vte-marshallers.h: vte-marshallers.list
 
 clean-local:
 	$(RM) *.core core core.* stamp-*.h *~
-
-if HAVE_SVG
-ICON_EXTENSION = svg
-else
-ICON_EXTENSION = png
-endif
-
-stock-icon-list.h: $(shell ls ../pixmaps/*.$(ICON_EXTENSION))
-	echo -n ''                                                                                                        > $@.tmp
-	echo '#ifndef _HAVE_STOCK_ICON_LIST_H_'                                                                          >> $@.tmp
-	echo '#define _HAVE_STOCK_ICON_LIST_H_'                                                                          >> $@.tmp
-	echo 'static struct { const char *fname ; const char *stock_name ; } stock_icon_list[] = {'                      >> $@.tmp
-	ls ../pixmaps | grep -v Makefile | grep '\.$(ICON_EXTENSION)' | while read ; do \
-	  echo '{ .fname = "'$$REPLY'", .stock_name = "'@PACKAGE@-$$(echo $$REPLY | sed 's/\.$(ICON_EXTENSION)//')'" },' >> $@.tmp ; \
-	done ;
-	echo '};'                                                                                                        >> $@.tmp
-	echo '#endif /* !_HAVE_STOCK_ICON_LIST_H_ */'                                                                    >> $@.tmp
-	mv $@.tmp $@
 
 CLEANFILES = $(BUILT_SOURCES) vte-marshallers.c.tmp vte-marshallers.h.tmp

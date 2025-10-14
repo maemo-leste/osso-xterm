@@ -35,41 +35,23 @@
 #include "font-dialog.h"
 #include "terminal-gconf.h"
 
-#ifdef HAVE_OSSO_BROWSER
-//#include <osso-browser-interface.h>
-#else
-//#include <tablet-browser-interface.h>
-#endif
-
 #include <libintl.h>
 #include <locale.h>
 
-#define GETTEXT_PACKAGE "osso-browser-ui"
 #define _(String) g_dgettext(PACKAGE, String)
 #define N_(String) String
 
-#if HILDON == 0
-#include <hildon-widgets/hildon-window.h>
-#include <hildon-widgets/hildon-program.h>
-#include <hildon-widgets/hildon-defines.h>
-#include <hildon-widgets/hildon-banner.h>
-#elif HILDON == 1
 #include <hildon/hildon-window.h>
 #include <hildon/hildon-program.h>
 #include <hildon/hildon-defines.h>
 #include <hildon/hildon-banner.h>
-#endif
 #include <gconf/gconf-client.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdk/gdkx.h>
 #include <vte/vte.h>
 
 #include "terminal-gconf.h"
-#include "terminal-settings.h"
-#include "terminal-tab-header.h"
 #include "terminal-window.h"
-#include "terminal-encoding.h"
-#include "shortcuts.h"
 
 
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
@@ -105,11 +87,6 @@ static void            terminal_window_action_reset            (GtkWidget       
                                                              TerminalWindow     *window);
 static void            terminal_window_action_reset_and_clear  (GtkWidget       *button,
                                                              TerminalWindow     *window);
-#if (0)
-static void            terminal_window_action_encoding         (GtkAction       *action,
-								TerminalWindow  *window);
-
-#endif /* (0) */
 static void            terminal_widget_destroyed (GObject *obj, TerminalWindow *window);
 
 struct _TerminalWindow
@@ -134,20 +111,6 @@ struct _TerminalWindow
 };
 
 static GObjectClass *parent_class;
-
-#if (0)
-static GtkActionEntry action_entries[] =
-{
-
-  { "reset", NULL, N_ ("Reset"), NULL, NULL, G_CALLBACK (terminal_window_action_reset), },
-  { "reset-and-clear", NULL, N_ ("Reset and Clear"), NULL, NULL, G_CALLBACK (terminal_window_action_reset_and_clear), },
-
-  { "close-all-windows", NULL, N_("weba_me_close_all_windows"), NULL, NULL, G_CALLBACK (terminal_window_action_quit), },
-
-  { "encoding", NULL, N_("weba_fi_encoding_method"), NULL, NULL, G_CALLBACK (terminal_window_action_encoding), },
-};
-
-#endif /* (0) */
 
 G_DEFINE_TYPE (TerminalWindow, terminal_window, HILDON_TYPE_WINDOW);
 
@@ -607,24 +570,6 @@ terminal_window_action_reset_and_clear (GtkWidget *button,
   terminal_widget_reset (active, TRUE);
 }
 
-#if (0)
-static void
-terminal_window_action_encoding (GtkAction       *action,
-				 TerminalWindow  *window)
-{
-  gchar *retval = NULL;
-  gchar *encoding = NULL;
-  g_object_get (window->terminal, "encoding", &encoding, NULL);
-  retval = terminal_encoding_dialog (window->terminal, GTK_WINDOW (window), 
-				     encoding);
-#ifdef DEBUG
-  g_debug ("%s - retval: %s",__FUNCTION__, retval);
-#endif
-
-  g_free (retval);
-}
-#endif /* (0) */
-
 /**
  * terminal_window_new:
  *
@@ -680,11 +625,6 @@ terminal_window_real_add (
     TerminalWindow *window,
     TerminalWidget *widget)
 {
-  /*
-    gchar *title = terminal_widget_get_title(widget);
-    g_object_set(GTK_WINDOW (window), "title", title, NULL);
-    g_free(title);
-  */
     gtk_container_add(GTK_CONTAINER (window), GTK_WIDGET(widget));
 
     /* add terminal to window */
@@ -784,8 +724,6 @@ terminal_window_launch (
     } else {
       g_object_set (window->terminal, "encoding", window->encoding, NULL);
     }
-
-  /*  g_idle_add ((GSourceFunc)_im_context_focus, window->terminal); */
   }
   return child_launched;
 }

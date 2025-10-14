@@ -33,11 +33,6 @@
 
 #define GETTEXT_PACKAGE "osso-browser-ui"
 #include <glib/gi18n-lib.h>
-/*
-  #include <libintl.h>
-  #include <locale.h>
-  #define _(String) gettext(String)
-*/
 
 #include <gconf/gconf-client.h>
 #include <gdk/gdkx.h>
@@ -84,9 +79,6 @@ static gboolean terminal_widget_get_child_command             (TerminalWidget   
                                                                gchar          ***argv,
                                                                GError          **error);
 static gchar  **terminal_widget_get_child_environment         (TerminalWidget   *widget);
-#if 0
-static void terminal_widget_update_background                 (TerminalWidget   *widget);
-#endif
 static void terminal_widget_update_binding_backspace          (TerminalWidget   *widget);
 static void terminal_widget_update_binding_delete             (TerminalWidget   *widget);
 static void terminal_widget_update_misc_bell                  (TerminalWidget   *widget);
@@ -94,9 +86,6 @@ static void terminal_widget_update_misc_cursor_blinks         (TerminalWidget   
 static void terminal_widget_update_scrolling_lines            (TerminalWidget   *widget);
 static void terminal_widget_update_scrolling_on_output        (TerminalWidget   *widget);
 static void terminal_widget_update_scrolling_on_keystroke     (TerminalWidget   *widget);
-#if 0
-static void terminal_widget_update_title                      (TerminalWidget   *widget);
-#endif
 static void terminal_widget_update_word_chars                 (TerminalWidget   *widget);
 static void terminal_widget_vte_child_exited                  (VteTerminal      *terminal,
                                                                TerminalWidget   *widget);
@@ -155,9 +144,6 @@ static void     terminal_widget_update_colors		      (TerminalWidget *widget,
 							       const gchar *fg_name,
 							       const gchar *bg_name,
                                                                gboolean reverse);
-#if 0
-static void     terminal_widget_timer_background_destroy      (gpointer        user_data);
-#endif
 static void     terminal_widget_emit_context_menu            (TerminalWidget *widget,
 		                                              gpointer user_data);
 static void	terminal_widget_ctrlify_notify	     	     (GObject *src, GParamSpec *pspec, GObject *dst);
@@ -165,10 +151,6 @@ static void	terminal_widget_do_keys			     (TerminalWidget *widget,
 							      const gchar *key_string);
 static void	terminal_widget_do_key_button		     (GObject *button,
 							      TerminalWidget *widget);
-#if 0
-static void terminal_widget_ctrl_clicked (GtkButton    *item,
-					  TerminalWidget *widget);
-#endif
 static GObjectClass *parent_class;
 static guint widget_signals[LAST_SIGNAL];
 
@@ -560,15 +542,9 @@ terminal_widget_init (TerminalWidget *widget)
     G_CALLBACK(terminal_widget_ctrlify_notify),
     widget->terminal);
 
- 
-  /*  g_signal_connect (G_OBJECT(widget->cbutton), "clicked",
-		    G_CALLBACK(terminal_widget_ctrl_clicked),
-		    widget);
-  */
   gtk_toolbar_insert(GTK_TOOLBAR(widget->tbar),
 		     widget->cbutton,
 		     -1);
-  //  gtk_box_pack_start (GTK_BOX (widget), widget->tbar, FALSE, FALSE, 0);
 
   /* apply current settings */
 
@@ -656,8 +632,6 @@ terminal_widget_dispose (GObject *object)
 
   g_signal_handlers_disconnect_by_func(widget->cbutton,
       terminal_widget_ctrlify_notify, widget->terminal);
-/*  g_signal_handlers_disconnect_by_func(widget->cbutton,
-		  terminal_widget_ctrlify_notify, widget);*/
 
   g_signal_handlers_disconnect_by_func(widget->terminal,
     terminal_widget_vte_child_exited, widget);
@@ -883,20 +857,6 @@ terminal_widget_get_child_environment (TerminalWidget *widget)
   return result;
 }
 
-
-#if 0
-static void
-terminal_widget_update_background (TerminalWidget *widget)
-{
-  if (G_UNLIKELY (widget->background_timer_id != 0))
-    g_source_remove (widget->background_timer_id);
-
-  widget->background_timer_id = g_timeout_add_full (G_PRIORITY_LOW, 250, terminal_widget_timer_background,
-                                                    widget, terminal_widget_timer_background_destroy);
-}
-#endif
-
-
 static void
 terminal_widget_update_binding_backspace (TerminalWidget *widget)
 {
@@ -1002,15 +962,6 @@ static void
 terminal_widget_update_scrolling_on_keystroke (TerminalWidget *widget)
 {
 }
-
-
-#if 0
-static void
-terminal_widget_update_title (TerminalWidget *widget)
-{
-  g_object_notify (G_OBJECT (widget), "title");
-}
-#endif
 
 
 static void
@@ -1405,15 +1356,6 @@ terminal_widget_gconf_font_size(GConfClient    *client,
   terminal_widget_update_font(widget, font_name, font_size);
   g_free(font_name);
 }
-
-#if 0
-static void
-terminal_widget_timer_background_destroy (gpointer user_data)
-{
-  TERMINAL_WIDGET (user_data)->background_timer_id = 0;
-}
-#endif
-
 
 /**
  * terminal_widget_new:
@@ -2015,25 +1957,8 @@ terminal_widget_select_all (TerminalWidget *widget)
 #ifdef DEBUG
   g_debug (__FUNCTION__);
 #endif
-#if 0
-  VteTerminal *term = VTE_TERMINAL(widget->terminal);
-  GTK_WIDGET (term->widget);
-#endif
   return TRUE;
 }
-#if 0
-void terminal_widget_send_keys(TerminalWidget *widget,
-                               const gchar *key_string)
-{
-        guint keyval = 0;
-        guint state = 0;
-
-        while (key_string && *key_string) {
-                key_string = parse_key(key_string, &keyval, &state);
-                terminal_widget_send_key(widget, keyval, state);
-        }
-}
-#endif
 
 void
 terminal_widget_add_tool_item(TerminalWidget *widget, GtkToolItem *item)
