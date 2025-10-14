@@ -320,6 +320,16 @@ terminal_window_init (TerminalWindow *window)
   g_signal_connect_data(G_OBJECT(button), "clicked", (GCallback)show_font_dialog, window, NULL, G_CONNECT_AFTER | G_CONNECT_SWAPPED);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
+  /* Reset */
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset"), NULL);
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+
+  /* Reset And Clear */
+  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset And Clear"), NULL);
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset_and_clear, window);
+  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
+
   /* Copy */
   window->copy_button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", GTK_STOCK_COPY, "use-stock", TRUE, NULL);
   g_object_ref_sink(window->copy_button);
@@ -332,16 +342,6 @@ terminal_window_init (TerminalWindow *window)
   g_signal_connect(G_OBJECT(window->paste_button), "clicked", (GCallback)terminal_window_action_paste, window);
   g_signal_connect(G_OBJECT(hildon_app_menu), "show", (GCallback)terminal_window_paste_show, window);
   hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(window->paste_button));
-
-  /* Reset */
-  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset"), NULL);
-  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset, window);
-  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
-
-  /* Reset And Clear */
-  button = g_object_new(GTK_TYPE_BUTTON, "visible", TRUE, "label", _("Reset And Clear"), NULL);
-  g_signal_connect(G_OBJECT(button), "clicked", (GCallback)terminal_window_action_reset_and_clear, window);
-  hildon_app_menu_append(HILDON_APP_MENU(hildon_app_menu), GTK_BUTTON(button));
 
   hildon_window_set_app_menu(HILDON_WINDOW(window), HILDON_APP_MENU(hildon_app_menu));
 
