@@ -1,9 +1,5 @@
 src/font-dialog.c
 src/main.c
-src/shortcuts.c
-src/terminal-encoding.c
 src/terminal-manager.c
-src/terminal-settings.c
-src/terminal-tab-header.c
 src/terminal-widget.c
 src/terminal-window.c
