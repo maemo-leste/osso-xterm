@@ -1384,7 +1384,7 @@ terminal_widget_window_delete_event(
 void
 terminal_widget_set_app_win (TerminalWidget *widget, HildonWindow *window)
 {
-  widget->app = g_object_ref(window);
+  widget->app = (GtkWindow*)g_object_ref(window);
   g_signal_connect (G_OBJECT (widget->app), "delete-event",
                     G_CALLBACK (terminal_widget_window_delete_event), widget);
 
