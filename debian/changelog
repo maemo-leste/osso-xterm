@@ -1,3 +1,9 @@
+osso-xterm (0.17) unstable; urgency=medium
+
+  * Fix compilation error for Excalibur release
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 18 Nov 2025 00:58:06 +0100
+
 osso-xterm (0.16) unstable; urgency=medium
 
   * Add stable position for copy and paste buttons (thp)
